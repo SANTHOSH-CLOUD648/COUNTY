@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>County Indoor Netz — Admin</title>
+<style>
+  :root{
+    --navy:#1a5c38;
+    --navy-dark:#0d3320;
+    --gold:#c9a23a;
+    --cream:#f3f9f5;
+    --ink:#21263b;
+    --muted:#6b7088;
+    --error:#b3261e;
+    --leather:#a51f1f;
+    --tennis:#3f8f4f;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #25307e 0%, var(--navy) 45%, var(--navy-dark) 100%);
+    min-height:100vh;
+    color:var(--ink);
+    padding:32px 16px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+
+  .brand{
+    text-align:center;
+    color:#fff;
+    margin-bottom:22px;
+  }
+  .brand .seam{
+    display:inline-flex;align-items:center;gap:10px;
+    font-size:13px;letter-spacing:3px;color:var(--gold);
+    text-transform:uppercase;font-weight:600;margin-bottom:6px;
+  }
+  .brand .seam::before,.brand .seam::after{
+    content:"";width:28px;height:1px;background:var(--gold);opacity:.6;
+  }
+  .brand h1{
+    margin:0;
+    font-family:Georgia, 'Times New Roman', serif;
+    font-size:34px;
+    letter-spacing:.5px;
+  }
+  .brand p{margin:6px 0 0;color:#cfd3ee;font-size:14px;}
+
+  .card{
+    background:var(--cream);
+    border-radius:20px;
+    padding:30px 28px 26px;
+    box-shadow:0 24px 60px rgba(8,12,40,.35);
+    border:1px solid rgba(255,255,255,.5);
+  }
+
+  .card h2{
+    margin:0 0 4px;
+    font-size:19px;
+    color:var(--navy);
+    font-family:Georgia, serif;
+  }
+  .card .sub{margin:0 0 22px;color:var(--muted);font-size:13px;}
+
+  .welcome-back{
+    display:none;
+    background:#eef1fb;
+    border:1px solid #c9d0f0;
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:13.5px;
+    color:var(--navy);
+    margin:-8px 0 18px;
+  }
+  .welcome-back.show{display:block;}
+  .link-btn-inline{
+    background:none;border:none;color:var(--navy);
+    font-size:12.5px;text-decoration:underline;cursor:pointer;
+    margin-left:8px;padding:0;font-weight:600;
+  }
+
+  form{display:grid;grid-template-columns:1fr 1fr;gap:16px 14px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field.full{grid-column:1 / -1;}
+
+  label{
+    font-size:12.5px;font-weight:700;color:var(--navy);
+    letter-spacing:.3px;
+    display:flex;align-items:center;gap:5px;
+  }
+  label .req{color:var(--leather);font-weight:700;}
+
+  input,select{
+    border:1.5px solid #d9d3c0;
+    background:#fff;
+    border-radius:10px;
+    padding:11px 12px;
+    font-size:14.5px;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+    font-family:inherit;
+    width:100%;
+  }
+  input:focus,select:focus{
+    border-color:var(--navy);
+    box-shadow:0 0 0 3px rgba(28,42,120,.12);
+  }
+  input:disabled,select:disabled{
+    background:#f1efe6;color:#9a9a9a;cursor:not-allowed;
+  }
+  select{appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%231c2a78'><path d='M5.5 7.5l4.5 4.5 4.5-4.5'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:16px;
+    padding-right:34px;
+  }
+
+  .field.invalid input, .field.invalid select{
+    border-color:var(--error);
+    background:#fff7f6;
+  }
+  .errmsg{font-size:11.5px;color:var(--error);min-height:14px;}
+
+  .amount-box{
+    grid-column:1 / -1;
+    margin-top:6px;
+    background:linear-gradient(135deg,var(--navy),#222e84);
+    border-radius:14px;
+    padding:18px 20px;
+    display:flex;align-items:center;justify-content:space-between;
+    color:#fff;
+  }
+  .amount-box .lbl{font-size:13px;color:#cfd3ee;letter-spacing:.4px;text-transform:uppercase;}
+  .amount-box .val{font-size:26px;font-weight:700;font-family:Georgia,serif;color:var(--gold);}
+  .amount-box .note{font-size:11px;color:#aab0e0;margin-top:3px;}
+
+  .ball-tag{
+    display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:2px 8px;
+    border-radius:20px;margin-left:auto;font-weight:600;
+  }
+
+  .submit-row{grid-column:1/-1;margin-top:8px;}
+  button.submit{
+    width:100%;
+    background:var(--gold);
+    color:var(--navy-dark);
+    border:none;
+    padding:14px;
+    font-size:15.5px;
+    font-weight:700;
+    border-radius:12px;
+    cursor:pointer;
+    letter-spacing:.3px;
+    transition:transform .12s, box-shadow .12s, background .15s;
+    box-shadow:0 10px 24px rgba(201,162,58,.35);
+  }
+  button.submit:hover{background:#d8b14c;transform:translateY(-1px);}
+  button.submit:active{transform:translateY(0);}
+
+  .foot-note{
+    text-align:center;color:#cfd3ee;font-size:12px;margin-top:18px;
+  }
+
+  /* confirmation panel */
+  .confirm{
+    display:none;
+    margin-top:18px;
+    background:#eef6ee;
+    border:1px solid #bfe2c0;
+    border-radius:14px;
+    padding:18px 20px;
+    color:#1c4a22;
+  }
+  .confirm.show{display:block;}
+
+  .booking-error{
+    display:none;
+    margin-top:14px;
+    background:#fff0f0;
+    border:1.5px solid #e8b4b4;
+    border-radius:12px;
+    padding:14px 16px;
+    font-size:14px;
+    font-weight:600;
+    color:#8b1c1c;
+    line-height:1.5;
+  }
+  .booking-error.show{display:block;}
+  .confirm h3{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px;}
+  .confirm dl{margin:0;display:grid;grid-template-columns:120px 1fr;row-gap:4px;font-size:13px;}
+  .confirm dt{color:#3c6b40;font-weight:600;}
+  .confirm dd{margin:0;}
+
+  .share-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .receipt-header{
+    width:100%;
+    text-align:center;
+    font-size:15px;
+    font-weight:700;
+    color:var(--navy);
+    letter-spacing:.5px;
+    padding-bottom:8px;
+    border-bottom:1.5px solid #c9d0f0;
+    margin-bottom:4px;
+    font-family:Georgia, serif;
+  }
+  .share-btn{
+    flex:1;min-width:160px;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:11px 14px;border-radius:10px;
+    font-size:13.5px;font-weight:700;text-decoration:none;
+    cursor:pointer;border:none;
+    transition:transform .12s, opacity .15s;
+  }
+  .share-btn:hover{transform:translateY(-1px);}
+  .share-btn.wa{background:#25D366;color:#fff;}
+  .share-btn.sms{background:var(--navy);color:#fff;}
+
+  .cancel-toggle{text-align:center;margin-top:22px;}
+  .link-btn{
+    background:none;border:none;color:var(--navy);
+    font-size:13px;font-weight:600;text-decoration:underline;
+    cursor:pointer;padding:4px;
+  }
+  .link-btn:hover{color:var(--navy-dark);}
+
+  .cancel-box{
+    display:none;
+    margin-top:14px;
+    background:#fbf2ec;
+    border:1px solid #e9d2bf;
+    border-radius:14px;
+    padding:18px 20px;
+  }
+  .cancel-box.show{display:block;}
+  .cancel-box h3{margin:0 0 4px;font-size:15px;color:var(--navy);font-family:Georgia,serif;}
+  .cancel-box .sub{margin:0 0 14px;font-size:12.5px;color:var(--muted);}
+  .cancel-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .cancel-row input{
+    flex:1;min-width:150px;
+    border:1.5px solid #d9d3c0;border-radius:10px;
+    padding:10px 12px;font-size:13.5px;font-family:inherit;
+  }
+  .cancel-row input:focus{outline:none;border-color:var(--navy);}
+  .cancel-submit{
+    background:var(--leather);color:#fff;border:none;
+    padding:10px 18px;border-radius:10px;font-weight:700;font-size:13.5px;
+    cursor:pointer;white-space:nowrap;
+  }
+  .cancel-submit:hover{background:#8c1818;}
+  .cancel-submit:disabled{opacity:.6;cursor:not-allowed;}
+  .cancel-result{margin-top:10px;font-size:13px;font-weight:600;min-height:18px;}
+  .cancel-result.ok{color:#1c4a22;}
+  .cancel-result.err{color:var(--error);}
+
+  .closed-notice{
+    display:none;
+    background:#fff0f0;
+    border:1.5px solid #e8b4b4;
+    border-radius:12px;
+    padding:14px 16px;
+    font-size:14px;
+    color:#8b1c1c;
+    margin-bottom:20px;
+    line-height:1.5;
+  }
+  .closed-notice.show{display:block;}
+
+  @media (max-width:520px){
+    form{grid-template-columns:1fr;}
+    .brand h1{font-size:27px;}
+    .services-grid{grid-template-columns:1fr;}
+    .service-btn:last-child:nth-child(odd){grid-column:auto;}
+  }
+
+  /* ── More Services sticky bar ── */
+  .services-bar{
+    max-width:640px;margin:0 auto 18px;
+    position:relative;
+  }
+  .services-bar-btn{
+    width:100%;
+    background:var(--gold);color:var(--navy-dark);
+    border:none;border-radius:12px;
+    padding:13px 18px;
+    font-size:15px;font-weight:700;font-family:inherit;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+    box-shadow:0 6px 20px rgba(201,162,58,.35);
+    transition:background .15s, transform .12s;
+  }
+  .services-bar-btn:hover{ background:#d8b14c; }
+  .services-arrow{ transition:transform .2s;font-size:12px; }
+  .services-arrow.open{ transform:rotate(180deg); }
+
+  .services-dropdown{
+    display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;
+    background:#fff;border-radius:14px;
+    box-shadow:0 16px 48px rgba(8,12,40,.25);
+    border:1px solid #e2ddd0;
+    overflow:hidden;z-index:200;
+  }
+  .services-dropdown.open{ display:block; }
+
+  .dropdown-item{
+    width:100%;background:none;border:none;border-bottom:1px solid #f0ece0;
+    padding:14px 18px;text-align:left;cursor:pointer;
+    font-family:inherit;font-size:14.5px;font-weight:600;color:var(--navy);
+    display:flex;align-items:center;gap:12px;
+    transition:background .12s;
+  }
+  .dropdown-item:last-child{ border-bottom:none; }
+  .dropdown-item:hover{ background:#f7f4ec; }
+  .dropdown-item span:first-child{ font-size:20px; }
+
+  /* ── Service Modal ── */
+  .service-overlay{
+    display:none;position:fixed;inset:0;
+    background:rgba(8,12,40,.6);z-index:1000;
+    backdrop-filter:blur(3px);
+  }
+  .service-overlay.show{ display:block; }
+  .service-modal{
+    display:none;position:fixed;
+    top:50%;left:50%;transform:translate(-50%,-60%);
+    background:var(--cream);border-radius:20px;
+    padding:32px 28px 28px;
+    max-width:420px;width:90%;z-index:1001;
+    box-shadow:0 32px 80px rgba(8,12,40,.45);
+    text-align:center;
+  }
+  .service-modal.show{ display:block;transform:translate(-50%,-50%); }
+  .service-close{
+    position:absolute;top:14px;right:16px;
+    background:none;border:none;font-size:18px;
+    color:var(--muted);cursor:pointer;padding:4px;line-height:1;
+  }
+  .service-close:hover{ color:var(--navy); }
+  .service-modal-icon{ font-size:42px;margin-bottom:10px; }
+  .service-modal-title{
+    margin:0 0 12px;font-family:Georgia,serif;font-size:20px;color:var(--navy);
+  }
+  .service-modal-body{
+    margin:0;font-size:14px;color:var(--ink);line-height:1.7;
+  }
+
+  /* ── Admin Booking Panel ── */
+  .admin-panel{ display:none; }
+  .admin-panel.show{ display:block; }
+  .admin-wrap{
+    max-width:740px;margin:24px auto 0;
+    background:#fff8f0;border:2px solid var(--gold);
+    border-radius:20px;padding:24px 24px 20px;
+    box-shadow:0 16px 48px rgba(8,12,40,.25);
+  }
+  .admin-title{
+    display:flex;align-items:center;gap:10px;
+    font-family:Georgia,serif;font-size:18px;font-weight:700;
+    color:var(--navy);margin:0 0 18px;
+  }
+  .admin-title .badge{
+    background:var(--leather);color:#fff;
+    font-size:10px;font-weight:700;letter-spacing:1px;
+    padding:3px 7px;border-radius:20px;
+  }
+  .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;}
+  .admin-grid .full{grid-column:1/-1;}
+  .admin-lbl{font-size:12px;font-weight:700;color:var(--navy);display:block;margin-bottom:4px;}
+  .admin-grid input,.admin-grid select{
+    width:100%;border:1.5px solid #d9d3c0;background:#fff;
+    border-radius:10px;padding:10px 12px;font-size:14px;
+    font-family:inherit;color:var(--ink);outline:none;
+  }
+  .admin-grid input:focus,.admin-grid select:focus{
+    border-color:var(--navy);box-shadow:0 0 0 3px rgba(28,42,120,.1);
+  }
+  .admin-grid select{
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%231c2a78'><path d='M5.5 7.5l4.5 4.5 4.5-4.5'/></svg>");
+    background-repeat:no-repeat;background-position:right 10px center;background-size:16px;
+    padding-right:30px;
+  }
+  .admin-amount-row{
+    grid-column:1/-1;background:var(--navy);border-radius:10px;
+    padding:10px 14px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .admin-amount-label{font-size:12px;color:#cfd3ee;text-transform:uppercase;letter-spacing:.5px;}
+  .admin-amount-val{font-size:20px;font-weight:700;color:var(--gold);font-family:Georgia,serif;}
+  .admin-amount-note{font-size:11px;color:#aab0e0;margin-top:2px;}
+  .add-btn{
+    grid-column:1/-1;background:var(--navy);color:#fff;border:none;
+    padding:12px;border-radius:10px;font-size:14.5px;font-weight:700;
+    cursor:pointer;font-family:inherit;transition:background .15s;
+  }
+  .add-btn:hover{background:var(--navy-dark);}
+
+  .admin-msg{margin-top:12px;padding:12px 16px;border-radius:10px;font-size:13.5px;font-weight:600;display:none;}
+  .admin-msg.ok{background:#eef6ee;color:#1c4a22;border:1px solid #bfe2c0;display:block;}
+  .admin-msg.err{background:#fff0f0;color:#8b1c1c;border:1px solid #e8b4b4;display:block;}
+  .admin-receipt{
+    margin-top:14px;background:#fff;border:1.5px solid #d9d3c0;
+    border-radius:12px;padding:16px 18px;
+  }
+  .receipt-title{
+    text-align:center;font-family:Georgia,serif;font-weight:700;
+    font-size:16px;color:var(--navy);letter-spacing:.5px;
+    padding-bottom:10px;border-bottom:1.5px solid #c9d0f0;margin-bottom:12px;
+  }
+  .receipt-meta{font-size:13px;color:var(--ink);margin-bottom:10px;font-weight:600;}
+  .receipt-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .receipt-table th{
+    background:var(--navy);color:#fff;padding:8px 6px;
+    text-align:center;font-size:11.5px;letter-spacing:.3px;
+  }
+  .receipt-table td{
+    padding:7px 6px;text-align:center;border-bottom:1px solid #eee;
+    color:var(--ink);
+  }
+  .receipt-table tr:last-child td{border-bottom:none;}
+  .receipt-table tr:nth-child(even) td{background:#f7f4ec;}
+  .receipt-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;}
+  .receipt-note{
+    margin-top:14px;padding-top:10px;border-top:1px dashed #c9d0f0;
+    font-size:11.5px;color:var(--ink);line-height:1.7;
+  }
+  .receipt-note div{display:flex;align-items:center;gap:6px;}
+  .receipt-btn{
+    background:var(--navy);color:#fff;border:none;border-radius:8px;
+    padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
+    font-family:inherit;
+  }
+  .grp-ref-bar{
+    display:flex;align-items:center;gap:10px;
+    background:#f0f4ff;border:1.5px solid #c9d0f0;border-radius:10px;
+    padding:10px 14px;margin-bottom:14px;font-size:13.5px;color:var(--navy);
+  }
+  .grp-ref-bar strong{
+    font-size:15px;letter-spacing:1px;color:var(--leather);flex:1;
+  }
+  .grp-ref-bar button{
+    background:none;border:1px solid #c9d0f0;border-radius:6px;
+    padding:4px 8px;font-size:12px;cursor:pointer;color:var(--navy);
+    font-family:inherit;
+  }
+  .grp-ref-bar button:hover{background:#e0e8ff;}
+  .receipt-btn:hover{background:var(--navy-dark);}
+
+  /* ── Admin nav tabs ── */
+  .admin-nav{margin-bottom:18px;}
+  .admin-nav-title{
+    font-family:Georgia,serif;font-weight:700;font-size:17px;color:var(--navy);
+    margin-bottom:12px;display:flex;align-items:center;gap:10px;
+  }
+  .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;}
+  .admin-tab{
+    background:#fff;border:1.5px solid #d9d3c0;border-radius:10px;
+    padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;
+    font-family:inherit;color:var(--navy);transition:all .15s;
+  }
+  .admin-tab:hover{background:#f0f4ff;border-color:#c9d0f0;}
+  .admin-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .admin-tab-content{display:block;}
+
+  /* ── Cancel tab ── */
+  .cancel-tab-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .cancel-tab-title{margin:0;font-size:15px;font-weight:700;color:var(--navy);}
+  .cancel-tab-msg{font-size:13px;margin-bottom:10px;}
+  .cancel-empty{text-align:center;color:var(--muted);font-size:13px;padding:24px;border:1.5px dashed #d9d3c0;border-radius:10px;}
+
+  .bulk-group-card{
+    background:#fff;border:1.5px solid #e2ddd0;border-radius:12px;
+    margin-bottom:10px;overflow:hidden;
+  }
+  .bulk-group-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;cursor:pointer;gap:10px;
+    transition:background .12s;
+  }
+  .bulk-group-header:hover{background:#f7f4ec;}
+  .bulk-group-info{flex:1;}
+  .bulk-group-ref{font-size:12px;font-weight:700;letter-spacing:1px;color:var(--leather);}
+  .bulk-group-name{font-size:14px;font-weight:700;color:var(--navy);}
+  .bulk-group-meta{font-size:12px;color:var(--muted);}
+  .bulk-group-badge{
+    background:var(--navy);color:#fff;font-size:11px;font-weight:700;
+    padding:3px 8px;border-radius:20px;white-space:nowrap;
+  }
+  .bulk-group-chevron{font-size:12px;color:var(--muted);transition:transform .2s;}
+  .bulk-group-chevron.open{transform:rotate(180deg);}
+
+  .bulk-group-detail{display:none;border-top:1px solid #e8e4d8;padding:12px 16px;}
+  .bulk-group-detail.open{display:block;}
+  .bulk-cancel-all{
+    width:100%;background:#b3261e;color:#fff;border:none;border-radius:8px;
+    padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+    margin-bottom:10px;transition:background .15s;
+  }
+  .bulk-cancel-all:hover{background:#8b1a14;}
+  .bulk-cancel-all:disabled{opacity:.6;cursor:not-allowed;}
+  .bulk-slot-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 0;border-bottom:1px solid #f0ece0;gap:10px;font-size:13px;
+  }
+  .bulk-slot-row:last-child{border-bottom:none;}
+  .bulk-slot-info{flex:1;color:var(--ink);}
+  .bulk-slot-ref{font-size:11px;color:var(--muted);}
+  .bulk-slot-cancel{
+    background:none;border:1.5px solid #b3261e;color:#b3261e;
+    border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;
+    cursor:pointer;font-family:inherit;white-space:nowrap;
+  }
+  .bulk-slot-cancel:hover{background:#b3261e;color:#fff;}
+  .bulk-slot-cancel:disabled{opacity:.5;cursor:not-allowed;}
+  .normal-search-box{
+    background:#f0f4ff;border:1.5px solid #c9d0f0;border-radius:12px;
+    padding:14px 16px;margin-bottom:16px;
+  }
+  .normal-search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .normal-search-row input{
+    flex:1;min-width:120px;border:1.5px solid #d9d3c0;background:#fff;
+    border-radius:8px;padding:9px 12px;font-size:13.5px;
+    font-family:inherit;color:var(--ink);outline:none;
+  }
+  .normal-search-row input:focus{border-color:var(--navy);}
+  .section-divider{
+    border:none;border-top:1.5px dashed #d9d3c0;margin:18px 0;
+  }
+  .normal-slot-card{
+    background:#fff;border:1.5px solid #e2ddd0;border-radius:10px;
+    padding:12px 14px;margin-bottom:8px;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  }
+  .normal-slot-info{flex:1;font-size:13px;color:var(--ink);line-height:1.7;}
+  .normal-slot-info strong{color:var(--navy);font-size:14px;}
+  .normal-slot-ref{font-size:11px;color:var(--muted);}
+  .normal-slot-btns{display:flex;gap:6px;flex-shrink:0;align-items:center;}
+  .bulk-slot-past{font-size:11px;color:var(--muted);font-style:italic;padding:4px 10px;}
+
+  .bulk-slot-btns{display:flex;gap:6px;flex-shrink:0;}
+  .bulk-slot-edit{
+    background:none;border:1.5px solid var(--navy);color:var(--navy);
+    border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;
+    cursor:pointer;font-family:inherit;white-space:nowrap;
+  }
+  .bulk-slot-edit:hover{background:var(--navy);color:#fff;}
+  .bulk-group-actions{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .bulk-add-more{
+    flex:1;background:var(--navy);color:#fff;border:none;border-radius:8px;
+    padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+    transition:background .15s;
+  }
+  .bulk-add-more:hover{background:var(--navy-dark);}
+  .bulk-cancel-all{
+    flex:1;background:#b3261e;color:#fff;border:none;border-radius:8px;
+    padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+    transition:background .15s;
+  }
+  .bulk-cancel-all:hover{background:#8b1a14;}
+  .bulk-cancel-all:disabled,.bulk-add-more:disabled{opacity:.6;cursor:not-allowed;}
+
+  /* Edit modal */
+  .edit-overlay{
+    display:none;position:fixed;inset:0;background:rgba(8,12,40,.6);
+    z-index:1000;backdrop-filter:blur(3px);
+  }
+  .edit-overlay.show{display:block;}
+  .edit-modal{
+    display:none;position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    background:var(--cream);border-radius:20px;
+    padding:24px 24px 20px;max-width:560px;width:94%;
+    max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    z-index:1001;box-shadow:0 32px 80px rgba(8,12,40,.45);
+  }
+  .edit-modal.show{display:block;}
+  .edit-modal-title{font-family:Georgia,serif;font-weight:700;font-size:18px;color:var(--navy);margin-bottom:4px;}
+  .edit-ref{font-size:12px;color:var(--muted);margin-bottom:16px;}
+  .edit-msg{margin-top:10px;font-size:13px;font-weight:600;}
+  .edit-msg.ok{color:#1c4a22;} .edit-msg.err{color:#8b1c1c;}
+  .edit-actions{display:flex;gap:10px;margin-top:16px;}
+  .edit-save-btn{
+    flex:1;background:var(--gold);color:var(--navy-dark);border:none;
+    border-radius:10px;padding:11px;font-size:14px;font-weight:700;
+    cursor:pointer;font-family:inherit;
+  }
+  .edit-save-btn:hover{background:#d8b14c;}
+  .edit-save-btn:disabled{opacity:.6;cursor:not-allowed;}
+  .edit-cancel-btn{
+    background:#fff;border:1.5px solid #d9d3c0;color:var(--navy);
+    border-radius:10px;padding:11px 16px;font-size:14px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .edit-cancel-btn:hover{background:#f7f4ec;}
+  .edit-receipt{
+    margin-top:14px;background:#fff;border:1.5px solid #d9d3c0;
+    border-radius:12px;padding:14px 16px;
+  }
+  .edit-receipt dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;}
+  .edit-receipt dt{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;}
+  .edit-receipt dd{font-size:13px;color:var(--ink);margin:0;font-weight:600;}
+
+  .reports-placeholder{text-align:center;padding:40px 20px;color:var(--muted);}
+  @media(max-width:520px){.admin-grid{grid-template-columns:1fr;}.admin-tabs{gap:6px;}.bulk-group-actions{flex-direction:column;}}
+</style>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <h1 style="font-family:Georgia,serif;">County Indoor Netz</h1>
+    <p style="margin-top:4px;">🔐 Admin Panel</p>
+  </div>
+
+    <div class="admin-wrap">
+
+      <!-- Admin navigation tabs -->
+      <div class="admin-nav">
+        <div class="admin-nav-title">🔐 Admin Panel <span class="badge">STAFF ONLY</span></div>
+        <div class="admin-tabs">
+          <button class="admin-tab active" id="tabBtnBook"   onclick="showAdminTab('book')">📅 Bulk Booking</button>
+          <button class="admin-tab"        id="tabBtnCancel" onclick="showAdminTab('cancel')">✏️ Edit Booking</button>
+          <button class="admin-tab"        id="tabBtnReports" onclick="showAdminTab('reports')">📊 Reports</button>
+        </div>
+      </div>
+
+      <!-- ── BOOK TAB ── -->
+      <div id="adminTabBook" class="admin-tab-content">
+        <!-- Group Ref bar -->
+        <div class="grp-ref-bar">
+          <span>Group Ref:</span>
+          <strong id="grpRefDisplay">—</strong>
+          <button onclick="newGroupRef()" title="New customer / new group">🔄 New Group</button>
+        </div>
+        <div class="admin-grid">
+          <div><label class="admin-lbl">Name</label><input type="text" id="aName" placeholder="Customer name"></div>
+          <div><label class="admin-lbl">Mobile</label><input type="tel" id="aMobile" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
+          <div><label class="admin-lbl">Date</label><input type="date" id="aDate"></div>
+          <div><label class="admin-lbl">Session</label>
+            <select id="aSession">
+              <option value="" disabled selected>Select</option>
+              <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
+              <option value="Evening (06:00 pm to 11:00 pm)">Evening</option>
+            </select>
+          </div>
+          <div><label class="admin-lbl">Time</label>
+            <select id="aTime"><option value="" disabled selected>Select session first</option></select>
+          </div>
+          <div><label class="admin-lbl">Players</label>
+            <select id="aPlayers">
+              <option value="" disabled selected>Select</option>
+              <option>1</option><option>2</option><option>3</option><option>4</option>
+              <option value="Team Booking">5 &amp; Above (Team Booking)</option>
+            </select>
+          </div>
+          <div><label class="admin-lbl">Duration</label>
+            <select id="aDuration">
+              <option value="" disabled selected>Select</option>
+              <option>1 hr</option><option>1.5 hrs</option><option>2 hrs</option>
+              <option>2.5 hrs</option><option>3 hrs</option>
+            </select>
+          </div>
+          <div><label class="admin-lbl">No. of Nets</label>
+            <select id="aNets">
+              <option value="1" selected>1</option>
+              <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+            </select>
+          </div>
+          <div><label class="admin-lbl">Ball Type</label>
+            <select id="aBall">
+              <option value="" disabled selected>Select</option>
+              <option value="Leather Ball">Leather Ball</option>
+              <option value="Tennis ball">Tennis ball</option>
+            </select>
+          </div>
+          <button class="add-btn full" id="adminBookBtn" onclick="adminBookNow()">✅ Book Now</button>
+        </div>
+        <div class="admin-amount-row" style="margin:10px 0 0;border-radius:10px;">
+          <div>
+            <div class="admin-amount-label">Amount</div>
+            <div class="admin-amount-val" id="aAmountVal">— Pending —</div>
+            <div class="admin-amount-note" id="aAmountNote">Select session, players &amp; duration</div>
+          </div>
+          <div class="ball-tag" id="aBallTag" style="display:none;"></div>
+        </div>
+        <div class="admin-msg" id="adminMsg"></div>
+        <!-- Receipt -->
+        <div class="admin-receipt" id="adminReceipt" style="display:none;">
+          <div class="receipt-title">🧾 Booking Receipt</div>
+          <div class="receipt-meta" id="adminReceiptMeta"></div>
+          <table class="receipt-table">
+            <thead><tr><th>Date</th><th>Time</th><th>Duration</th><th>Players</th><th>Nets Required</th><th>Ball Type</th><th>Ref #</th></tr></thead>
+            <tbody id="adminReceiptBody"></tbody>
+          </table>
+          <div class="receipt-note">
+            <div>⛑️ Helmet compulsory for leather balls.</div>
+            <div>🧍🧍🧍 Rate changes if player count exceeds booking.</div>
+          </div>
+          <div class="receipt-actions">
+            <a id="adminWaBtn" class="share-btn wa" target="_blank" rel="noopener" style="display:none;">
+              <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+              Send via WhatsApp
+            </a>
+            <a id="adminSmsBtn" class="share-btn sms" style="display:none;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+              Send via SMS
+            </a>
+            <button class="receipt-btn" onclick="clearAdminReceipt()">🗑 Clear &amp; New</button>
+          </div>
+        </div>
+      </div><!-- end book tab -->
+
+      <!-- ── CANCEL TAB ── -->
+      <div id="adminTabCancel" class="admin-tab-content" style="display:none;">
+
+        <!-- Normal Bookings Search -->
+        <div class="normal-search-box">
+          <div class="cancel-tab-title" style="margin-bottom:10px;">🔍 Search Normal Bookings</div>
+          <div class="normal-search-row">
+            <input type="date" id="searchDate" placeholder="Search by date">
+            <span style="color:var(--muted);font-size:12px;align-self:center;">or</span>
+            <input type="text" id="searchRef" placeholder="Ref # (e.g. A1B2C3)" maxlength="12" style="text-transform:uppercase;">
+            <button class="receipt-btn" onclick="searchNormalBookings()">Search</button>
+            <button class="receipt-btn" id="normalRefreshBtn" onclick="refreshNormalBookings()" style="display:none;background:var(--navy-dark);">🔄 Refresh</button>
+          </div>
+          <div id="normalSearchMsg" style="font-size:13px;margin-top:6px;"></div>
+          <div id="normalSearchResults"></div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Bulk Bookings -->
+        <div class="cancel-tab-header">
+          <h3 class="cancel-tab-title">Active Bulk Bookings</h3>
+          <button class="receipt-btn" onclick="loadBulkList()">🔄 Refresh</button>
+        </div>
+        <div class="cancel-tab-msg" id="cancelTabMsg"></div>
+        <div id="bulkListArea">
+          <div class="cancel-empty">Click Refresh to load active bulk bookings.</div>
+        </div>
+      </div><!-- end cancel tab -->
+
+      <!-- ── REPORTS TAB ── -->
+      <div id="adminTabReports" class="admin-tab-content" style="display:none;">
+        <div class="reports-placeholder">
+          <div style="font-size:40px;margin-bottom:12px;">📊</div>
+          <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px;">Reports</div>
+          <div style="font-size:13px;color:var(--muted);">Coming soon — daily summaries, revenue reports, and more.</div>
+        </div>
+      </div><!-- end reports tab -->
+
+    </div>
+
+  <!-- Edit Booking Modal -->
+  <div class="edit-overlay" id="editOverlay" onclick="closeEditModal()"></div>
+  <div class="edit-modal" id="editModal">
+    <div class="edit-modal-title">✏️ Edit Booking</div>
+    <div class="edit-ref" id="editRefDisplay"></div>
+    <div class="admin-grid">
+      <div><label class="admin-lbl">Date</label><input type="date" id="editDate"></div>
+      <div><label class="admin-lbl">Session</label>
+        <select id="editSession">
+          <option value="" disabled selected>Select</option>
+          <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
+          <option value="Evening (06:00 pm to 11:00 pm)">Evening</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">Time</label>
+        <select id="editTime"><option value="" disabled selected>Select session first</option></select>
+      </div>
+      <div><label class="admin-lbl">Duration</label>
+        <select id="editDuration">
+          <option value="" disabled selected>Select</option>
+          <option>1 hr</option><option>1.5 hrs</option><option>2 hrs</option>
+          <option>2.5 hrs</option><option>3 hrs</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">No. of Nets</label>
+        <select id="editNets">
+          <option value="1" selected>1</option>
+          <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">Ball Type</label>
+        <select id="editBall">
+          <option value="" disabled selected>Select</option>
+          <option value="Leather Ball">Leather Ball</option>
+          <option value="Tennis ball">Tennis ball</option>
+        </select>
+      </div>
+      <div id="editPlayersRow" style="display:none;">
+        <label class="admin-lbl">No. of Players</label>
+        <select id="editPlayers">
+          <option value="" disabled selected>Select</option>
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option value="Team Booking">5 &amp; Above (Team Booking)</option>
+        </select>
+      </div>
+      <div id="editAmountRow" style="display:none;">
+        <div class="admin-amount-row full" style="margin-top:4px;">
+          <div>
+            <div class="admin-amount-label">Updated Amount</div>
+            <div class="admin-amount-val" id="editAmountVal">—</div>
+            <div class="admin-amount-note" id="editAmountNote"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="edit-msg" id="editMsg"></div>
+    <div class="edit-receipt" id="editReceipt" style="display:none;">
+      <div class="receipt-title">🧾 Updated Booking Receipt</div>
+      <dl id="editReceiptDetails"></dl>
+      <div class="receipt-note">
+        <div>⛑️ Helmet compulsory for leather balls.</div>
+        <div>🧍🧍🧍 Rate changes if player count exceeds booking.</div>
+      </div>
+      <div class="share-row" style="margin-top:12px;">
+        <a id="editWaBtn" class="share-btn wa" target="_blank" rel="noopener">
+          <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+          Send via WhatsApp
+        </a>
+        <a id="editSmsBtn" class="share-btn sms">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          Send via SMS
+        </a>
+      </div>
+    </div>
+    <div class="edit-actions">
+      <button class="edit-save-btn" id="editSaveBtn" onclick="saveEdit()">💾 Save Changes</button>
+      <button class="edit-cancel-btn" onclick="closeEditModal()">✕ Close</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+
+  // ── Shared helpers (duplicated from the client page, since this is now
+  // a standalone file and no longer shares a single <script> with it) ──
+  const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
+
+  const today = new Date();
+  const yyyy  = today.getFullYear();
+  const pad   = n => String(n).padStart(2,'0');
+  const todayStr = `${yyyy}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+
+  let MAX_NETS            = 4;
+  let MAX_NETS_PER_BOOKING = 4;
+  let BOOKING_RATES = {
+    Morning: {'1':300,'2':300,'3':400,'4':500,'Team Booking':700},
+    Evening: {'1':500,'2':500,'3':600,'4':700,
+              'Team Booking|Leather Ball':1000,'Team Booking|Tennis ball':800}
+  };
+
+  let availabilityCache = {};
+  let ALL_CLOSED   = false;
+  let CLOSED_NETS  = [];
+  let FROM_MINUTES = -1;
+
+  function fetchWithTimeout(url, options, timeoutMs){
+    timeoutMs = timeoutMs || 8000;
+    return Promise.race([
+      options ? fetch(url, options) : fetch(url),
+      new Promise(function(_,reject){
+        setTimeout(function(){ reject(new Error('Request timed out')); }, timeoutMs);
+      })
+    ]);
+  }
+
+  async function fetchAvailability(dateStr){
+    try{
+      const res = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateStr}`);
+      if(!res.ok) return null;
+      const data = await res.json();
+      if(data && typeof data.maxNets === 'number' && data.maxNets >= 0) MAX_NETS = data.maxNets;
+      if(data && typeof data.maxNetsPerBooking === 'number') MAX_NETS_PER_BOOKING = data.maxNetsPerBooking;
+      ALL_CLOSED   = !!(data && data.allClosed);
+      CLOSED_NETS  = (data && Array.isArray(data.closedNets)) ? data.closedNets : [];
+      FROM_MINUTES = (data && typeof data.fromMinutes === 'number') ? data.fromMinutes : -1;
+      return (data && data.counts) ? data.counts : data;
+    }catch(err){ return null; }
+  }
+
+  function parseSlotMinutes(label){
+    const [time, ap] = label.split(' ');
+    let [h,m] = time.split(':').map(Number);
+    if(ap === 'am'){ if(h === 12) h = 0; } else { if(h !== 12) h += 12; }
+    return h*60 + m;
+  }
+
+  function minutesToTimeLabel(mins){
+    const h = Math.floor(mins/60), m = mins%60;
+    const ap = h>=12?'pm':'am', h12 = h%12||12;
+    return (h12<10?'0':'')+h12+':'+(m<10?'0':'')+m+' '+ap;
+  }
+
+  const DURATION_SLOTS = {'1 hr':2, '1.5 hrs':3, '2 hrs':4, '2.5 hrs':5, '3 hrs':6};
+
+  function getSpanSlots(startTime, durationLabel){
+    const idx = ALL_TIMES_ADMIN.indexOf(startTime);
+    const span = DURATION_SLOTS[durationLabel] || 2;
+    if(idx === -1) return [];
+    return ALL_TIMES_ADMIN.slice(idx, idx + span);
+  }
+
+  function lookupRate(session, players, ball){
+    const sk = session.startsWith('Morning') ? 'Morning' : 'Evening';
+    const r  = BOOKING_RATES[sk] || {};
+    const keys = players === 'Team Booking'
+      ? ['5 and above', 'Team Booking']
+      : [players];
+    for(const p of keys){
+      if(p === '5 and above' || p === 'Team Booking'){
+        if(ball && r[p+'|'+ball] !== undefined) return r[p+'|'+ball];
+      }
+      if(r[p] !== undefined) return r[p];
+    }
+    return null;
+  }
+
+  function isSlotPast(dateStr, timeStr){
+    const sp = dateStr.split('/');
+    const iso = sp.length===3 ? '20'+sp[2]+'-'+sp[1]+'-'+sp[0] : '';
+    if(iso < todayStr) return true;
+    if(iso === todayStr && timeStr){
+      const now = new Date();
+      return parseSlotMinutes(timeStr) <= now.getHours()*60 + now.getMinutes();
+    }
+    return false;
+  }
+
+  function toTitleCase(str){
+    return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // Fetch live settings (max nets, rates) on load
+  (async function initAdminSettings(){
+    try{
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=settings`);
+      if(!res.ok) return;
+      const data = await res.json();
+      if(data && typeof data.maxNets === 'number' && data.maxNets >= 0) MAX_NETS = data.maxNets;
+      if(data && typeof data.maxNetsPerBooking === 'number') MAX_NETS_PER_BOOKING = data.maxNetsPerBooking;
+      if(data && data.rates && typeof data.rates === 'object') BOOKING_RATES = data.rates;
+    }catch(e){}
+  })();
+
+
+  const ALL_TIMES_ADMIN = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
+    "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
+    "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm","11:00 pm"];
+  const MORNING_A = ALL_TIMES_ADMIN.slice(0, ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
+  const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("06:00 pm"));
+
+  const aSession  = document.getElementById('aSession');
+  const aTime     = document.getElementById('aTime');
+  const aPlayers  = document.getElementById('aPlayers');
+  const aDuration = document.getElementById('aDuration');
+  const aBall     = document.getElementById('aBall');
+  const aNetsEl   = document.getElementById('aNets');
+  const aAmtVal   = document.getElementById('aAmountVal');
+  const aAmtNote  = document.getElementById('aAmountNote');
+  const aDateEl   = document.getElementById('aDate');
+
+  // Bulk booking must not allow picking a past date — same rule as the
+  // normal booking calendar. No max cap here since admins may need to
+  // book further ahead than the public-facing 15-day window.
+  aDateEl.min = todayStr;
+  if (!aDateEl.value || aDateEl.value < todayStr) aDateEl.value = todayStr;
+  aDateEl.addEventListener('change', ()=>{
+    if (aDateEl.value && aDateEl.value < todayStr) {
+      alert('Bulk bookings cannot be made for a past date.');
+      aDateEl.value = todayStr;
+      applyAdminPastTimeFilter();
+      refreshAdminAvailability();
+    }
+  });
+
+  const ADMIN_DUR_HRS = {'1 hr':1,'1.5 hrs':1.5,'2 hrs':2,'2.5 hrs':2.5,'3 hrs':3};
+
+  // Ball type tag next to the Amount box — mirrors the normal booking form
+  const aBallTag = document.getElementById('aBallTag');
+  aBall.addEventListener('change', ()=>{
+    if(aBall.value === 'Leather Ball'){
+      aBallTag.style.display='inline-flex';
+      aBallTag.style.background='#5c1414';
+      aBallTag.style.color='#fff';
+      aBallTag.textContent='Leather';
+    } else if(aBall.value === 'Tennis ball'){
+      aBallTag.style.display='inline-flex';
+      aBallTag.style.background='#234d29';
+      aBallTag.style.color='#fff';
+      aBallTag.textContent='Tennis';
+    } else {
+      aBallTag.style.display='none';
+    }
+  });
+
+  function calcAdminAmount(){
+    const d    = aDuration.value;
+    const nets = parseInt(aNetsEl.value)||1;
+    const rate = lookupRate(aSession.value, aPlayers.value, aBall.value);
+    const hrs = ADMIN_DUR_HRS[d];
+    if(rate && hrs){
+      const amt = rate * hrs * nets;
+      aAmtVal.textContent  = '₹' + amt.toLocaleString('en-IN');
+      aAmtNote.textContent = `₹${rate}/hr × ${d}${nets>1?' × '+nets+' Nets':''}`;
+    } else {
+      aAmtVal.textContent  = '— Pending —';
+      aAmtNote.textContent = 'Select session, players & duration';
+    }
+  }
+
+  // Restrict No. of Nets to 1 when players < 5 (Team Booking), same as customer form
+  aPlayers.addEventListener('change', ()=>{
+    if(aPlayers.value !== 'Team Booking'){
+      aNetsEl.value = '1';
+      aNetsEl.disabled = true;
+    } else {
+      aNetsEl.disabled = false;
+    }
+    calcAdminAmount();
+  });
+
+  [aDuration, aBall].forEach(el => el.addEventListener('change', calcAdminAmount));
+  aNetsEl.addEventListener('change', calcAdminAmount);
+
+  function populateAdminTimes(list){
+    aTime.innerHTML = '';
+    const ph = document.createElement('option');
+    ph.value=''; ph.disabled=true; ph.selected=true;
+    ph.textContent = list ? 'Select time' : 'Select session first';
+    aTime.appendChild(ph);
+    (list||[]).forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; aTime.appendChild(o); });
+    aTime.disabled = !list;
+  }
+
+  async function refreshAdminAvailability(){
+    const dateStr = document.getElementById('aDate').value;
+    if(!dateStr || aTime.disabled) return;
+    aTime.querySelector('option[disabled]').textContent = '⏳ Checking availability…';
+    const counts = await fetchAvailability(dateStr);
+    aTime.querySelector('option[disabled]').textContent = 'Select time';
+    if(!counts) return;
+    const dur = aDuration.value;
+    Array.from(aTime.options).forEach(o=>{
+      if(!o.value) return;
+      const slots = getSpanSlots(o.value, dur||'1 hr');
+      const used  = slots.length ? Math.max(...slots.map(s => counts[s]||0)) : (counts[o.value]||0);
+      const left  = MAX_NETS - used;
+      if(left <= 0){
+        o.textContent = `${o.value} — Full`;
+        o.style.color = '#b3261e'; o.disabled = true;
+        if(aTime.value === o.value) aTime.value = '';
+      } else {
+        o.textContent = left < MAX_NETS ? `${o.value} (${left} net${left>1?'s':''} left)` : o.value;
+        o.style.color = ''; o.disabled = false;
+      }
+    });
+    updateAdminNetsLimit(counts, dur);
+    applyAdminPastTimeFilter();
+    filterAdminDurations(); // re-enforce duration limit after availability loads
+  }
+
+  function updateAdminNetsLimit(counts, dur){
+    if(!counts) return;
+    const t = aTime.value;
+    if(!t) return;
+    const slots = getSpanSlots(t, dur||'1 hr');
+    const used  = slots.length ? Math.max(...slots.map(s => counts[s]||0)) : (counts[t]||0);
+    const avail = Math.max(0, MAX_NETS - used);
+    const cur   = parseInt(aNetsEl.value)||1;
+    aNetsEl.innerHTML = '';
+    for(let i=1; i<=Math.min(avail, MAX_NETS_PER_BOOKING||4); i++){
+      const o = document.createElement('option');
+      o.value = i; o.textContent = i; aNetsEl.appendChild(o);
+    }
+    aNetsEl.value = Math.min(cur, avail) || 1;
+    if(avail === 0) aNetsEl.innerHTML = '<option value="0">No nets free</option>';
+  }
+
+  populateAdminTimes(null);
+
+  // Filter admin durations so bookings don't extend past session end
+  const ADMIN_DUR_MINS = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
+
+  function filterAdminDurations(){
+    const sessionVal = aSession.value;
+    const timeVal    = aTime.value;
+    if(!sessionVal || !timeVal) return;
+    // Morning ends at 6pm (5pm slot + 1hr), Evening ends at midnight (11pm + 1hr)
+    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 24*60;
+    const timeMins       = parseSlotMinutes(timeVal);
+    Array.from(aDuration.options).forEach(o=>{
+      if(!o.value) return;
+      const endMins = timeMins + (ADMIN_DUR_MINS[o.value]||60);
+      if(endMins > sessionEndMins){
+        o.disabled = true;
+        if(aDuration.value === o.value){ aDuration.value = ''; }
+      } else {
+        o.disabled = false;
+      }
+    });
+  }
+
+  function applyAdminPastTimeFilter(){
+    const dateVal = document.getElementById('aDate').value;
+    const now = new Date();
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    Array.from(aTime.options).forEach(o=>{
+      if(!o.value) return;
+      if(dateVal === todayStr && parseSlotMinutes(o.value) <= nowMins){
+        o.disabled = true;
+        o.textContent = o.value.replace(/ \(.*\)/,'') + ' — Past';
+        if(aTime.value === o.value) aTime.value = '';
+      } else if(!o.disabled || o.textContent.includes('Past')) {
+        // Only re-enable if it was disabled for being past (not for being Full)
+        if(o.textContent.includes('Past')){
+          o.disabled = false;
+        }
+      }
+    });
+  }
+
+  aSession.addEventListener('change', ()=>{
+    populateAdminTimes(aSession.value.startsWith('Morning') ? MORNING_A : EVENING_A);
+    applyAdminPastTimeFilter();
+    filterAdminDurations();
+    refreshAdminAvailability();
+    calcAdminAmount(); // recalculate — Morning vs Evening have different rates
+  });
+  document.getElementById('aDate').addEventListener('change', ()=>{
+    applyAdminPastTimeFilter();
+    refreshAdminAvailability();
+  });
+  aDuration.addEventListener('change', ()=>{
+    refreshAdminAvailability();
+    calcAdminAmount();
+  });
+  aTime.addEventListener('change', ()=>{
+    filterAdminDurations();
+    updateAdminNetsLimit(availabilityCache, aDuration.value);
+  });
+
+
+  // Set search date min to today — no point searching past dates for edit/cancel
+  const searchDateEl = document.getElementById('searchDate');
+  if(searchDateEl) searchDateEl.min = todayStr;
+
+  // Auto-clear the other field when one is used — prevents conflicting searches
+  document.getElementById('searchDate').addEventListener('input', ()=>{
+    document.getElementById('searchRef').value = '';
+  });
+  document.getElementById('searchRef').addEventListener('input', ()=>{
+    document.getElementById('searchDate').value = '';
+  });
+
+  // Allow Enter key in search fields
+  ['searchDate','searchRef'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter') searchNormalBookings(); });
+  });
+
+  // ── Admin tab navigation ─────────────────────────────────────
+  const ADMIN_TABS = ['book','cancel','reports'];
+  function showAdminTab(tab){
+    ADMIN_TABS.forEach(function(t){
+      document.getElementById('adminTab'+t.charAt(0).toUpperCase()+t.slice(1)).style.display = t===tab?'block':'none';
+      const btn = document.getElementById('tabBtn'+t.charAt(0).toUpperCase()+t.slice(1));
+      if(btn) btn.classList.toggle('active', t===tab);
+    });
+    if(tab==='cancel') loadBulkList();
+  }
+  window.showAdminTab = showAdminTab;
+
+  // ── Cancel tab — bulk booking list ───────────────────────────
+  async function loadBulkList(){
+    const area = document.getElementById('bulkListArea');
+    const msg  = document.getElementById('cancelTabMsg');
+    area.innerHTML = '<div class="cancel-empty">⏳ Loading active bulk bookings…</div>';
+    msg.textContent = '';
+    try {
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 15000);
+      const data = await res.json();
+      if(data.status !== 'ok' || !data.groups.length){
+        area.innerHTML = '<div class="cancel-empty">No active bulk bookings found.</div>';
+        return;
+      }
+      area.innerHTML = data.groups.map((g,gi)=>`
+        <div class="bulk-group-card" id="grpCard${gi}">
+          <div class="bulk-group-header" onclick="toggleBulkGroup(${gi})">
+            <div class="bulk-group-info">
+              <div class="bulk-group-ref">${g.groupRef}</div>
+              <div class="bulk-group-name">${g.name}</div>
+              <div class="bulk-group-meta">📱 ${g.mobile}</div>
+            </div>
+            <span class="bulk-group-badge">${g.slots.length} slot${g.slots.length>1?'s':''}</span>
+            <span class="bulk-group-chevron" id="chev${gi}">▾</span>
+          </div>
+          <div class="bulk-group-detail" id="grpDetail${gi}">
+            <div class="bulk-group-actions">
+              <button class="bulk-cancel-all" onclick="cancelBulkGroup('${g.groupRef}','${g.mobile}',${gi})">
+                🚫 Cancel Entire Group
+              </button>
+              <button class="bulk-add-more" onclick="addMoreToGroup('${g.groupRef}','${g.name}','${g.mobile}')">
+                ➕ Add More Slots
+              </button>
+            </div>
+            ${g.slots.map((s,si)=>{
+              // Parse slot date (dd/mm/yy) and compare with today
+              const sp = s.date.split('/');
+              const slotISO = sp.length===3 ? `20${sp[2]}-${sp[1]}-${sp[0]}` : '';
+              const isPast = isSlotPast(s.date, s.time);
+              return `
+              <div class="bulk-slot-row" id="slot_${gi}_${si}">
+                <div class="bulk-slot-info">
+                  📅 ${s.date} &nbsp; ⏰ ${s.time} &nbsp; ⏱ ${s.duration} &nbsp; 🎾 ${s.net}
+                  <div class="bulk-slot-ref">Ref: ${s.ref}</div>
+                </div>
+                <div class="bulk-slot-btns">
+                  ${!isPast ? `
+                    <button class="bulk-slot-edit" onclick="openEditModal('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}','${s.duration}','${s.net}','${s.ball||''}','${s.players||''}')">✏️ Edit</button>
+                    <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}',${gi},${si})">🚫 Cancel</button>
+                  ` : '<span class="bulk-slot-past">Past</span>'}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`).join('');
+    } catch(e){
+      area.innerHTML = '<div class="cancel-empty">❌ Could not load bookings. Check connection.</div>';
+    }
+  }
+  window.loadBulkList = loadBulkList;
+
+  function toggleBulkGroup(gi){
+    const detail = document.getElementById('grpDetail'+gi);
+    const chev   = document.getElementById('chev'+gi);
+    const open   = detail.classList.toggle('open');
+    chev.classList.toggle('open', open);
+  }
+  window.toggleBulkGroup = toggleBulkGroup;
+
+  async function cancelBulkGroup(groupRef, mobile, gi){
+    const btn = document.querySelector(`#grpCard${gi} .bulk-cancel-all`);
+    btn.disabled = true; btn.textContent = 'Cancelling…';
+    try {
+      const res  = await fetchWithTimeout(
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(groupRef)}&mobile=${encodeURIComponent(mobile)}`,
+        null, 20000);
+      const data = await res.json();
+      if(data.status && data.status.startsWith('group_cancelled:')){
+        const count = data.status.split(':')[1];
+        document.getElementById('grpCard'+gi).style.opacity = '0.5';
+        btn.textContent = `✅ ${count} slot${count>1?'s':''} cancelled`;
+        document.getElementById('cancelTabMsg').textContent = `✅ Group ${groupRef} — ${count} slot${count>1?'s':''} cancelled.`;
+        // Disable all individual cancel buttons in this card
+        document.querySelectorAll(`#grpCard${gi} .bulk-slot-cancel`).forEach(b=>b.disabled=true);
+      } else if(data.status === 'too_late'){
+        btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
+        document.getElementById('cancelTabMsg').textContent = '⚠️ Some or all slots are in the past and cannot be cancelled.';
+      } else {
+        btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
+        document.getElementById('cancelTabMsg').textContent = '❌ Cancellation failed. Try again.';
+      }
+    } catch(e){
+      btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
+      document.getElementById('cancelTabMsg').textContent = '❌ Connection error. Try again.';
+    }
+  }
+  window.cancelBulkGroup = cancelBulkGroup;
+
+  async function cancelSingleSlot(ref, mobile, gi, si){
+    const btn = document.getElementById(`slot_${gi}_${si}`).querySelector('.bulk-slot-cancel');
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const res  = await fetchWithTimeout(
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`,
+        null, 15000);
+      const data = await res.json();
+      if(data.status === 'cancelled'){
+        document.getElementById(`slot_${gi}_${si}`).innerHTML =
+          `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>`;
+      } else if(data.status === 'too_late'){
+        btn.disabled = true; btn.textContent = 'Past';
+      } else if(data.status === 'already_cancelled'){
+        btn.disabled = true; btn.textContent = 'Already cancelled';
+      } else {
+        btn.disabled = false; btn.textContent = 'Cancel';
+        document.getElementById('cancelTabMsg').textContent = '❌ Could not cancel. Try again.';
+      }
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Cancel';
+    }
+  }
+  window.cancelSingleSlot = cancelSingleSlot;
+
+  // Helper: returns true if a slot (dd/mm/yy date + time string) is in the past
+  function isSlotPast(dateStr, timeStr){
+    const sp = dateStr.split('/');
+    const iso = sp.length===3 ? '20'+sp[2]+'-'+sp[1]+'-'+sp[0] : '';
+    if(iso < todayStr) return true;
+    if(iso === todayStr && timeStr){
+      const now = new Date();
+      return parseSlotMinutes(timeStr) <= now.getHours()*60 + now.getMinutes();
+    }
+    return false;
+  }
+
+  // ── Normal Booking Search ─────────────────────────────────────
+  let lastSearchDate = '', lastSearchRef = '';
+
+  async function searchNormalBookings(){
+    const dateVal = document.getElementById('searchDate').value;
+    const refVal  = document.getElementById('searchRef').value.trim().toUpperCase();
+    const msg     = document.getElementById('normalSearchMsg');
+    const results = document.getElementById('normalSearchResults');
+
+    if(!dateVal && !refVal){
+      msg.textContent = '⚠️ Enter a date or Ref # to search.';
+      msg.style.color = 'var(--error)'; return;
+    }
+    // Store last search for refresh
+    lastSearchDate = dateVal;
+    lastSearchRef  = refVal;
+
+    msg.textContent = '⏳ Searching…'; msg.style.color = 'var(--muted)';
+    results.innerHTML = '';
+    document.getElementById('normalRefreshBtn').style.display = 'none';
+
+    try {
+      const qs = refVal
+        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}`
+        : `action=searchBookings&date=${encodeURIComponent(dateVal)}`;
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+      const data = await res.json();
+
+      if(!data.results || !data.results.length){
+        msg.textContent = 'No active normal bookings found.';
+        msg.style.color = 'var(--muted)'; return;
+      }
+      msg.textContent = `${data.results.length} booking${data.results.length>1?'s':''} found.`;
+      msg.style.color = 'var(--navy)';
+      document.getElementById('normalRefreshBtn').style.display = 'inline-flex';
+
+      results.innerHTML = data.results.map((b,i)=>`
+        <div class="normal-slot-card" id="nslot_${i}">
+          <div class="normal-slot-info">
+            <strong>${b.name}</strong> &nbsp; 📱 ${b.mobile}<br>
+            📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; ⏱ ${b.duration} &nbsp; 🎾 ${b.net}<br>
+            ${b.session.startsWith('Morning')?'Morning':'Evening'} &nbsp; ${b.ball} &nbsp; ${b.amount}
+            <div class="normal-slot-ref">Ref: ${b.ref}</div>
+          </div>
+          <div class="normal-slot-btns">
+            ${isSlotPast(b.date, b.time)
+              ? '<span class="bulk-slot-past">Past</span>'
+              : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',' + i + ')\">🚫 Cancel</button>'}
+          </div>
+        </div>`).join('');
+    } catch(e){
+      msg.textContent = '❌ Search failed. Check connection.';
+      msg.style.color = 'var(--error)';
+    }
+  }
+  async function refreshNormalBookings(){
+    // Re-run last search using stored date/ref
+    if(!lastSearchDate && !lastSearchRef) return;
+    document.getElementById('searchDate').value = lastSearchDate;
+    document.getElementById('searchRef').value  = lastSearchRef;
+    await searchNormalBookings();
+  }
+  window.refreshNormalBookings = refreshNormalBookings;
+  window.searchNormalBookings  = searchNormalBookings;
+
+  async function cancelNormalBooking(ref, mobile, idx){
+    const btn = document.querySelector(`#nslot_${idx} .bulk-slot-cancel`);
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const res  = await fetchWithTimeout(
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`,
+        null, 15000);
+      const data = await res.json();
+      if(data.status === 'cancelled'){
+        document.getElementById(`nslot_${idx}`).innerHTML =
+          `<div class="bulk-slot-cancelled" style="padding:10px;">✅ Booking ${ref} cancelled.</div>`;
+      } else if(data.status === 'too_late'){
+        btn.disabled = true; btn.textContent = 'Past';
+      } else {
+        btn.disabled = false; btn.textContent = '🚫 Cancel';
+      }
+    } catch(e){ btn.disabled = false; btn.textContent = '🚫 Cancel'; }
+  }
+  window.cancelNormalBooking = cancelNormalBooking;
+
+  // ── Add More Slots to existing group ─────────────────────────
+  function addMoreToGroup(groupRef, name, mobile){
+    // Switch to Bulk Booking tab and pre-fill group details
+    showAdminTab('book');
+    currentGroupRef = groupRef;
+    document.getElementById('grpRefDisplay').textContent = groupRef;
+    document.getElementById('aName').value   = name;
+    document.getElementById('aMobile').value = mobile;
+    document.getElementById('aDate').value   = todayStr;
+    aSession.value = ''; populateAdminTimes(null);
+    aDuration.value = ''; aBall.value = '';
+    document.getElementById('aBallTag').style.display = 'none';
+    document.getElementById('adminMsg').textContent = `➕ Adding more slots to group ${groupRef} for ${name}`;
+    document.getElementById('adminMsg').className = 'admin-msg ok';
+    // Clear previous receipt so new slots accumulate cleanly
+    adminBookings = [];
+    document.getElementById('adminReceipt').style.display = 'none';
+    document.getElementById('adminWaBtn').style.display   = 'none';
+    document.getElementById('adminSmsBtn').style.display  = 'none';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  window.addMoreToGroup = addMoreToGroup;
+
+  // ── Edit booking modal ────────────────────────────────────────
+  const ALL_TIMES_EDIT = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
+    "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
+    "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm","11:00 pm"];
+  const MORNING_E = ALL_TIMES_EDIT.slice(0, ALL_TIMES_EDIT.indexOf('05:00 pm')+1);
+  const EVENING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('06:00 pm'));
+
+  let editCurrentRef = '', editCurrentMobile = '', editCurrentName = '', editCurrentGroupRef = '';
+
+  function openEditModal(ref, mobile, name, groupRef, date, time, duration, net, ball, players){
+    editCurrentRef      = ref;
+    editCurrentMobile   = mobile;
+    editCurrentName     = name;
+    editCurrentGroupRef = groupRef;
+    editCurrentPlayers  = players || '';
+    const isBulk = !!(groupRef && groupRef.startsWith('GRP-'));
+    // Show amount row for all bookings where player count is known
+    document.getElementById('editAmountRow').style.display = players ? 'block' : 'none';
+    document.getElementById('editRefDisplay').textContent = `Ref: ${ref} · Group: ${groupRef||'—'} · ${name} · ${mobile}`;
+    document.getElementById('editMsg').textContent = '';
+    document.getElementById('editMsg').className  = 'edit-msg';
+    document.getElementById('editReceipt').style.display = 'none';
+
+    // Restrict date to today onwards — cannot edit to a past date
+    const editDateEl = document.getElementById('editDate');
+    editDateEl.min = todayStr;
+
+    // Convert dd/mm/yy to yyyy-MM-dd for date input
+    if(date && date.includes('/')){
+      const p = date.split('/');
+      const iso = `20${p[2]}-${p[1]}-${p[0]}`;
+      editDateEl.value = iso < todayStr ? todayStr : iso;
+    }
+
+    // Pre-fill session and time
+    const hour = parseInt(time.split(':')[0],10);
+    const isPM = time.includes('pm');
+    const hour24 = isPM && hour!==12 ? hour+12 : (!isPM && hour===12 ? 0 : hour);
+    const session = hour24 < 18 ? 'Morning (09:00 am to 05:00 pm)' : 'Evening (06:00 pm to 11:00 pm)';
+    document.getElementById('editSession').value = session;
+    populateEditTimes(hour24 < 18 ? MORNING_E : EVENING_E);
+    applyEditPastTimeFilter(); // hide past times if today
+    document.getElementById('editTime').value = time;
+    document.getElementById('editDuration').value = duration;
+
+    const netCount = (net.match(/Net/g)||[]).length || 1;
+    document.getElementById('editNets').value = netCount;
+    // Remember the original slot so we can add back freed nets in the availability calc
+    editOriginalDate      = document.getElementById('editDate').value;
+    editOriginalTime      = time;
+    editCurrentNetsCount  = netCount;
+    // Pre-fill ball type
+    if(ball) document.getElementById('editBall').value = ball;
+
+    // Show Players field for ALL bookings (bulk and normal)
+    document.getElementById('editPlayersRow').style.display = 'block';
+    if(players) document.getElementById('editPlayers').value = players;
+
+    // Apply nets restriction based on pre-filled players
+    const nSelEdit = document.getElementById('editNets');
+    if(players && players !== 'Team Booking'){
+      nSelEdit.disabled = true; // lock to 1 net for < 5 players
+    } else {
+      nSelEdit.disabled = false;
+    }
+
+    document.getElementById('editOverlay').classList.add('show');
+    document.getElementById('editModal').classList.add('show');
+    filterEditDurations();
+    calcEditAmount(); // calculate immediately with pre-filled values
+    refreshEditAvailability(); // then update availability labels (async)
+  }
+  window.openEditModal = openEditModal;
+
+  function populateEditTimes(list){
+    const sel = document.getElementById('editTime');
+    sel.innerHTML = '<option value="" disabled selected>Select time</option>';
+    (list||[]).forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o); });
+  }
+
+  function applyEditPastTimeFilter(){
+    const dateVal = document.getElementById('editDate').value;
+    const timeSel = document.getElementById('editTime');
+    if(dateVal !== todayStr){
+      Array.from(timeSel.options).forEach(o=>{
+        if(o.value){ o.disabled=false; o.dataset.past='0';
+          o.textContent = o.value.replace(' — Past',''); }
+      });
+      return;
+    }
+    const now = new Date();
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    Array.from(timeSel.options).forEach(o=>{
+      if(!o.value) return;
+      const base = o.value.replace(' — Past','');
+      const slotMins = parseSlotMinutes(base);
+      if(slotMins <= nowMins){
+        // Label as Past but DO NOT disable — disabled options can't be selected
+        // in browsers, which causes blank Time when original time is past.
+        // Server will reject saving a past time anyway.
+        o.dataset.past = '1';
+        o.textContent = base + ' — Past';
+        o.style.color = '#b3261e';
+      } else {
+        o.dataset.past = '0';
+        o.textContent = base;
+        o.style.color = '';
+      }
+    });
+  }
+
+  let editAvailCache = {};
+  let editOriginalDate = '', editOriginalTime = '', editCurrentNetsCount = 0, editCurrentPlayers = '';
+
+  async function refreshEditAvailability(){
+    const dateVal = document.getElementById('editDate').value;
+    const sessionVal = document.getElementById('editSession').value;
+    if(!dateVal || !sessionVal) return;
+    const timeSel = document.getElementById('editTime');
+    const ph = timeSel.querySelector('option[disabled]');
+    if(ph) ph.textContent = '⏳ Checking…';
+    const counts = await fetchAvailability(dateVal);
+    if(ph) ph.textContent = 'Select time';
+    editAvailCache = counts || {};
+    const durVal = document.getElementById('editDuration').value;
+    const sameDate = (dateVal === editOriginalDate);
+
+    Array.from(timeSel.options).forEach(o=>{
+      if(!o.value || o.dataset.past === '1') return;
+      const slots = getSpanSlots(o.value, durVal || '1 hr');
+      const used  = slots.length ? Math.max(...slots.map(s => editAvailCache[s]||0)) : (editAvailCache[o.value]||0);
+      // Add back current booking's nets when checking its own original slot
+      const bonus = (sameDate && o.value === editOriginalTime) ? editCurrentNetsCount : 0;
+      const left  = MAX_NETS - used + bonus;
+      if(left <= 0){
+        o.textContent = o.value + ' — Full';
+        o.style.color = '#b3261e';
+        // DO NOT disable or clear selection — original slot must remain visible
+      } else {
+        o.textContent = left < MAX_NETS ? (o.value + ' (' + left + ' net' + (left>1?'s':'') + ' left)') : o.value;
+        o.style.color = ''; o.disabled = false;
+      }
+    });
+    updateEditNetsLimit();
+    applyEditPastTimeFilter();
+  }
+
+  function updateEditNetsLimit(){
+    const t   = document.getElementById('editTime').value;
+    const dur = document.getElementById('editDuration').value;
+    if(!t || !editAvailCache || Object.keys(editAvailCache).length === 0) return;
+    const slots = getSpanSlots(t, dur || '1 hr');
+    const used  = slots.length ? Math.max(...slots.map(s => editAvailCache[s]||0)) : (editAvailCache[t]||0);
+
+    // When the same original slot is selected, Surya's current nets will be freed —
+    // add them back so the dropdown correctly shows how many nets are available
+    const sameSlot = (t === editOriginalTime && document.getElementById('editDate').value === editOriginalDate);
+    const bonus     = sameSlot ? editCurrentNetsCount : 0;
+
+    const avail = Math.max(0, MAX_NETS - used + bonus);
+    const nSel  = document.getElementById('editNets');
+    const cur   = parseInt(nSel.value)||1;
+    nSel.innerHTML = '';
+    for(let i=1; i<=Math.min(avail, MAX_NETS); i++){
+      const o = document.createElement('option');
+      o.value = i; o.textContent = i; nSel.appendChild(o);
+    }
+    nSel.value = Math.min(cur, avail) || 1;
+    if(avail === 0) nSel.innerHTML = '<option value="0">No nets free</option>';
+  }
+
+  // Amount calculation for edit modal (normal bookings only)
+  const EDIT_DUR_HRS = {'1 hr':1,'1.5 hrs':1.5,'2 hrs':2,'2.5 hrs':2.5,'3 hrs':3};
+
+  function calcEditAmount(){
+    if(!editCurrentPlayers) return; // skip if no player count available
+    const dur  = document.getElementById('editDuration').value;
+    const nets = parseInt(document.getElementById('editNets').value)||1;
+    const ball = document.getElementById('editBall').value;
+    const p    = editCurrentPlayers;
+    const session = document.getElementById('editSession').value;
+    const rate = lookupRate(session, p, ball);
+    const hrs = EDIT_DUR_HRS[dur];
+    if(rate && hrs){
+      const amt = rate * hrs * nets;
+      document.getElementById('editAmountVal').textContent  = '₹' + amt.toLocaleString('en-IN');
+      document.getElementById('editAmountNote').textContent = `₹${rate}/hr × ${dur}${nets>1?' × '+nets+' Nets':''}`;
+    } else {
+      document.getElementById('editAmountVal').textContent  = '—';
+      document.getElementById('editAmountNote').textContent = '';
+    }
+  }
+
+  ['editSession','editDuration','editNets','editBall'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', calcEditAmount);
+  });
+  document.getElementById('editPlayers').addEventListener('change', ()=>{
+    editCurrentPlayers = document.getElementById('editPlayers').value;
+    const nSel = document.getElementById('editNets');
+    if(editCurrentPlayers && editCurrentPlayers !== 'Team Booking'){
+      // Less than 5 players — lock to 1 net
+      nSel.value = '1';
+      nSel.disabled = true;
+    } else {
+      nSel.disabled = false;
+    }
+    calcEditAmount();
+  });
+
+  const EDIT_DUR_MINS = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
+
+  function filterEditDurations(){
+    const sessionVal = document.getElementById('editSession').value;
+    const timeVal    = document.getElementById('editTime').value;
+    const durSel     = document.getElementById('editDuration');
+    if(!sessionVal || !timeVal) return;
+    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 24*60;
+    const timeMins = parseSlotMinutes(timeVal);
+    Array.from(durSel.options).forEach(o=>{
+      if(!o.value) return;
+      const endMins = timeMins + (EDIT_DUR_MINS[o.value]||60);
+      if(endMins > sessionEndMins){
+        o.disabled = true;
+        if(durSel.value === o.value) durSel.value = '';
+      } else {
+        o.disabled = false;
+      }
+    });
+  }
+
+  document.getElementById('editSession').addEventListener('change', ()=>{
+    const v = document.getElementById('editSession').value;
+    populateEditTimes(v.startsWith('Morning') ? MORNING_E : EVENING_E);
+    applyEditPastTimeFilter();
+    filterEditDurations();
+    refreshEditAvailability();
+    calcEditAmount();
+  });
+  document.getElementById('editDate').addEventListener('change', ()=>{
+    applyEditPastTimeFilter();
+    filterEditDurations();
+    refreshEditAvailability();
+  });
+  document.getElementById('editTime').addEventListener('change', ()=>{
+    filterEditDurations();
+    updateEditNetsLimit();
+  });
+  document.getElementById('editDuration').addEventListener('change', ()=>{
+    refreshEditAvailability();
+    calcEditAmount();
+  });
+
+  function closeEditModal(){
+    document.getElementById('editOverlay').classList.remove('show');
+    document.getElementById('editModal').classList.remove('show');
+    document.getElementById('editReceipt').style.display = 'none';
+    document.getElementById('editSaveBtn').style.display = '';  // restore button
+    document.getElementById('editMsg').textContent = '';
+    document.getElementById('editMsg').className = 'edit-msg';
+  }
+  window.closeEditModal = closeEditModal;
+
+  async function saveEdit(){
+    const ref      = editCurrentRef;
+    const mobile   = editCurrentMobile;
+    const date     = document.getElementById('editDate').value;
+    const session  = document.getElementById('editSession').value;
+    const time     = document.getElementById('editTime').value;
+    const duration = document.getElementById('editDuration').value;
+    const nets     = parseInt(document.getElementById('editNets').value)||1;
+    const ball     = document.getElementById('editBall').value;
+    const players  = document.getElementById('editPlayers').value || editCurrentPlayers;
+    const btn      = document.getElementById('editSaveBtn');
+    const msg      = document.getElementById('editMsg');
+
+    if(!date||!session||!time||!duration){
+      msg.textContent = '⚠️ Please fill Date, Session, Time and Duration.';
+      msg.className = 'edit-msg err'; return;
+    }
+
+    // Block saving to a past time slot
+    if(isSlotPast(document.getElementById('editDate').value.split('-').reverse().map((v,i)=>i===2?v.slice(2):v).join('/'), time)){
+      msg.textContent = '❌ Cannot save — this time slot has already passed. Please choose a future time.';
+      msg.className = 'edit-msg err'; return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    msg.textContent = ''; msg.className = 'edit-msg';
+    try {
+      const amountVal = document.getElementById('editAmountVal').textContent.replace(/[\u20B9,]/g,'').trim();
+      const qs = [
+        `action=editBooking`,
+        `ref=${encodeURIComponent(ref)}`,
+        `mobile=${encodeURIComponent(mobile)}`,
+        `date=${encodeURIComponent(date)}`,
+        `session=${encodeURIComponent(session)}`,
+        `time=${encodeURIComponent(time)}`,
+        `duration=${encodeURIComponent(duration)}`,
+        `netsRequired=${nets}`,
+        ball ? `ball=${encodeURIComponent(ball)}` : '',
+        players ? `players=${encodeURIComponent(players)}` : '',
+        (amountVal && amountVal !== '—') ? `amount=${encodeURIComponent(amountVal)}` : ''
+      ].filter(Boolean).join('&');
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const result = await res.json();
+      if(result.status === 'ok'){
+        const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
+        const dp = date.split('-');
+        const dateDisplay = dp[2]+'/'+dp[1]+'/'+dp[0].slice(2);
+        const sessionShort = session.startsWith('Morning') ? 'Morning' : 'Evening';
+
+        msg.textContent = '✅ Booking updated successfully!';
+        msg.className = 'edit-msg ok';
+        document.getElementById('editSaveBtn').style.display = 'none'; // hide after success
+
+        // Build receipt
+        document.getElementById('editReceiptDetails').innerHTML = `
+          <dt>Group Ref</dt><dd style="color:var(--leather);font-weight:700;letter-spacing:.5px">${editCurrentGroupRef}</dd>
+          <dt>Booking Ref</dt><dd>${ref}</dd>
+          <dt>Name</dt><dd>${editCurrentName}</dd>
+          <dt>Mobile</dt><dd>${mobile}</dd>
+          ${players ? `<dt>Players</dt><dd>${players}</dd>` : ''}
+          <dt>Date</dt><dd>${dateDisplay}</dd>
+          <dt>Session</dt><dd>${sessionShort}</dd>
+          <dt>Time</dt><dd>${time}</dd>
+          <dt>Duration</dt><dd>${duration}</dd>
+          <dt>Nets Required</dt><dd>${nets}</dd>
+          ${ball ? `<dt>Ball Type</dt><dd>${ball}</dd>` : ''}
+          ${amountVal && amountVal !== '—' ? `<dt>Amount</dt><dd>${amountVal}</dd>` : ''}
+        `;
+
+        const waMsg = `*County Indoor Netz — Booking Updated* 🏏
+
+*Group Ref:* ${editCurrentGroupRef}
+*Booking Ref:* ${ref}
+*Name:* ${editCurrentName}
+*Date:* ${dateDisplay}
+*Session:* ${sessionShort}
+*Time:* ${time}
+*Duration:* ${duration}
+*Nets Required:* ${nets}
+
+⛑️ Helmet compulsory for leather balls.
+🧍🧍🧍 Rate changes if player count exceeds booking.
+
+Your booking has been updated. See you at the nets!`;
+
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.`;
+
+        document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
+        document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
+        document.getElementById('editReceipt').style.display = 'block';
+
+        // Refresh the booking list in the background
+        setTimeout(()=> loadBulkList(), 500);
+      } else if(result.status === 'full'){
+        msg.textContent = '❌ No nets available at that slot. Choose a different time.';
+        msg.className = 'edit-msg err';
+      } else if(result.status === 'too_late'){
+        msg.textContent = '❌ This slot time has already passed — it cannot be edited.';
+        msg.className = 'edit-msg err';
+        msg.textContent = '❌ Booking not found or already cancelled.';
+        msg.className = 'edit-msg err';
+      } else {
+        msg.textContent = '❌ Could not update. Please try again.';
+        msg.className = 'edit-msg err';
+      }
+    } catch(e){
+      msg.textContent = '❌ Connection error. Try again.';
+      msg.className = 'edit-msg err';
+    }
+    btn.disabled = false; btn.textContent = '💾 Save Changes';
+  }
+  window.saveEdit = saveEdit;
+  let adminBookings = [];
+  let currentGroupRef = '';
+
+  function newGroupRef(){
+    currentGroupRef = 'GRP-' + Math.random().toString(36).slice(2,7).toUpperCase();
+    document.getElementById('grpRefDisplay').textContent = currentGroupRef;
+    // Clear all form fields for the new group/customer
+    document.getElementById('aName').value    = '';
+    document.getElementById('aMobile').value  = '';
+    document.getElementById('aDate').value    = todayStr;
+    aSession.value = '';
+    populateAdminTimes(null);
+    aDuration.value = '';
+    aBall.value     = '';
+    aNetsEl.value   = '1';
+    document.getElementById('aBallTag').style.display = 'none';
+    // Clear receipt and messages
+    adminBookings = [];
+    document.getElementById('adminReceipt').style.display  = 'none';
+    document.getElementById('adminWaBtn').style.display    = 'none';
+    document.getElementById('adminSmsBtn').style.display   = 'none';
+    document.getElementById('adminMsg').className          = 'admin-msg';
+  }
+  window.newGroupRef = newGroupRef;
+  // Auto-generate on load
+  newGroupRef();
+
+  async function adminBookNow(){
+    const name    = toTitleCase(document.getElementById('aName').value.trim());
+    const mobile  = document.getElementById('aMobile').value.trim();
+    const date    = document.getElementById('aDate').value;
+    const session = aSession.value;
+    const time    = aTime.value;
+    const players = aPlayers.value;
+    const dur     = aDuration.value;
+    const nets    = parseInt(aNetsEl.value)||1;
+    const ball    = aBall.value;
+    const amount  = aAmtVal.textContent.replace(/[\u20B9,]/g,'').trim();
+    const msg     = document.getElementById('adminMsg');
+    const btn     = document.getElementById('adminBookBtn');
+
+    if(!name||!mobile||!date||!session||!time||!players||!dur||!ball){
+      msg.textContent = '⚠️ Booking Not Confirmed — please fill all required fields before booking.';
+      msg.className = 'admin-msg err';
+      msg.scrollIntoView({behavior:'smooth', block:'nearest'});
+      return;
+    }
+    if(date < todayStr){
+      msg.textContent = '⚠️ Booking Not Confirmed — cannot book a past date.';
+      msg.className = 'admin-msg err';
+      msg.scrollIntoView({behavior:'smooth', block:'nearest'});
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Booking…';
+    msg.className = 'admin-msg';
+
+    // Prime time rule: Evening session with < 5 players on TODAY only allowed after 5pm
+    const isEvening = session.startsWith('Evening');
+    const isSmallGroup = players !== 'Team Booking';
+    if(isEvening && isSmallGroup && date === todayStr){
+      const now = new Date();
+      const nowMins = now.getHours()*60 + now.getMinutes();
+      if(nowMins < 17*60){ // before 5pm
+        msg.textContent = '⚠️ Booking Not Confirmed — Since the number of players is less than 5, Prime Time booking is available only after 5 pm.';
+        msg.className = 'admin-msg err';
+        btn.disabled = false; btn.textContent = '✅ Book Now';
+        return;
+      }
+    }
+
+    const ref = 'ADM'+Math.random().toString(36).slice(2,7).toUpperCase();
+    const dp  = date.split('-');
+    const dateDisplay = dp[2]+'/'+dp[1]+'/'+dp[0].slice(2);
+
+    try {
+      // Use encodeURIComponent (not URLSearchParams) — Apps Script does not
+      // decode '+' as space in GET params, only %20. URLSearchParams uses '+' for spaces.
+      const qs = [
+        `action=adminBook`,
+        `ref=${encodeURIComponent(ref)}`,
+        `name=${encodeURIComponent(name)}`,
+        `mobile=${encodeURIComponent(mobile)}`,
+        `date=${encodeURIComponent(date)}`,
+        `session=${encodeURIComponent(session)}`,
+        `time=${encodeURIComponent(time)}`,
+        `players=${encodeURIComponent(players)}`,
+        `netsRequired=${nets}`,
+        `duration=${encodeURIComponent(dur)}`,
+        `ball=${encodeURIComponent(ball)}`,
+        `amount=${encodeURIComponent(amount)}`,
+        `groupCode=${encodeURIComponent(currentGroupRef)}`
+      ].join('&');
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+      const result = await res.json();
+
+      if(result.status === 'ok'){
+        const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
+
+        // Trigger monthly tab rebuild in background (non-blocking)
+        if(result.month){
+          fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000)
+            .catch(()=>{});
+        }
+
+        // Store this booking
+        adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
+        updateAdminReceipt();
+
+        const count = adminBookings.length;
+        msg.textContent = `✅ Booking ${count} confirmed — ${dateDisplay} ${time} ${netLabel}. Add next slot or view receipt.`;
+        msg.className = 'admin-msg ok';
+
+        // Clear only Date for next booking
+        document.getElementById('aDate').value = '';
+        refreshAdminAvailability();
+      } else if(result.status === 'full'){
+        msg.textContent = `❌ ${time} on ${dateDisplay} — No nets available. Choose another slot.`;
+        msg.className = 'admin-msg err';
+        refreshAdminAvailability();
+      } else if(result.status === 'too_late'){
+        msg.textContent = `❌ ${time} on ${dateDisplay} — This slot has already passed. Choose a future time.`;
+        msg.className = 'admin-msg err';
+        refreshAdminAvailability();
+      } else if(result.status === 'prime_time'){
+        msg.textContent = `❌ Since the number of players is less than 5, Prime Time booking is available only after 5 pm.`;
+        msg.className = 'admin-msg err';
+      } else {
+        msg.textContent = '❌ Booking could not be confirmed. Please try again.';
+        msg.className = 'admin-msg err';
+      }
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+
+    btn.disabled = false;
+    btn.textContent = '✅ Book Now';
+  }
+  window.adminBookNow = adminBookNow;
+
+  function updateAdminReceipt(){
+    if(!adminBookings.length) return;
+    const b0 = adminBookings[0];
+    document.getElementById('adminReceiptMeta').innerHTML =
+      `<strong>${b0.name}</strong> &nbsp;|&nbsp; ${b0.mobile} &nbsp;|&nbsp; ${adminBookings.length} slot${adminBookings.length>1?'s':''}<br>
+       <span style="font-size:12px;color:var(--muted);">Group Ref: <strong style="color:var(--leather);letter-spacing:1px;">${b0.groupRef}</strong> &nbsp;—&nbsp; Use this to cancel all slots at once</span>`;
+    document.getElementById('adminReceiptBody').innerHTML = adminBookings.map(b=>`
+      <tr>
+        <td>${b.dateDisplay}</td>
+        <td>${b.time}</td>
+        <td>${b.dur}</td>
+        <td>${b.players}</td>
+        <td>${b.nets}</td>
+        <td>${b.ball==='Leather Ball'?'Ltr':'Tns'}</td>
+        <td>${b.ref}</td>
+      </tr>`).join('');
+
+    // Build WhatsApp message
+    const waLines = adminBookings.map((b,i)=>
+      `${i+1}. ${b.dateDisplay} | ${b.time} | ${b.dur} | Players: ${b.players} | Nets Required: ${b.nets} | ${b.ball==='Leather Ball'?'Leather':'Tennis'} | Ref: ${b.ref}`
+    ).join('\n');
+    const waMsg = `*County Indoor Netz — Bulk Booking Confirmed* 🏏
+
+*Customer:* ${b0.name}
+*Mobile:* ${b0.mobile}
+*Group Ref:* ${b0.groupRef}
+
+*Booking Details:*
+${waLines}
+
+⛑️ Helmet compulsory for leather balls.
+🧍🧍🧍 Rate changes if player count exceeds booking.
+
+To cancel all slots quote Group Ref *${b0.groupRef}*
+See you at the nets! 🏏`;
+
+    const smsLines = adminBookings.map((b,i)=>
+      `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
+    ).join('\n');
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\n\nTo cancel all: quote Group Ref ${b0.groupRef}`;
+
+    const waBtn  = document.getElementById('adminWaBtn');
+    const smsBtn = document.getElementById('adminSmsBtn');
+    waBtn.href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
+    smsBtn.href = `sms:+91${b0.mobile}?body=${encodeURIComponent(smsMsg)}`;
+    waBtn.style.display  = 'inline-flex';
+    smsBtn.style.display = 'inline-flex';
+
+    document.getElementById('adminReceipt').style.display = 'block';
+  }
+
+  function clearAdminReceipt(){
+    // Full reset — same behavior as pressing "New Group": clears every
+    // field and issues a fresh group code ready for the next booking.
+    newGroupRef();
+  }
+  window.clearAdminReceipt = clearAdminReceipt;
+
+
+})();
+</script>
+</body>
+</html>
