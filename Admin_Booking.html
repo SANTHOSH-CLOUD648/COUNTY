@@ -726,11 +726,11 @@
           <div class="receipt-actions">
             <a id="adminWaBtn" class="share-btn wa" target="_blank" rel="noopener" style="display:none;">
               <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
-              Send via WhatsApp
+              Get Me via WhatsApp
             </a>
             <a id="adminSmsBtn" class="share-btn sms" style="display:none;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-              Send via SMS
+              Get Me via SMS
             </a>
             <button class="receipt-btn" onclick="clearAdminReceipt()">🗑 Clear &amp; New</button>
           </div>
@@ -854,11 +854,11 @@
       <div class="share-row" style="margin-top:12px;">
         <a id="editWaBtn" class="share-btn wa" target="_blank" rel="noopener">
           <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
-          Send via WhatsApp
+          Get Me via WhatsApp
         </a>
         <a id="editSmsBtn" class="share-btn sms">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-          Send via SMS
+          Get Me via SMS
         </a>
       </div>
     </div>
@@ -1895,19 +1895,10 @@ Your booking has been updated. See you at the nets!`;
     btn.textContent = 'Booking…';
     msg.className = 'admin-msg';
 
-    // Prime time rule: Evening session with < 5 players on TODAY only allowed after 5pm
-    const isEvening = session.startsWith('Evening');
-    const isSmallGroup = players !== 'Team Booking';
-    if(isEvening && isSmallGroup && date === todayStr){
-      const now = new Date();
-      const nowMins = now.getHours()*60 + now.getMinutes();
-      if(nowMins < 17*60){ // before 5pm
-        msg.textContent = '⚠️ Booking Not Confirmed — Since the number of players is less than 5, Prime Time booking is available only after 5 pm.';
-        msg.className = 'admin-msg err';
-        btn.disabled = false; btn.textContent = '✅ Book Now';
-        return;
-      }
-    }
+    // Note: unlike the customer-facing booking form, admin/staff bookings
+    // are NOT restricted by the Prime Time 5pm cutoff rule — staff can book
+    // an Evening slot for fewer than 5 players at any time of day. Nets are
+    // still locked to 1 unless Team Booking (5+) is selected, same as before.
 
     const ref = 'ADM'+Math.random().toString(36).slice(2,7).toUpperCase();
     const dp  = date.split('-');
