@@ -1280,6 +1280,14 @@
   }
   window.toggleBulkGroup = toggleBulkGroup;
 
+  function toggleNormalResult(i){
+    const detail = document.getElementById('ndetail'+i);
+    const chev   = document.getElementById('nchev'+i);
+    const open   = detail.classList.toggle('open');
+    chev.classList.toggle('open', open);
+  }
+  window.toggleNormalResult = toggleNormalResult;
+
   async function cancelBulkGroup(groupRef, mobile, gi){
     const btn = document.querySelector(`#grpCard${gi} .bulk-cancel-all`);
     btn.disabled = true; btn.textContent = 'Cancelling…';
@@ -1383,17 +1391,26 @@
       document.getElementById('normalRefreshBtn').style.display = 'inline-flex';
 
       results.innerHTML = data.results.map((b,i)=>`
-        <div class="normal-slot-card" id="nslot_${i}">
-          <div class="normal-slot-info">
-            <strong>${b.name}</strong> &nbsp; 📱 ${b.mobile}<br>
-            📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; ⏱ ${b.duration} &nbsp; 🎾 ${b.net}<br>
-            ${b.session.startsWith('Morning')?'Morning':'Evening'} &nbsp; ${b.ball} &nbsp; ${b.amount}
-            <div class="normal-slot-ref">Ref: ${b.ref}</div>
+        <div class="bulk-group-card" id="nslot_${i}">
+          <div class="bulk-group-header" onclick="toggleNormalResult(${i})">
+            <div class="bulk-group-info">
+              <div class="bulk-group-name">${b.name}</div>
+              <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
+            </div>
+            ${isSlotPast(b.date, b.time) ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
+            <span class="bulk-group-chevron" id="nchev${i}">▾</span>
           </div>
-          <div class="normal-slot-btns">
-            ${isSlotPast(b.date, b.time)
-              ? '<span class="bulk-slot-past">Past</span>'
-              : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',' + i + ')\">🚫 Cancel</button>'}
+          <div class="bulk-group-detail" id="ndetail${i}">
+            <div class="normal-slot-info">
+              📱 ${b.mobile}<br>
+              ⏱ ${b.duration} &nbsp; 🎾 ${b.net}<br>
+              ${b.session.startsWith('Morning')?'Morning':'Evening'} &nbsp; ${b.ball} &nbsp; ${b.amount}
+            </div>
+            <div class="normal-slot-btns" style="margin-top:10px;">
+              ${isSlotPast(b.date, b.time)
+                ? '<span class="bulk-slot-past">Past</span>'
+                : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',' + i + ')\">🚫 Cancel</button>'}
+            </div>
           </div>
         </div>`).join('');
     } catch(e){
