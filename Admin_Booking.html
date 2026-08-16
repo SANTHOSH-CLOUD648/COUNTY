@@ -1804,13 +1804,13 @@
 ⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://bit.ly/4qhi6hT
+https://tinyurl.com/2hta9v6t
 
 🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
 
 Your booking has been updated. See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://bit.ly/4qhi6hT\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -2016,7 +2016,7 @@ ${waLines}
 ⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://bit.ly/4qhi6hT
+https://tinyurl.com/2hta9v6t
 
 🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
 
@@ -2026,7 +2026,7 @@ See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://bit.ly/4qhi6hT\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi\n\nTo cancel all: quote Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi\n\nTo cancel all: quote Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');
