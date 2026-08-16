@@ -726,11 +726,11 @@
           <div class="receipt-actions">
             <a id="adminWaBtn" class="share-btn wa" target="_blank" rel="noopener" style="display:none;">
               <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
-              Get Me via WhatsApp
+              Send via WhatsApp
             </a>
             <a id="adminSmsBtn" class="share-btn sms" style="display:none;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-              Get Me via SMS
+              Send via SMS
             </a>
             <button class="receipt-btn" onclick="clearAdminReceipt()">🗑 Clear &amp; New</button>
           </div>
@@ -835,6 +835,7 @@
     </div>
     <div class="edit-msg" id="editMsg"></div>
     <div class="edit-receipt" id="editReceipt" style="display:none;">
+      <button type="button" id="editMoreBtn" class="receipt-btn" style="display:none;margin-bottom:10px;" onclick="goToGroupFromEdit()">➕ More…</button>
       <div class="receipt-title">🧾 Updated Booking Receipt</div>
       <dl id="editReceiptDetails"></dl>
       <div class="receipt-note">
@@ -854,11 +855,11 @@
       <div class="share-row" style="margin-top:12px;">
         <a id="editWaBtn" class="share-btn wa" target="_blank" rel="noopener">
           <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
-          Get Me via WhatsApp
+          Send via WhatsApp
         </a>
         <a id="editSmsBtn" class="share-btn sms">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-          Get Me via SMS
+          Send via SMS
         </a>
       </div>
     </div>
@@ -1226,7 +1227,7 @@
         return;
       }
       area.innerHTML = data.groups.map((g,gi)=>`
-        <div class="bulk-group-card" id="grpCard${gi}">
+        <div class="bulk-group-card" id="grpCard${gi}" data-groupref="${g.groupRef}">
           <div class="bulk-group-header" onclick="toggleBulkGroup(${gi})">
             <div class="bulk-group-info">
               <div class="bulk-group-ref">${g.groupRef}</div>
@@ -1238,7 +1239,7 @@
           </div>
           <div class="bulk-group-detail" id="grpDetail${gi}">
             <div class="bulk-group-actions">
-              <button class="bulk-cancel-all" onclick="cancelBulkGroup('${g.groupRef}','${g.mobile}',${gi})">
+              <button class="bulk-cancel-all" onclick="cancelBulkGroup('${g.groupRef}','${g.mobile}','${g.name}',${gi})">
                 🚫 Cancel Entire Group
               </button>
               <button class="bulk-add-more" onclick="addMoreToGroup('${g.groupRef}','${g.name}','${g.mobile}')">
@@ -1259,7 +1260,7 @@
                 <div class="bulk-slot-btns">
                   ${!isPast ? `
                     <button class="bulk-slot-edit" onclick="openEditModal('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}','${s.duration}','${s.net}','${s.ball||''}','${s.players||''}')">✏️ Edit</button>
-                    <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}',${gi},${si})">🚫 Cancel</button>
+                    <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
                   ` : '<span class="bulk-slot-past">Past</span>'}
                 </div>
               </div>`;
@@ -1288,7 +1289,7 @@
   }
   window.toggleNormalResult = toggleNormalResult;
 
-  async function cancelBulkGroup(groupRef, mobile, gi){
+  async function cancelBulkGroup(groupRef, mobile, name, gi){
     const btn = document.querySelector(`#grpCard${gi} .bulk-cancel-all`);
     btn.disabled = true; btn.textContent = 'Cancelling…';
     try {
@@ -1303,6 +1304,7 @@
         document.getElementById('cancelTabMsg').textContent = `✅ Group ${groupRef} — ${count} slot${count>1?'s':''} cancelled.`;
         // Disable all individual cancel buttons in this card
         document.querySelectorAll(`#grpCard${gi} .bulk-slot-cancel`).forEach(b=>b.disabled=true);
+        showCancelShareButtons(`grpCancelShare${gi}`, btn.parentElement, buildGroupCancelMessage(name, mobile, groupRef, count));
       } else if(data.status === 'too_late'){
         btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
         document.getElementById('cancelTabMsg').textContent = '⚠️ Some or all slots are in the past and cannot be cancelled.';
@@ -1317,8 +1319,9 @@
   }
   window.cancelBulkGroup = cancelBulkGroup;
 
-  async function cancelSingleSlot(ref, mobile, gi, si){
-    const btn = document.getElementById(`slot_${gi}_${si}`).querySelector('.bulk-slot-cancel');
+  async function cancelSingleSlot(ref, mobile, name, groupRef, date, time, gi, si){
+    const rowEl = document.getElementById(`slot_${gi}_${si}`);
+    const btn = rowEl.querySelector('.bulk-slot-cancel');
     btn.disabled = true; btn.textContent = '…';
     try {
       const res  = await fetchWithTimeout(
@@ -1326,8 +1329,9 @@
         null, 15000);
       const data = await res.json();
       if(data.status === 'cancelled'){
-        document.getElementById(`slot_${gi}_${si}`).innerHTML =
-          `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>`;
+        rowEl.innerHTML = `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>
+          <div id="slotCancelShare_${gi}_${si}" style="margin-top:8px;"></div>`;
+        showCancelShareButtons(`slotCancelShare_${gi}_${si}`, null, buildSingleCancelMessage(name, mobile, ref, groupRef, date, time));
       } else if(data.status === 'too_late'){
         btn.disabled = true; btn.textContent = 'Past';
       } else if(data.status === 'already_cancelled'){
@@ -1341,6 +1345,60 @@
     }
   }
   window.cancelSingleSlot = cancelSingleSlot;
+
+  // Builds the WhatsApp + SMS confirmation text for a single-slot cancellation
+  function buildSingleCancelMessage(name, mobile, ref, groupRef, date, time){
+    const waMsg = `*County Indoor Netz — Booking Cancelled* 🚫
+
+Name: ${name}
+Mobile: ${mobile}
+Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? `\nGroup Ref: ${groupRef}` : ''}
+Date: ${date}
+Time: ${time}
+
+This slot has been cancelled and the net is now free for others to book.`;
+    const smsMsg = `County Indoor Netz - Booking Cancelled\nName: ${name} | Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? ` | Group Ref: ${groupRef}` : ''}\nDate: ${date} Time: ${time}\nThis slot has been cancelled.`;
+    return { waMsg, smsMsg, mobile };
+  }
+
+  // Builds the WhatsApp + SMS confirmation text for a whole-group cancellation
+  function buildGroupCancelMessage(name, mobile, groupRef, count){
+    const waMsg = `*County Indoor Netz — Group Booking Cancelled* 🚫
+
+Name: ${name}
+Mobile: ${mobile}
+Group Ref: ${groupRef}
+Slots cancelled: ${count}
+
+All slots under this group have been cancelled and those nets are now free for others to book.`;
+    const smsMsg = `County Indoor Netz - Group Booking Cancelled\nName: ${name} | Group Ref: ${groupRef}\nSlots cancelled: ${count}\nAll slots under this group have been cancelled.`;
+    return { waMsg, smsMsg, mobile };
+  }
+
+  // Renders a small "Send via WhatsApp / SMS" button pair for a
+  // cancellation confirmation, inserted right after the given container.
+  function showCancelShareButtons(id, afterEl, { waMsg, smsMsg, mobile }){
+    const wrap = document.createElement('div');
+    wrap.id = id;
+    wrap.style.cssText = 'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;';
+    wrap.innerHTML = `
+      <a class="share-btn wa" style="flex:1;min-width:140px;padding:8px 10px;font-size:12.5px;"
+         href="https://wa.me/?text=${encodeURIComponent(waMsg)}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 32 32" width="14" height="14" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+        Send via WhatsApp
+      </a>
+      <a class="share-btn sms" style="flex:1;min-width:140px;padding:8px 10px;font-size:12.5px;"
+         href="sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        Send via SMS
+      </a>`;
+    if(afterEl){
+      afterEl.insertAdjacentElement('afterend', wrap);
+    } else {
+      const target = document.getElementById(id);
+      if(target) target.replaceWith(wrap);
+    }
+  }
 
   // Helper: returns true if a slot (dd/mm/yy date + time string) is in the past
   function isSlotPast(dateStr, timeStr){
@@ -1409,7 +1467,7 @@
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isSlotPast(b.date, b.time)
                 ? '<span class="bulk-slot-past">Past</span>'
-                : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',' + i + ')\">🚫 Cancel</button>'}
+                : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'}
             </div>
           </div>
         </div>`).join('');
@@ -1428,8 +1486,9 @@
   window.refreshNormalBookings = refreshNormalBookings;
   window.searchNormalBookings  = searchNormalBookings;
 
-  async function cancelNormalBooking(ref, mobile, idx){
-    const btn = document.querySelector(`#nslot_${idx} .bulk-slot-cancel`);
+  async function cancelNormalBooking(ref, mobile, name, date, time, idx){
+    const rowEl = document.getElementById(`nslot_${idx}`);
+    const btn = rowEl.querySelector('.bulk-slot-cancel');
     btn.disabled = true; btn.textContent = '…';
     try {
       const res  = await fetchWithTimeout(
@@ -1437,8 +1496,10 @@
         null, 15000);
       const data = await res.json();
       if(data.status === 'cancelled'){
-        document.getElementById(`nslot_${idx}`).innerHTML =
-          `<div class="bulk-slot-cancelled" style="padding:10px;">✅ Booking ${ref} cancelled.</div>`;
+        rowEl.innerHTML =
+          `<div class="bulk-slot-cancelled" style="padding:10px;">✅ Booking ${ref} cancelled.</div>
+           <div id="normalCancelShare_${idx}" style="margin-top:8px;"></div>`;
+        showCancelShareButtons(`normalCancelShare_${idx}`, null, buildSingleCancelMessage(name, mobile, ref, '', date, time));
       } else if(data.status === 'too_late'){
         btn.disabled = true; btn.textContent = 'Past';
       } else {
@@ -1494,6 +1555,7 @@
     document.getElementById('editMsg').textContent = '';
     document.getElementById('editMsg').className  = 'edit-msg';
     document.getElementById('editReceipt').style.display = 'none';
+    document.getElementById('editMoreBtn').style.display = 'none';
 
     // Restrict date to today onwards — cannot edit to a past date
     const editDateEl = document.getElementById('editDate');
@@ -1735,6 +1797,44 @@
   }
   window.closeEditModal = closeEditModal;
 
+  // "More…" button on the edit receipt — closes this modal and jumps
+  // straight to this booking's group in Active Bulk Bookings, so staff can
+  // immediately pick another slot from the same group to edit next,
+  // instead of manually scrolling to find it again.
+  async function goToGroupFromEdit(){
+    const groupRef = editCurrentGroupRef;
+    closeEditModal();
+
+    // Switch to the Cancel/Edit tab WITHOUT going through showAdminTab(),
+    // since that function also triggers its own background loadBulkList()
+    // call — running both at once creates a race where that second,
+    // un-awaited call can finish after ours and silently re-collapse the
+    // group we just expanded below. Switching tabs manually here avoids
+    // that entirely, and we control the one loadBulkList() call ourselves.
+    ADMIN_TABS.forEach(function(t){
+      document.getElementById('adminTab'+t.charAt(0).toUpperCase()+t.slice(1)).style.display = t==='cancel'?'block':'none';
+      const btn = document.getElementById('tabBtn'+t.charAt(0).toUpperCase()+t.slice(1));
+      if(btn) btn.classList.toggle('active', t==='cancel');
+    });
+
+    await loadBulkList();
+
+    const card = document.querySelector(`.bulk-group-card[data-groupref="${groupRef}"]`);
+    if(!card){
+      document.getElementById('cancelTabMsg').textContent = `Group ${groupRef} not found — it may have been fully cancelled.`;
+      return;
+    }
+    // Expand it (same mechanism as clicking its header)
+    const detail = card.querySelector('.bulk-group-detail');
+    const chev   = card.querySelector('.bulk-group-chevron');
+    if(detail && !detail.classList.contains('open')){
+      detail.classList.add('open');
+      if(chev) chev.classList.add('open');
+    }
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  window.goToGroupFromEdit = goToGroupFromEdit;
+
   async function saveEdit(){
     const ref      = editCurrentRef;
     const mobile   = editCurrentMobile;
@@ -1786,6 +1886,11 @@
         msg.textContent = '✅ Booking updated successfully!';
         msg.className = 'edit-msg ok';
         document.getElementById('editSaveBtn').style.display = 'none'; // hide after success
+
+        // "More…" button only makes sense for bookings that belong to a
+        // bulk group — a standalone normal booking has nowhere to jump to.
+        const isPartOfGroup = editCurrentGroupRef && editCurrentGroupRef.toUpperCase().startsWith('GRP-');
+        document.getElementById('editMoreBtn').style.display = isPartOfGroup ? 'inline-flex' : 'none';
 
         // Build receipt
         document.getElementById('editReceiptDetails').innerHTML = `
@@ -1992,7 +2097,7 @@ Your booking has been updated. See you at the nets!`;
     const b0 = adminBookings[0];
     document.getElementById('adminReceiptMeta').innerHTML =
       `<strong>${b0.name}</strong> &nbsp;|&nbsp; ${b0.mobile} &nbsp;|&nbsp; ${adminBookings.length} slot${adminBookings.length>1?'s':''}<br>
-       <span style="font-size:12px;color:var(--muted);">Group Ref: <strong style="color:var(--leather);letter-spacing:1px;">${b0.groupRef}</strong> &nbsp;—&nbsp; Use this to cancel all slots at once</span>`;
+       <span style="font-size:12px;color:var(--muted);">To cancel any or all slots quote your individual Booking Ref No. and Group Ref <strong style="color:var(--leather);letter-spacing:1px;">${b0.groupRef}</strong></span>`;
     document.getElementById('adminReceiptBody').innerHTML = adminBookings.map(b=>`
       <tr>
         <td>${b.dateDisplay}</td>
@@ -2028,13 +2133,13 @@ https://tinyurl.com/2hta9v6t
 
 🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
 
-To cancel all slots quote Group Ref *${b0.groupRef}*
+To cancel any or all slots quote your individual Booking Ref No. and Group Ref *${b0.groupRef}*
 See you at the nets! 🏏`;
 
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi\n\nTo cancel all: quote Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');
