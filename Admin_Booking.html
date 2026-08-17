@@ -830,6 +830,7 @@
             <div class="admin-amount-val" id="editAmountVal">—</div>
             <div class="admin-amount-note" id="editAmountNote"></div>
           </div>
+          <div class="ball-tag" id="editBallTag" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -1036,6 +1037,29 @@
     }
   });
 
+  // Same ball-type tag, but for the Edit Booking modal's Amount box —
+  // this was missing before, so the tag never appeared while editing
+  // either a bulk-group slot or a standalone normal booking.
+  function updateEditBallTag(){
+    const editBallEl = document.getElementById('editBall');
+    const editBallTag = document.getElementById('editBallTag');
+    if(!editBallEl || !editBallTag) return;
+    if(editBallEl.value === 'Leather Ball'){
+      editBallTag.style.display='inline-flex';
+      editBallTag.style.background='#5c1414';
+      editBallTag.style.color='#fff';
+      editBallTag.textContent='Leather';
+    } else if(editBallEl.value === 'Tennis ball'){
+      editBallTag.style.display='inline-flex';
+      editBallTag.style.background='#234d29';
+      editBallTag.style.color='#fff';
+      editBallTag.textContent='Tennis';
+    } else {
+      editBallTag.style.display='none';
+    }
+  }
+  document.getElementById('editBall').addEventListener('change', updateEditBallTag);
+
   function calcAdminAmount(){
     const d    = aDuration.value;
     const nets = parseInt(aNetsEl.value)||1;
@@ -1214,6 +1238,10 @@
   window.showAdminTab = showAdminTab;
 
   // ── Cancel tab — bulk booking list ───────────────────────────
+  let lastBulkGroups = []; // remembers the last-loaded group data, so
+                            // showGroupReceipt(gi) can build a full receipt
+                            // without needing another server round-trip.
+
   async function loadBulkList(){
     const area = document.getElementById('bulkListArea');
     const msg  = document.getElementById('cancelTabMsg');
@@ -1224,9 +1252,14 @@
       const data = await res.json();
       if(data.status !== 'ok' || !data.groups.length){
         area.innerHTML = '<div class="cancel-empty">No active bulk bookings found.</div>';
+        lastBulkGroups = [];
         return;
       }
-      area.innerHTML = data.groups.map((g,gi)=>`
+      lastBulkGroups = data.groups;
+      area.innerHTML = data.groups.map((g,gi)=>{
+        const activeCount = g.slots.filter(s => s.status !== 'Cancelled').length;
+        const cancelledCount = g.slots.length - activeCount;
+        return `
         <div class="bulk-group-card" id="grpCard${gi}" data-groupref="${g.groupRef}">
           <div class="bulk-group-header" onclick="toggleBulkGroup(${gi})">
             <div class="bulk-group-info">
@@ -1234,7 +1267,7 @@
               <div class="bulk-group-name">${g.name}</div>
               <div class="bulk-group-meta">📱 ${g.mobile}</div>
             </div>
-            <span class="bulk-group-badge">${g.slots.length} slot${g.slots.length>1?'s':''}</span>
+            <span class="bulk-group-badge">${activeCount} active${cancelledCount>0 ? ` · ${cancelledCount} cancelled` : ''}</span>
             <span class="bulk-group-chevron" id="chev${gi}">▾</span>
           </div>
           <div class="bulk-group-detail" id="grpDetail${gi}">
@@ -1246,11 +1279,13 @@
                 ➕ Add More Slots
               </button>
             </div>
+            <button class="receipt-btn" style="width:100%;margin-bottom:10px;" onclick="showGroupReceipt(${gi})">
+              📋 View/Send Full Group Receipt
+            </button>
+            <div id="groupReceiptArea${gi}"></div>
             ${g.slots.map((s,si)=>{
-              // Parse slot date (dd/mm/yy) and compare with today
-              const sp = s.date.split('/');
-              const slotISO = sp.length===3 ? `20${sp[2]}-${sp[1]}-${sp[0]}` : '';
               const isPast = isSlotPast(s.date, s.time);
+              const isCancelled = s.status === 'Cancelled';
               return `
               <div class="bulk-slot-row" id="slot_${gi}_${si}">
                 <div class="bulk-slot-info">
@@ -1258,7 +1293,8 @@
                   <div class="bulk-slot-ref">Ref: ${s.ref}</div>
                 </div>
                 <div class="bulk-slot-btns">
-                  ${!isPast ? `
+                  ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled</span>'
+                    : !isPast ? `
                     <button class="bulk-slot-edit" onclick="openEditModal('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}','${s.duration}','${s.net}','${s.ball||''}','${s.players||''}')">✏️ Edit</button>
                     <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
                   ` : '<span class="bulk-slot-past">Past</span>'}
@@ -1266,12 +1302,104 @@
               </div>`;
             }).join('')}
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } catch(e){
       area.innerHTML = '<div class="cancel-empty">❌ Could not load bookings. Check connection.</div>';
     }
   }
   window.loadBulkList = loadBulkList;
+
+  // Builds and displays a full, up-to-date receipt for one group — every
+  // slot that was ever part of it, each clearly marked as Confirmed or
+  // Cancelled, reflecting whatever edits/cancellations have happened so
+  // far. This is the single source of truth to send after making several
+  // changes to a group, instead of several separate small messages.
+  function showGroupReceipt(gi){
+    const g = lastBulkGroups[gi];
+    if(!g) return;
+    const area = document.getElementById(`groupReceiptArea${gi}`);
+    if(!area) return;
+    area.innerHTML = '<div class="cancel-empty" style="padding:16px;">⏳ Loading latest status…</div>';
+
+    // Always re-fetch fresh data before building the receipt — a single
+    // slot cancel/edit doesn't refresh the whole list automatically, so
+    // relying on already-loaded data here could show a stale/outdated
+    // status. This targets just this one group, without disrupting the
+    // rest of the (possibly expanded) list on screen.
+    fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 15000)
+      .then(res => res.json())
+      .then(data => {
+        const fresh = (data.groups || []).find(x => x.groupRef === g.groupRef);
+        renderGroupReceipt(gi, fresh || g);
+      })
+      .catch(() => renderGroupReceipt(gi, g)); // fall back to last-known data if the refresh fails
+  }
+  window.showGroupReceipt = showGroupReceipt;
+
+  function renderGroupReceipt(gi, g){
+    const area = document.getElementById(`groupReceiptArea${gi}`);
+    if(!area) return;
+
+    const activeSlots    = g.slots.filter(s => s.status !== 'Cancelled');
+    const cancelledSlots = g.slots.filter(s => s.status === 'Cancelled');
+
+    const rowsHtml = g.slots.map(s => {
+      const isCancelled = s.status === 'Cancelled';
+      return `<tr style="${isCancelled?'opacity:.55;text-decoration:line-through;':''}">
+        <td>${s.date}</td><td>${s.time}</td><td>${s.duration}</td>
+        <td>${s.net}</td><td>${s.ball||''}</td><td>${s.ref}</td>
+        <td style="text-decoration:none;">${isCancelled ? '🚫 Cancelled' : '✅ Confirmed'}</td>
+      </tr>`;
+    }).join('');
+
+    area.innerHTML = `
+      <div class="admin-receipt" style="margin-bottom:14px;">
+        <div class="receipt-title">📋 Full Group Receipt</div>
+        <div class="receipt-meta">
+          <strong>${g.name}</strong> &nbsp;|&nbsp; ${g.mobile} &nbsp;|&nbsp;
+          ${activeSlots.length} active${cancelledSlots.length ? `, ${cancelledSlots.length} cancelled` : ''}
+        </div>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+          <table class="receipt-table">
+            <thead><tr><th>Date</th><th>Time</th><th>Duration</th><th>Net</th><th>Ball</th><th>Ref #</th><th>Status</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+        <div class="receipt-actions" id="groupReceiptBtns${gi}"></div>
+      </div>`;
+
+    const waLines = g.slots.map((s,i) =>
+      `${i+1}. ${s.date} | ${s.time} | ${s.duration} | ${s.net} | ${s.ball||''} | Ref: ${s.ref} | ${s.status==='Cancelled'?'🚫 Cancelled':'✅ Confirmed'}`
+    ).join('\n');
+    const waMsg = `*County Indoor Netz — Group Booking Summary* 📋
+
+*Customer:* ${g.name}
+*Mobile:* ${g.mobile}
+*Group Ref:* ${g.groupRef}
+*Active:* ${activeSlots.length}${cancelledSlots.length ? ` · *Cancelled:* ${cancelledSlots.length}` : ''}
+
+*All Slots:*
+${waLines}
+
+To cancel any or all active slots quote your individual Booking Ref No. and Group Ref *${g.groupRef}*
+See you at the nets! 🏏`;
+
+    const smsLines = g.slots.map((s,i) =>
+      `${i+1}. ${s.date} ${s.time} ${s.duration} ${s.net} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`
+    ).join('\n');
+    const smsMsg = `County Indoor Netz - Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}`;
+
+    document.getElementById(`groupReceiptBtns${gi}`).innerHTML = `
+      <a class="share-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(waMsg)}">
+        <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+        Send via WhatsApp
+      </a>
+      <a class="share-btn sms" href="sms:+91${g.mobile}?body=${encodeURIComponent(smsMsg)}">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        Send via SMS
+      </a>`;
+  }
 
   function toggleBulkGroup(gi){
     const detail = document.getElementById('grpDetail'+gi);
@@ -1587,6 +1715,7 @@ All slots under this group have been cancelled and those nets are now free for o
     editCurrentNetsCount  = netCount;
     // Pre-fill ball type
     if(ball) document.getElementById('editBall').value = ball;
+    updateEditBallTag();
 
     // Show Players field for ALL bookings (bulk and normal)
     document.getElementById('editPlayersRow').style.display = 'block';
