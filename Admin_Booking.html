@@ -834,9 +834,11 @@
         </div>
       </div>
     </div>
-    <div class="edit-msg" id="editMsg"></div>
+    <div class="edit-msg-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div class="edit-msg" id="editMsg" style="margin:0;"></div>
+      <button type="button" id="editMoreBtn" class="receipt-btn" style="display:none;flex-shrink:0;" onclick="goToGroupFromEdit()">➕ More…</button>
+    </div>
     <div class="edit-receipt" id="editReceipt" style="display:none;">
-      <button type="button" id="editMoreBtn" class="receipt-btn" style="display:none;margin-bottom:10px;" onclick="goToGroupFromEdit()">➕ More…</button>
       <div class="receipt-title">🧾 Updated Booking Receipt</div>
       <dl id="editReceiptDetails"></dl>
       <div class="receipt-note">
@@ -1346,9 +1348,10 @@
 
     const rowsHtml = g.slots.map(s => {
       const isCancelled = s.status === 'Cancelled';
+      const netsCount = (s.net.match(/Net/g)||[]).length || 1;
       return `<tr style="${isCancelled?'opacity:.55;text-decoration:line-through;':''}">
         <td>${s.date}</td><td>${s.time}</td><td>${s.duration}</td>
-        <td>${s.net}</td><td>${s.ball||''}</td><td>${s.ref}</td>
+        <td>${netsCount}</td><td>${s.ball||''}</td><td>${s.ref}</td>
         <td style="text-decoration:none;">${isCancelled ? '🚫 Cancelled' : '✅ Confirmed'}</td>
       </tr>`;
     }).join('');
@@ -1362,16 +1365,17 @@
         </div>
         <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
           <table class="receipt-table">
-            <thead><tr><th>Date</th><th>Time</th><th>Duration</th><th>Net</th><th>Ball</th><th>Ref #</th><th>Status</th></tr></thead>
+            <thead><tr><th>Date</th><th>Time</th><th>Duration</th><th>No. of Nets</th><th>Ball</th><th>Ref #</th><th>Status</th></tr></thead>
             <tbody>${rowsHtml}</tbody>
           </table>
         </div>
         <div class="receipt-actions" id="groupReceiptBtns${gi}"></div>
       </div>`;
 
-    const waLines = g.slots.map((s,i) =>
-      `${i+1}. ${s.date} | ${s.time} | ${s.duration} | ${s.net} | ${s.ball||''} | Ref: ${s.ref} | ${s.status==='Cancelled'?'🚫 Cancelled':'✅ Confirmed'}`
-    ).join('\n');
+    const waLines = g.slots.map((s,i) => {
+      const netsCount = (s.net.match(/Net/g)||[]).length || 1;
+      return `${i+1}. ${s.date} | ${s.time} | ${s.duration} | Nets: ${netsCount} | ${s.ball||''} | Ref: ${s.ref} | ${s.status==='Cancelled'?'🚫 Cancelled':'✅ Confirmed'}`;
+    }).join('\n');
     const waMsg = `*County Indoor Netz — Group Booking Summary* 📋
 
 *Customer:* ${g.name}
@@ -1383,12 +1387,19 @@
 ${waLines}
 
 To cancel any or all active slots quote your individual Booking Ref No. and Group Ref *${g.groupRef}*
+
+👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
+https://tinyurl.com/2hta9v6t
+
+🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
+
 See you at the nets! 🏏`;
 
-    const smsLines = g.slots.map((s,i) =>
-      `${i+1}. ${s.date} ${s.time} ${s.duration} ${s.net} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`
-    ).join('\n');
-    const smsMsg = `County Indoor Netz - Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}`;
+    const smsLines = g.slots.map((s,i) => {
+      const netsCount = (s.net.match(/Net/g)||[]).length || 1;
+      return `${i+1}. ${s.date} ${s.time} ${s.duration} Nets:${netsCount} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`;
+    }).join('\n');
+    const smsMsg = `County Indoor Netz - Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
 
     document.getElementById(`groupReceiptBtns${gi}`).innerHTML = `
       <a class="share-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(waMsg)}">
@@ -1406,6 +1417,13 @@ See you at the nets! 🏏`;
     const chev   = document.getElementById('chev'+gi);
     const open   = detail.classList.toggle('open');
     chev.classList.toggle('open', open);
+    // Clear any previously-shown full receipt when collapsing, so the
+    // next time this group is expanded it starts fresh rather than
+    // showing a stale receipt from before.
+    if(!open){
+      const receiptArea = document.getElementById('groupReceiptArea'+gi);
+      if(receiptArea) receiptArea.innerHTML = '';
+    }
   }
   window.toggleBulkGroup = toggleBulkGroup;
 
@@ -1713,6 +1731,10 @@ All slots under this group have been cancelled and those nets are now free for o
     editOriginalDate      = document.getElementById('editDate').value;
     editOriginalTime      = time;
     editCurrentNetsCount  = netCount;
+    editOriginalSession   = session;
+    editOriginalDuration  = duration;
+    editOriginalBall      = ball || '';
+    editOriginalPlayers   = players || '';
     // Pre-fill ball type
     if(ball) document.getElementById('editBall').value = ball;
     updateEditBallTag();
@@ -1720,6 +1742,12 @@ All slots under this group have been cancelled and those nets are now free for o
     // Show Players field for ALL bookings (bulk and normal)
     document.getElementById('editPlayersRow').style.display = 'block';
     if(players) document.getElementById('editPlayers').value = players;
+
+    // Calculate the amount immediately on open — previously this only ran
+    // when the admin manually changed session/duration/nets/ball, so if
+    // they only touched the date (or made no changes and just re-saved),
+    // Amount silently stayed blank on the receipt.
+    calcEditAmount();
 
     // Apply nets restriction based on pre-filled players
     const nSelEdit = document.getElementById('editNets');
@@ -1776,6 +1804,7 @@ All slots under this group have been cancelled and those nets are now free for o
 
   let editAvailCache = {};
   let editOriginalDate = '', editOriginalTime = '', editCurrentNetsCount = 0, editCurrentPlayers = '';
+  let editOriginalSession = '', editOriginalDuration = '', editOriginalBall = '', editOriginalPlayers = '';
 
   async function refreshEditAvailability(){
     const dateVal = document.getElementById('editDate').value;
@@ -1982,6 +2011,22 @@ All slots under this group have been cancelled and those nets are now free for o
       msg.className = 'edit-msg err'; return;
     }
 
+    // If nothing was actually changed, don't submit or show a receipt —
+    // just let the admin know and stop here.
+    const nothingChanged =
+      date === editOriginalDate &&
+      session === editOriginalSession &&
+      time === editOriginalTime &&
+      duration === editOriginalDuration &&
+      nets === editCurrentNetsCount &&
+      ball === editOriginalBall &&
+      players === editOriginalPlayers;
+    if(nothingChanged){
+      msg.textContent = 'ℹ️ No changes were made.';
+      msg.className = 'edit-msg';
+      return;
+    }
+
     // Block saving to a past time slot
     if(isSlotPast(document.getElementById('editDate').value.split('-').reverse().map((v,i)=>i===2?v.slice(2):v).join('/'), time)){
       msg.textContent = '❌ Cannot save — this time slot has already passed. Please choose a future time.';
@@ -2023,7 +2068,7 @@ All slots under this group have been cancelled and those nets are now free for o
 
         // Build receipt
         document.getElementById('editReceiptDetails').innerHTML = `
-          <dt>Group Ref</dt><dd style="color:var(--leather);font-weight:700;letter-spacing:.5px">${editCurrentGroupRef}</dd>
+          ${editCurrentGroupRef ? `<dt>Group Ref</dt><dd style="color:var(--leather);font-weight:700;letter-spacing:.5px">${editCurrentGroupRef}</dd>` : ''}
           <dt>Booking Ref</dt><dd>${ref}</dd>
           <dt>Name</dt><dd>${editCurrentName}</dd>
           <dt>Mobile</dt><dd>${mobile}</dd>
