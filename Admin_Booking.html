@@ -1295,7 +1295,7 @@
                   <div class="bulk-slot-ref">Ref: ${s.ref}</div>
                 </div>
                 <div class="bulk-slot-btns">
-                  ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled</span>'
+                  ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled' + (s.cancelledAt ? ' — ' + s.cancelledAt : '') + '</span>'
                     : !isPast ? `
                     <button class="bulk-slot-edit" onclick="openEditModal('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}','${s.duration}','${s.net}','${s.ball||''}','${s.players||''}')">✏️ Edit</button>
                     <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
@@ -1352,7 +1352,7 @@
       return `<tr style="${isCancelled?'opacity:.55;text-decoration:line-through;':''}">
         <td>${s.date}</td><td>${s.time}</td><td>${s.duration}</td>
         <td>${netsCount}</td><td>${s.ball||''}</td><td>${s.ref}</td>
-        <td style="text-decoration:none;">${isCancelled ? '🚫 Cancelled' : '✅ Confirmed'}</td>
+        <td style="text-decoration:none;">${isCancelled ? '🚫 Cancelled' + (s.cancelledAt ? '<br><span style=\"font-size:10px;color:var(--muted);\">' + s.cancelledAt + '</span>' : '') : '✅ Confirmed'}</td>
       </tr>`;
     }).join('');
 
@@ -1587,21 +1587,25 @@ All slots under this group have been cancelled and those nets are now free for o
       const data = await res.json();
 
       if(!data.results || !data.results.length){
-        msg.textContent = 'No active normal bookings found.';
+        msg.textContent = 'No bookings found.';
         msg.style.color = 'var(--muted)'; return;
       }
       msg.textContent = `${data.results.length} booking${data.results.length>1?'s':''} found.`;
       msg.style.color = 'var(--navy)';
       document.getElementById('normalRefreshBtn').style.display = 'inline-flex';
 
-      results.innerHTML = data.results.map((b,i)=>`
-        <div class="bulk-group-card" id="nslot_${i}">
+      results.innerHTML = data.results.map((b,i)=>{
+        const isCancelled = b.status === 'Cancelled';
+        const isPast = isSlotPast(b.date, b.time);
+        return `
+        <div class="bulk-group-card" id="nslot_${i}" style="${isCancelled?'opacity:.7;':''}">
           <div class="bulk-group-header" onclick="toggleNormalResult(${i})">
             <div class="bulk-group-info">
-              <div class="bulk-group-name">${b.name}</div>
+              <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
               <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
             </div>
-            ${isSlotPast(b.date, b.time) ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
+            ${isCancelled ? '<span class="bulk-group-badge" style="background:var(--error);">🚫 Cancelled</span>'
+              : isPast ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
             <span class="bulk-group-chevron" id="nchev${i}">▾</span>
           </div>
           <div class="bulk-group-detail" id="ndetail${i}">
@@ -1611,12 +1615,13 @@ All slots under this group have been cancelled and those nets are now free for o
               ${b.session.startsWith('Morning')?'Morning':'Evening'} &nbsp; ${b.ball} &nbsp; ${b.amount}
             </div>
             <div class="normal-slot-btns" style="margin-top:10px;">
-              ${isSlotPast(b.date, b.time)
-                ? '<span class="bulk-slot-past">Past</span>'
+              ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
+                : isPast ? '<span class="bulk-slot-past">Past</span>'
                 : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'}
             </div>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } catch(e){
       msg.textContent = '❌ Search failed. Check connection.';
       msg.style.color = 'var(--error)';
