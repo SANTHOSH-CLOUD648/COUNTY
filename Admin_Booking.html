@@ -1381,27 +1381,55 @@
         return;
       }
       msg.textContent = '';
+
+      const rowHtml = r => `
+        <tr>
+          <td>${r.label}</td>
+          <td>${r.totalBookings}</td>
+          <td>${r.totalCancellations}</td>
+          <td>${r.totalActive}</td>
+          <td>${r.morning}</td>
+          <td>${r.evening}</td>
+          <td>${r.leather}</td>
+          <td>${r.tennis}</td>
+          <td>₹${r.amount.toLocaleString('en-IN')}</td>
+        </tr>`;
+
+      const headerHtml = `
+        <thead><tr>
+          <th>${data.columnHeader || 'Date'}</th><th>Tot No. Of<br>Bookings</th><th>Tot No. Of<br>Cancellations</th>
+          <th>Tot No. Of<br>Active Bookings</th><th>Morning<br>Session</th><th>Evening<br>Session</th>
+          <th>Leather<br>Ball</th><th>Tennis<br>Ball</th><th>Amount</th>
+        </tr></thead>`;
+
+      let bodyHtml, titleHtml = '';
+      if (data.mode === 'single') {
+        bodyHtml = `<tbody>${rowHtml(data.row)}</tbody>`;
+      } else {
+        // breakdown mode: one row per date/month, plus a bold Total row
+        titleHtml = data.title ? `<div style="font-weight:700;color:var(--navy);margin-bottom:6px;">${data.title}</div>` : '';
+        const dataRows = data.rows.map(rowHtml).join('');
+        const totalRow = `
+          <tr style="background:#f0ece0;font-weight:800;">
+            <td>${data.total.label}</td>
+            <td>${data.total.totalBookings}</td>
+            <td>${data.total.totalCancellations}</td>
+            <td>${data.total.totalActive}</td>
+            <td>${data.total.morning}</td>
+            <td>${data.total.evening}</td>
+            <td>${data.total.leather}</td>
+            <td>${data.total.tennis}</td>
+            <td>₹${data.total.amount.toLocaleString('en-IN')}</td>
+          </tr>`;
+        bodyHtml = `<tbody>${dataRows}${totalRow}</tbody>`;
+      }
+
       resultArea.innerHTML = `
+        ${titleHtml}
         <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
           <table class="report-table">
-            <thead><tr>
-              <th>Date</th><th>Tot No. Of<br>Bookings</th><th>Tot No. Of<br>Cancellations</th>
-              <th>Tot No. Of<br>Active Bookings</th><th>Morning<br>Session</th><th>Evening<br>Session</th>
-              <th>Leather<br>Ball</th><th>Tennis<br>Ball</th><th>Amount</th>
-            </tr></thead>
-            <tbody>
-              <tr>
-                <td>${data.label}</td>
-                <td>${data.totalBookings}</td>
-                <td>${data.totalCancellations}</td>
-                <td>${data.totalActive}</td>
-                <td>${data.morning}</td>
-                <td>${data.evening}</td>
-                <td>${data.leather}</td>
-                <td>${data.tennis}</td>
-                <td>₹${data.amount.toLocaleString('en-IN')}</td>
-              </tr>
-            </tbody>
+            ${headerHtml}
+            ${bodyHtml}
           </table>
         </div>`;
     } catch(e){
