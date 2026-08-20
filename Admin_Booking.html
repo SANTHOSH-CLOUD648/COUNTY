@@ -1376,7 +1376,7 @@
       const netsCount = (s.net.match(/Net/g)||[]).length || 1;
       return `${i+1}. ${s.date} | ${s.time} | ${s.duration} | Nets: ${netsCount} | ${s.ball||''} | Ref: ${s.ref} | ${s.status==='Cancelled'?'🚫 Cancelled':'✅ Confirmed'}`;
     }).join('\n');
-    const waMsg = `*County Indoor Netz — Group Booking Summary* 📋
+    const waMsg = `*County Indoor Netz — Updated Group Booking Summary* 📋
 
 *Customer:* ${g.name}
 *Mobile:* ${g.mobile}
@@ -1399,7 +1399,7 @@ See you at the nets! 🏏`;
       const netsCount = (s.net.match(/Net/g)||[]).length || 1;
       return `${i+1}. ${s.date} ${s.time} ${s.duration} Nets:${netsCount} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`;
     }).join('\n');
-    const smsMsg = `County Indoor Netz - Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
+    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
 
     document.getElementById(`groupReceiptBtns${gi}`).innerHTML = `
       <a class="share-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(waMsg)}">
@@ -1502,22 +1502,28 @@ Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? `\nGroup Re
 Date: ${date}
 Time: ${time}
 
-This slot has been cancelled and the net is now free for others to book.`;
-    const smsMsg = `County Indoor Netz - Booking Cancelled\nName: ${name} | Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? ` | Group Ref: ${groupRef}` : ''}\nDate: ${date} Time: ${time}\nThis slot has been cancelled.`;
+This slot has been cancelled and the net is now free for others to book.
+
+👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
+https://tinyurl.com/2hta9v6t`;
+    const smsMsg = `County Indoor Netz - Booking Cancelled\nName: ${name} | Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? ` | Group Ref: ${groupRef}` : ''}\nDate: ${date} Time: ${time}\nThis slot has been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t`;
     return { waMsg, smsMsg, mobile };
   }
 
   // Builds the WhatsApp + SMS confirmation text for a whole-group cancellation
   function buildGroupCancelMessage(name, mobile, groupRef, count){
-    const waMsg = `*County Indoor Netz — Group Booking Cancelled* 🚫
+    const waMsg = `*County Indoor Netz — Group Booking Code ${groupRef} is Cancelled* 🚫
 
 Name: ${name}
 Mobile: ${mobile}
 Group Ref: ${groupRef}
 Slots cancelled: ${count}
 
-All slots under this group have been cancelled and those nets are now free for others to book.`;
-    const smsMsg = `County Indoor Netz - Group Booking Cancelled\nName: ${name} | Group Ref: ${groupRef}\nSlots cancelled: ${count}\nAll slots under this group have been cancelled.`;
+All slots under this group have been cancelled and those nets are now free for others to book.
+
+👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
+https://tinyurl.com/2hta9v6t`;
+    const smsMsg = `County Indoor Netz - Group Booking Code ${groupRef} is Cancelled\nName: ${name} | Group Ref: ${groupRef}\nSlots cancelled: ${count}\nAll slots under this group have been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t`;
     return { waMsg, smsMsg, mobile };
   }
 
@@ -1665,6 +1671,7 @@ All slots under this group have been cancelled and those nets are now free for o
     // Switch to Bulk Booking tab and pre-fill group details
     showAdminTab('book');
     currentGroupRef = groupRef;
+    addingToExistingGroup = true; // so the success message says "Booking Updated" instead of "Booking N confirmed"
     document.getElementById('grpRefDisplay').textContent = groupRef;
     document.getElementById('aName').value   = name;
     document.getElementById('aMobile').value = mobile;
@@ -1727,14 +1734,22 @@ All slots under this group have been cancelled and those nets are now free for o
     document.getElementById('editSession').value = session;
     populateEditTimes(hour24 < 18 ? MORNING_E : EVENING_E);
     applyEditPastTimeFilter(); // hide past times if today
-    document.getElementById('editTime').value = time;
+    // Normalize to zero-padded form ("2:00 pm" → "02:00 pm") before
+    // pre-selecting — the dropdown's option values are always zero-padded,
+    // so an unpadded source time would otherwise silently fail to select
+    // anything, leaving the field blank.
+    const timeParts = time.trim().split(':');
+    const normalizedTime = timeParts.length === 2
+      ? (timeParts[0].length < 2 ? '0'+timeParts[0] : timeParts[0]) + ':' + timeParts[1]
+      : time;
+    document.getElementById('editTime').value = normalizedTime;
     document.getElementById('editDuration').value = duration;
 
     const netCount = (net.match(/Net/g)||[]).length || 1;
     document.getElementById('editNets').value = netCount;
     // Remember the original slot so we can add back freed nets in the availability calc
     editOriginalDate      = document.getElementById('editDate').value;
-    editOriginalTime      = time;
+    editOriginalTime      = normalizedTime;
     editCurrentNetsCount  = netCount;
     editOriginalSession   = session;
     editOriginalDuration  = duration;
@@ -2084,7 +2099,7 @@ All slots under this group have been cancelled and those nets are now free for o
           <dt>Duration</dt><dd>${duration}</dd>
           <dt>Nets Required</dt><dd>${nets}</dd>
           ${ball ? `<dt>Ball Type</dt><dd>${ball}</dd>` : ''}
-          ${amountVal && amountVal !== '—' ? `<dt>Amount</dt><dd>${amountVal}</dd>` : ''}
+          ${(!editCurrentGroupRef && amountVal && amountVal !== '—') ? `<dt>Amount</dt><dd>${amountVal}</dd>` : ''}
         `;
 
         const waMsg = `*County Indoor Netz — Booking Updated* 🏏
@@ -2140,9 +2155,11 @@ Your booking has been updated. See you at the nets!`;
   window.saveEdit = saveEdit;
   let adminBookings = [];
   let currentGroupRef = '';
+  let addingToExistingGroup = false;
 
   function newGroupRef(){
     currentGroupRef = 'GRP-' + Math.random().toString(36).slice(2,7).toUpperCase();
+    addingToExistingGroup = false; // this is a brand new group, not adding to an existing one
     document.getElementById('grpRefDisplay').textContent = currentGroupRef;
     // Clear all form fields for the new group/customer
     document.getElementById('aName').value    = '';
@@ -2240,7 +2257,9 @@ Your booking has been updated. See you at the nets!`;
         updateAdminReceipt();
 
         const count = adminBookings.length;
-        msg.textContent = `✅ Booking ${count} confirmed — ${dateDisplay} ${time} ${netLabel}. Add next slot or view receipt.`;
+        msg.textContent = addingToExistingGroup
+          ? `✅ Booking Updated — ${dateDisplay} ${time} ${netLabel} added to group ${currentGroupRef}. Add next slot or view receipt.`
+          : `✅ Booking ${count} confirmed — ${dateDisplay} ${time} ${netLabel}. Add next slot or view receipt.`;
         msg.className = 'admin-msg ok';
 
         // Clear only Date for next booking
