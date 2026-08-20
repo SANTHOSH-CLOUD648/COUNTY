@@ -1447,10 +1447,15 @@ See you at the nets! 🏏`;
         const count = data.status.split(':')[1];
         document.getElementById('grpCard'+gi).style.opacity = '0.5';
         btn.textContent = `✅ ${count} slot${count>1?'s':''} cancelled`;
-        document.getElementById('cancelTabMsg').textContent = `✅ Group ${groupRef} — ${count} slot${count>1?'s':''} cancelled.`;
+        document.getElementById('cancelTabMsg').textContent = `✅ Group ${groupRef} — ${count} slot${count>1?'s':''} cancelled. This group will disappear from the list shortly.`;
         // Disable all individual cancel buttons in this card
         document.querySelectorAll(`#grpCard${gi} .bulk-slot-cancel`).forEach(b=>b.disabled=true);
         showCancelShareButtons(`grpCancelShare${gi}`, btn.parentElement, buildGroupCancelMessage(name, mobile, groupRef, count));
+        // Automatically refresh the whole list after a short delay — long
+        // enough to use the Send buttons above first, but no manual
+        // refresh/tab-switch needed for the fully-cancelled group to
+        // disappear (the backend already excludes it once reloaded).
+        setTimeout(() => { loadBulkList(); }, 6000);
       } else if(data.status === 'too_late'){
         btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
         document.getElementById('cancelTabMsg').textContent = '⚠️ Some or all slots are in the past and cannot be cancelled.';
@@ -2311,7 +2316,7 @@ Your booking has been updated. See you at the nets!`;
     const waLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} | ${b.time} | ${b.dur} | Players: ${b.players} | Nets Required: ${b.nets} | ${b.ball==='Leather Ball'?'Leather':'Tennis'} | Ref: ${b.ref}`
     ).join('\n');
-    const waMsg = `*County Indoor Netz — Bulk Booking Confirmed* 🏏
+    const waMsg = `*County Indoor Netz — Bulk Booking ${addingToExistingGroup ? 'Updated' : 'Confirmed'}* 🏏
 
 *Customer:* ${b0.name}
 *Mobile:* ${b0.mobile}
