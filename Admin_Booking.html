@@ -505,6 +505,36 @@
   .bulk-group-hours{
     font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;
   }
+
+  .report-subtab{
+    background:#f0ece0;color:var(--navy);border:1.5px solid #e2ddd0;
+    border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .report-subtab.active{ background:var(--navy);color:#fff;border-color:var(--navy); }
+  .report-label{ display:block;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px; }
+  .report-input{
+    width:100%;max-width:260px;padding:9px 12px;border:1.5px solid #e2ddd0;
+    border-radius:8px;font-size:14px;font-family:inherit;background:#fffdf8;
+  }
+  .report-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px;}
+  .report-table th{
+    background:var(--navy);color:#fff;padding:8px 6px;text-align:center;
+    font-size:11px;letter-spacing:.2px;white-space:nowrap;
+  }
+  .report-table td{
+    padding:9px 6px;text-align:center;border-bottom:1px solid #eee;
+    color:var(--ink);white-space:nowrap;font-weight:600;
+  }
+  .report-summary-card{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px;
+  }
+  .report-stat{
+    background:#fbf7ec;border:1.5px solid #e9e0c8;border-radius:10px;
+    padding:12px;text-align:center;
+  }
+  .report-stat .val{font-size:20px;font-weight:800;color:var(--navy);}
+  .report-stat .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
   .bulk-group-chevron{font-size:12px;color:var(--muted);transition:transform .2s;}
   .bulk-group-chevron.open{transform:rotate(180deg);}
 
@@ -772,11 +802,52 @@
 
       <!-- ── REPORTS TAB ── -->
       <div id="adminTabReports" class="admin-tab-content" style="display:none;">
-        <div class="reports-placeholder">
-          <div style="font-size:40px;margin-bottom:12px;">📊</div>
-          <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px;">Reports</div>
-          <div style="font-size:13px;color:var(--muted);">Coming soon — daily summaries, revenue reports, and more.</div>
+        <h3 class="cancel-tab-title" style="margin-bottom:12px;">📊 Reports</h3>
+
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="report-subtab active" id="repSubBtnDaily"   onclick="showReportSubTab('daily')">Daily</button>
+          <button class="report-subtab"        id="repSubBtnCustom"  onclick="showReportSubTab('custom')">Custom Dates</button>
+          <button class="report-subtab"        id="repSubBtnMonthly" onclick="showReportSubTab('monthly')">Monthly</button>
+          <button class="report-subtab"        id="repSubBtnYearly"  onclick="showReportSubTab('yearly')">Yearly</button>
         </div>
+
+        <div id="repPanelDaily" class="report-panel">
+          <label class="report-label">Date</label>
+          <input type="date" id="repDailyDate" class="report-input">
+          <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('daily')">Generate Report</button>
+        </div>
+
+        <div id="repPanelCustom" class="report-panel" style="display:none;">
+          <label class="report-label">From</label>
+          <input type="date" id="repCustomFrom" class="report-input">
+          <label class="report-label" style="margin-top:8px;">To</label>
+          <input type="date" id="repCustomTo" class="report-input">
+          <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('custom')">Generate Report</button>
+        </div>
+
+        <div id="repPanelMonthly" class="report-panel" style="display:none;">
+          <label class="report-label">Month</label>
+          <select id="repMonthlyMonth" class="report-input">
+            <option value="1">January</option><option value="2">February</option>
+            <option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+          <label class="report-label" style="margin-top:8px;">Year</label>
+          <input type="number" id="repMonthlyYear" class="report-input" style="width:100px;">
+          <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('monthly')">Generate Report</button>
+        </div>
+
+        <div id="repPanelYearly" class="report-panel" style="display:none;">
+          <label class="report-label">Year</label>
+          <input type="number" id="repYearlyYear" class="report-input" style="width:100px;">
+          <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('yearly')">Generate Report</button>
+        </div>
+
+        <div id="reportMsg" class="admin-msg" style="margin-top:12px;"></div>
+        <div id="reportResultArea" style="margin-top:14px;"></div>
       </div><!-- end reports tab -->
 
     </div>
@@ -1239,8 +1310,106 @@
       if(btn) btn.classList.toggle('active', t===tab);
     });
     if(tab==='cancel') loadBulkList();
+    if(tab==='reports') setReportDefaults();
   }
   window.showAdminTab = showAdminTab;
+
+  // ── Reports tab ──────────────────────────────────────────
+  function showReportSubTab(sub){
+    ['daily','custom','monthly','yearly'].forEach(function(s){
+      document.getElementById('repPanel'+s.charAt(0).toUpperCase()+s.slice(1)).style.display = (s===sub) ? 'block' : 'none';
+      var btn = document.getElementById('repSubBtn'+s.charAt(0).toUpperCase()+s.slice(1));
+      if (btn) btn.classList.toggle('active', s===sub);
+    });
+    document.getElementById('reportResultArea').innerHTML = '';
+    document.getElementById('reportMsg').textContent = '';
+  }
+  window.showReportSubTab = showReportSubTab;
+
+  // Set sensible defaults (today / this month / this year) the first time
+  // the Reports tab is opened, so the fields aren't empty.
+  let reportDefaultsSet = false;
+  function setReportDefaults(){
+    if (reportDefaultsSet) return;
+    reportDefaultsSet = true;
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
+    const pad = n => n<10 ? '0'+n : ''+n;
+    document.getElementById('repDailyDate').value  = `${y}-${pad(m)}-${pad(d)}`;
+    document.getElementById('repCustomFrom').value = `${y}-${pad(m)}-${pad(d)}`;
+    document.getElementById('repCustomTo').value   = `${y}-${pad(m)}-${pad(d)}`;
+    document.getElementById('repMonthlyMonth').value = String(m);
+    document.getElementById('repMonthlyYear').value  = String(y);
+    document.getElementById('repYearlyYear').value    = String(y);
+  }
+
+  async function generateReport(type){
+    const msg = document.getElementById('reportMsg');
+    const resultArea = document.getElementById('reportResultArea');
+    msg.textContent = '⏳ Generating report…';
+    msg.className = 'admin-msg';
+    resultArea.innerHTML = '';
+
+    let qs = `action=report&type=${type}`;
+    if (type === 'daily'){
+      const v = document.getElementById('repDailyDate').value;
+      if (!v){ msg.textContent = '⚠️ Please select a date.'; msg.className='admin-msg err'; return; }
+      qs += `&date=${v}`;
+    } else if (type === 'custom'){
+      const f = document.getElementById('repCustomFrom').value;
+      const t = document.getElementById('repCustomTo').value;
+      if (!f || !t){ msg.textContent = '⚠️ Please select both dates.'; msg.className='admin-msg err'; return; }
+      if (f > t){ msg.textContent = '⚠️ "From" date must be before "To" date.'; msg.className='admin-msg err'; return; }
+      qs += `&fromDate=${f}&toDate=${t}`;
+    } else if (type === 'monthly'){
+      const mo = document.getElementById('repMonthlyMonth').value;
+      const yr = document.getElementById('repMonthlyYear').value;
+      if (!yr){ msg.textContent = '⚠️ Please enter a year.'; msg.className='admin-msg err'; return; }
+      qs += `&month=${mo}&year=${yr}`;
+    } else if (type === 'yearly'){
+      const yr = document.getElementById('repYearlyYear').value;
+      if (!yr){ msg.textContent = '⚠️ Please enter a year.'; msg.className='admin-msg err'; return; }
+      qs += `&year=${yr}`;
+    }
+
+    try {
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const data = await res.json();
+      if (data.status !== 'ok'){
+        msg.textContent = '❌ ' + (data.message || 'Could not generate report.');
+        msg.className = 'admin-msg err';
+        return;
+      }
+      msg.textContent = '';
+      resultArea.innerHTML = `
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+          <table class="report-table">
+            <thead><tr>
+              <th>Date</th><th>Tot No. Of<br>Bookings</th><th>Tot No. Of<br>Cancellations</th>
+              <th>Tot No. Of<br>Active Bookings</th><th>Morning<br>Session</th><th>Evening<br>Session</th>
+              <th>Leather<br>Ball</th><th>Tennis<br>Ball</th><th>Amount</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td>${data.label}</td>
+                <td>${data.totalBookings}</td>
+                <td>${data.totalCancellations}</td>
+                <td>${data.totalActive}</td>
+                <td>${data.morning}</td>
+                <td>${data.evening}</td>
+                <td>${data.leather}</td>
+                <td>${data.tennis}</td>
+                <td>₹${data.amount.toLocaleString('en-IN')}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>`;
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.generateReport = generateReport;
 
   // ── Cancel tab — bulk booking list ───────────────────────────
   let lastBulkGroups = []; // remembers the last-loaded group data, so
