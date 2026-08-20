@@ -1244,6 +1244,27 @@
                             // showGroupReceipt(gi) can build a full receipt
                             // without needing another server round-trip.
 
+  // Builds the "N bookings - ₹Total" badge text for a group, counting only
+  // active (non-cancelled) slots and summing their amounts. Shared by the
+  // initial render and by the recalculation after edits/cancellations, so
+  // it always reflects the group's current live state.
+  function buildGroupBadgeText(g){
+    const activeSlots = g.slots.filter(s => s.status !== 'Cancelled');
+    const cancelledCount = g.slots.length - activeSlots.length;
+    const total = activeSlots.reduce((sum, s) => {
+      const n = parseFloat(String(s.amount||'').replace(/[^0-9.]/g,''));
+      return sum + (isNaN(n) ? 0 : n);
+    }, 0);
+    const bookingWord = activeSlots.length === 1 ? 'booking' : 'bookings';
+    return `${activeSlots.length} ${bookingWord} - ₹${total.toLocaleString('en-IN')}${cancelledCount>0 ? ` · ${cancelledCount} cancelled` : ''}`;
+  }
+
+  function refreshGroupBadge(gi){
+    const g = lastBulkGroups[gi];
+    const badgeEl = document.querySelector(`#grpCard${gi} .bulk-group-badge`);
+    if (g && badgeEl) badgeEl.textContent = buildGroupBadgeText(g);
+  }
+
   async function loadBulkList(){
     const area = document.getElementById('bulkListArea');
     const msg  = document.getElementById('cancelTabMsg');
@@ -1259,8 +1280,6 @@
       }
       lastBulkGroups = data.groups;
       area.innerHTML = data.groups.map((g,gi)=>{
-        const activeCount = g.slots.filter(s => s.status !== 'Cancelled').length;
-        const cancelledCount = g.slots.length - activeCount;
         return `
         <div class="bulk-group-card" id="grpCard${gi}" data-groupref="${g.groupRef}">
           <div class="bulk-group-header" onclick="toggleBulkGroup(${gi})">
@@ -1269,7 +1288,7 @@
               <div class="bulk-group-name">${g.name}</div>
               <div class="bulk-group-meta">📱 ${g.mobile}</div>
             </div>
-            <span class="bulk-group-badge">${activeCount} active${cancelledCount>0 ? ` · ${cancelledCount} cancelled` : ''}</span>
+            <span class="bulk-group-badge">${buildGroupBadgeText(g)}</span>
             <span class="bulk-group-chevron" id="chev${gi}">▾</span>
           </div>
           <div class="bulk-group-detail" id="grpDetail${gi}">
@@ -1483,6 +1502,13 @@ See you at the nets! 🏏`;
         rowEl.innerHTML = `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>
           <div id="slotCancelShare_${gi}_${si}" style="margin-top:8px;"></div>`;
         showCancelShareButtons(`slotCancelShare_${gi}_${si}`, null, buildSingleCancelMessage(name, mobile, ref, groupRef, date, time));
+        // Update local state and recalculate this group's "N bookings - ₹Total"
+        // badge immediately, without needing a full list reload (which would
+        // collapse the currently-expanded group and disrupt the view).
+        if(lastBulkGroups[gi] && lastBulkGroups[gi].slots[si]){
+          lastBulkGroups[gi].slots[si].status = 'Cancelled';
+          refreshGroupBadge(gi);
+        }
       } else if(data.status === 'too_late'){
         btn.disabled = true; btn.textContent = 'Past';
       } else if(data.status === 'already_cancelled'){
