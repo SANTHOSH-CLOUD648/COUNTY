@@ -502,6 +502,9 @@
     background:var(--navy);color:#fff;font-size:11px;font-weight:700;
     padding:3px 8px;border-radius:20px;white-space:nowrap;
   }
+  .bulk-group-hours{
+    font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;
+  }
   .bulk-group-chevron{font-size:12px;color:var(--muted);transition:transform .2s;}
   .bulk-group-chevron.open{transform:rotate(180deg);}
 
@@ -1259,10 +1262,26 @@
     return `${activeSlots.length} ${bookingWord} - ₹${total.toLocaleString('en-IN')}${cancelledCount>0 ? ` · ${cancelledCount} cancelled` : ''}`;
   }
 
+  // Builds the "(X hrs)" total-duration text for a group, same active-only
+  // rule as the amount total above.
+  function buildGroupHoursText(g){
+    const activeSlots = g.slots.filter(s => s.status !== 'Cancelled');
+    const totalHrs = activeSlots.reduce((sum, s) => {
+      const n = parseFloat(String(s.duration||''));
+      return sum + (isNaN(n) ? 0 : n);
+    }, 0);
+    // Show as a whole number when possible (4, not 4.0), otherwise keep one decimal (3.5)
+    const hrsDisplay = Number.isInteger(totalHrs) ? totalHrs : totalHrs.toFixed(1);
+    const hrWord = totalHrs === 1 ? 'hr' : 'hrs';
+    return `(${hrsDisplay} ${hrWord})`;
+  }
+
   function refreshGroupBadge(gi){
     const g = lastBulkGroups[gi];
     const badgeEl = document.querySelector(`#grpCard${gi} .bulk-group-badge`);
+    const hoursEl = document.querySelector(`#grpCard${gi} .bulk-group-hours`);
     if (g && badgeEl) badgeEl.textContent = buildGroupBadgeText(g);
+    if (g && hoursEl) hoursEl.textContent = buildGroupHoursText(g);
   }
 
   async function loadBulkList(){
@@ -1288,7 +1307,10 @@
               <div class="bulk-group-name">${g.name}</div>
               <div class="bulk-group-meta">📱 ${g.mobile}</div>
             </div>
-            <span class="bulk-group-badge">${buildGroupBadgeText(g)}</span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+              <span class="bulk-group-badge">${buildGroupBadgeText(g)}</span>
+              <span class="bulk-group-hours">${buildGroupHoursText(g)}</span>
+            </div>
             <span class="bulk-group-chevron" id="chev${gi}">▾</span>
           </div>
           <div class="bulk-group-detail" id="grpDetail${gi}">
