@@ -857,6 +857,11 @@
   <div class="edit-modal" id="editModal">
     <div class="edit-modal-title">✏️ Edit Booking</div>
     <div class="edit-ref" id="editRefDisplay"></div>
+    <div id="editSummaryBadges" style="display:none;margin:6px 0 10px;font-size:12px;color:var(--muted);font-weight:600;">
+      <span id="editSumDuration"></span> &nbsp;·&nbsp;
+      <span id="editSumBall"></span> &nbsp;·&nbsp;
+      <span id="editSumAmount" style="color:var(--navy);font-weight:800;"></span>
+    </div>
     <div class="admin-grid">
       <div><label class="admin-lbl">Date</label><input type="date" id="editDate"></div>
       <div><label class="admin-lbl">Session</label>
@@ -1964,6 +1969,7 @@ https://tinyurl.com/2hta9v6t`;
     document.getElementById('editMsg').className  = 'edit-msg';
     document.getElementById('editReceipt').style.display = 'none';
     document.getElementById('editMoreBtn').style.display = 'none';
+    document.getElementById('editSummaryBadges').style.display = 'none';
 
     // Restrict date to today onwards — cannot edit to a past date
     const editDateEl = document.getElementById('editDate');
@@ -2145,13 +2151,25 @@ https://tinyurl.com/2hta9v6t`;
     const session = document.getElementById('editSession').value;
     const rate = lookupRate(session, p, ball);
     const hrs = EDIT_DUR_HRS[dur];
+    let amountText = '—';
     if(rate && hrs){
       const amt = rate * hrs * nets;
-      document.getElementById('editAmountVal').textContent  = '₹' + amt.toLocaleString('en-IN');
+      amountText = '₹' + amt.toLocaleString('en-IN');
+      document.getElementById('editAmountVal').textContent  = amountText;
       document.getElementById('editAmountNote').textContent = `₹${rate}/hr × ${dur}${nets>1?' × '+nets+' Nets':''}`;
     } else {
       document.getElementById('editAmountVal').textContent  = '—';
       document.getElementById('editAmountNote').textContent = '';
+    }
+
+    // Also refresh the quick-glance summary line at the top of the modal
+    // (Duration · Ball Type · Amount), same idea as the group booking badges.
+    const badges = document.getElementById('editSummaryBadges');
+    if (dur || ball || amountText !== '—'){
+      badges.style.display = 'block';
+      document.getElementById('editSumDuration').textContent = dur ? `⏱ ${dur}` : '';
+      document.getElementById('editSumBall').textContent = ball ? `🏏 ${ball}` : '';
+      document.getElementById('editSumAmount').textContent = amountText !== '—' ? `💰 ${amountText}` : '';
     }
   }
 
