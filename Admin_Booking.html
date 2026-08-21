@@ -1864,6 +1864,7 @@ https://tinyurl.com/2hta9v6t`;
             <div class="bulk-group-info">
               <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
               <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
+              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
             </div>
             ${isCancelled ? '<span class="bulk-group-badge" style="background:var(--error);">🚫 Cancelled</span>'
               : isPast ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
