@@ -686,6 +686,16 @@
     </div>
   </div>
 
+  <div class="services-bar" id="newsBar" style="max-width:640px;margin:0 auto 18px;">
+    <button class="services-bar-btn" id="newsBarBtn" onclick="toggleNewsMenu()">
+      📰 News
+      <span class="services-arrow" id="newsArrow">▾</span>
+    </button>
+    <div class="services-dropdown" id="newsDropdown">
+      <!-- Populated by buildNewsDropdown() on load -->
+    </div>
+  </div>
+
   <div class="card">
 
     <div class="closed-notice" id="closedNotice">
@@ -879,6 +889,30 @@
     </div>
   </div>
 
+  <!-- News Category Detail Modal — tapping a category goes straight here,
+       same as tapping a facility goes straight to its photo(s). -->
+  <div class="service-overlay" id="newsOverlay" onclick="closeNews()"></div>
+  <div class="service-modal" id="newsModal" style="max-width:480px;">
+    <button class="service-close" onclick="closeNews()">✕</button>
+    <div class="service-modal-icon" id="newsModalIcon"></div>
+    <h3 class="service-modal-title" id="newsModalTitle"></h3>
+    <div id="newsModalDate" style="text-align:center;font-size:12px;color:var(--muted);margin-top:-6px;margin-bottom:8px;"></div>
+    <p class="service-modal-body" id="newsModalMessage"></p>
+    <div id="newsImageWrap" style="margin-top:6px;display:none;">
+      <img id="newsModalImage" src="" alt=""
+           style="display:block;max-width:100%;max-height:280px;margin:0 auto;border-radius:12px;object-fit:cover;">
+      <div id="newsGalleryNav" style="display:none;align-items:center;justify-content:space-between;margin-top:10px;">
+        <button type="button" onclick="newsPrevImage()" class="receipt-btn" style="padding:7px 14px;">◀ Prev</button>
+        <span id="newsGalleryCounter" style="font-size:12.5px;color:var(--muted);font-weight:600;"></span>
+        <button type="button" onclick="newsNextImage()" class="receipt-btn" style="padding:7px 14px;">Next ▶</button>
+      </div>
+      <div id="newsImageFallback" style="display:none;padding:30px 10px;text-align:center;color:var(--muted);font-size:13.5px;">
+        📷 Photo coming soon
+      </div>
+    </div>
+    <a id="newsLinkBtn" href="#" target="_blank" rel="noopener" class="receipt-btn" style="display:none;width:100%;text-align:center;margin-top:12px;text-decoration:none;"></a>
+  </div>
+
 
   <p class="foot-note">County Indoor Netz · Practice smart, play sharp 🏏</p>
 </div>
@@ -993,6 +1027,9 @@ try {
       }
       if(data && Array.isArray(data.facilities)){
         buildFacilitiesDropdown(data.facilities);
+      }
+      if(data && data.news && typeof data.news === 'object'){
+        buildNewsDropdown(data.news);
       }
       if(data && data.rates && typeof data.rates === 'object'){
         BOOKING_RATES = data.rates;
@@ -1949,6 +1986,183 @@ See you at the nets!`;
     if (document.getElementById('facilityModal').classList.contains('show')) {
       if (e.key === 'ArrowLeft')  facilityPrevImage();
       if (e.key === 'ArrowRight') facilityNextImage();
+    }
+  });
+
+  // ── News menu (Announcements / Achievements / Links / Gallery / Support) ──
+  // The "News" dropdown shows 5 fixed categories. Tapping a category opens
+  // its content DIRECTLY — same as tapping a facility — no list/selection
+  // step in between. If a category's sheet has multiple rows, they're all
+  // combined into one view: all photos become one shared gallery, all
+  // messages stack together, all links show as separate buttons.
+  const NEWS_CATEGORIES = [
+    { key:'announcements', icon:'📰', label:'Announcements' },
+    { key:'achievements',  icon:'🏆', label:'Achievements' },
+    { key:'links',         icon:'🔗', label:'Links' },
+    { key:'gallery',       icon:'🖼️', label:'Gallery' },
+    { key:'support',       icon:'☎️', label:'Support' }
+  ];
+  let NEWS_DATA = { announcements:[], achievements:[], links:[], gallery:[], support:[] };
+
+  function buildNewsDropdown(news) {
+    if (news && typeof news === 'object') NEWS_DATA = news;
+    const dd = document.getElementById('newsDropdown');
+    dd.innerHTML = NEWS_CATEGORIES.map(c =>
+      `<button class="dropdown-item" onclick="openNewsCategory('${c.key}')">
+        <span>${c.icon}</span> ${c.label}
+      </button>`
+    ).join('');
+  }
+  buildNewsDropdown(); // fallback empty categories shown immediately; live data overwrites once fetched
+
+  function toggleNewsMenu() {
+    const dd    = document.getElementById('newsDropdown');
+    const arrow = document.getElementById('newsArrow');
+    const open  = dd.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+    document.getElementById('servicesDropdown').classList.remove('open');
+    document.getElementById('servicesArrow').classList.remove('open');
+    document.getElementById('facilitiesDropdown').classList.remove('open');
+    document.getElementById('facilitiesArrow').classList.remove('open');
+  }
+  window.toggleNewsMenu = toggleNewsMenu;
+
+  document.addEventListener('click', (e) => {
+    const bar = document.getElementById('newsBar');
+    if (bar && !bar.contains(e.target)) {
+      document.getElementById('newsDropdown').classList.remove('open');
+      document.getElementById('newsArrow').classList.remove('open');
+    }
+  });
+
+  let currentNewsImages = [];
+  let currentNewsImageIndex = 0;
+
+  // Tapping a category goes straight to its content — no list step.
+  function openNewsCategory(key) {
+    document.getElementById('newsDropdown').classList.remove('open');
+    document.getElementById('newsArrow').classList.remove('open');
+    const cat = NEWS_CATEGORIES.find(c => c.key === key);
+    if (!cat) return;
+    const items = NEWS_DATA[key] || [];
+
+    document.getElementById('newsModalIcon').textContent = cat.icon;
+
+    if (items.length === 1) {
+      // Just one entry — show it plainly, its own title, like a single facility
+      const n = items[0];
+      document.getElementById('newsModalTitle').textContent = n.title || cat.label;
+      document.getElementById('newsModalDate').textContent  = n.date ? '🗓 ' + n.date : '';
+      document.getElementById('newsModalMessage').textContent = n.message || '';
+      document.getElementById('newsModalMessage').style.display = n.message ? 'block' : 'none';
+      currentNewsImages = Array.isArray(n.images) ? n.images.filter(Boolean) : [];
+      renderNewsLinkButtons(items);
+    } else {
+      // Multiple entries — combine them all into one view under the category name
+      document.getElementById('newsModalTitle').textContent = cat.label;
+      document.getElementById('newsModalDate').textContent  = '';
+      const combinedMessage = items
+        .map(n => n.message ? (n.title ? `${n.title}: ${n.message}` : n.message) : (n.title || ''))
+        .filter(Boolean)
+        .join('\n\n');
+      document.getElementById('newsModalMessage').textContent = combinedMessage;
+      document.getElementById('newsModalMessage').style.display = combinedMessage ? 'block' : 'none';
+      currentNewsImages = items.flatMap(n => Array.isArray(n.images) ? n.images.filter(Boolean) : []);
+      renderNewsLinkButtons(items);
+    }
+
+    currentNewsImageIndex = 0;
+    const imageWrap = document.getElementById('newsImageWrap');
+    if (currentNewsImages.length) {
+      imageWrap.style.display = 'block';
+      showNewsImage();
+    } else if (items.length && items.some(n => !n.message && !n.linkUrl)) {
+      // A category with an entry that has neither text nor a link nor a photo
+      // yet — show the same friendly placeholder used for Facilities.
+      imageWrap.style.display = 'block';
+      document.getElementById('newsModalImage').style.display = 'none';
+      document.getElementById('newsGalleryNav').style.display = 'none';
+      document.getElementById('newsImageFallback').style.display = 'block';
+    } else {
+      imageWrap.style.display = 'none';
+    }
+
+    document.getElementById('newsOverlay').classList.add('show');
+    document.getElementById('newsModal').classList.add('show');
+  }
+  window.openNewsCategory = openNewsCategory;
+
+  // Renders one button per item that has a link (Links category will
+  // typically show several; other categories usually show none or one).
+  function renderNewsLinkButtons(items) {
+    const container = document.getElementById('newsLinkBtn').parentElement;
+    // Remove any previously-rendered extra link buttons
+    container.querySelectorAll('.news-link-extra').forEach(el => el.remove());
+
+    const withLinks = items.filter(n => n.linkUrl);
+    const mainBtn = document.getElementById('newsLinkBtn');
+    if (withLinks.length === 0) {
+      mainBtn.style.display = 'none';
+      return;
+    }
+    mainBtn.style.display = 'block';
+    mainBtn.href = withLinks[0].linkUrl;
+    mainBtn.textContent = (withLinks[0].linkLabel || 'Open Link') + ' ↗';
+
+    // Any additional links beyond the first get their own stacked buttons
+    withLinks.slice(1).forEach(n => {
+      const a = document.createElement('a');
+      a.href = n.linkUrl; a.target = '_blank'; a.rel = 'noopener';
+      a.className = 'receipt-btn news-link-extra';
+      a.style.cssText = 'display:block;width:100%;text-align:center;margin-top:8px;text-decoration:none;';
+      a.textContent = (n.linkLabel || 'Open Link') + ' ↗';
+      mainBtn.insertAdjacentElement('afterend', a);
+    });
+  }
+
+  function showNewsImage() {
+    const img      = document.getElementById('newsModalImage');
+    const nav      = document.getElementById('newsGalleryNav');
+    const counter  = document.getElementById('newsGalleryCounter');
+    const fallback = document.getElementById('newsImageFallback');
+    if (!currentNewsImages.length) return;
+    img.style.display = 'block';
+    fallback.style.display = 'none';
+    img.onerror = () => { img.style.display = 'none'; fallback.style.display = 'block'; };
+    img.src = currentNewsImages[currentNewsImageIndex];
+    if (currentNewsImages.length > 1) {
+      nav.style.display = 'flex';
+      counter.textContent = (currentNewsImageIndex + 1) + ' / ' + currentNewsImages.length;
+    } else {
+      nav.style.display = 'none';
+    }
+  }
+
+  function newsPrevImage() {
+    if (!currentNewsImages.length) return;
+    currentNewsImageIndex = (currentNewsImageIndex - 1 + currentNewsImages.length) % currentNewsImages.length;
+    showNewsImage();
+  }
+  window.newsPrevImage = newsPrevImage;
+
+  function newsNextImage() {
+    if (!currentNewsImages.length) return;
+    currentNewsImageIndex = (currentNewsImageIndex + 1) % currentNewsImages.length;
+    showNewsImage();
+  }
+  window.newsNextImage = newsNextImage;
+
+  function closeNews() {
+    document.getElementById('newsOverlay').classList.remove('show');
+    document.getElementById('newsModal').classList.remove('show');
+  }
+  window.closeNews = closeNews;
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeNews();
+    if (document.getElementById('newsModal').classList.contains('show')) {
+      if (e.key === 'ArrowLeft')  newsPrevImage();
+      if (e.key === 'ArrowRight') newsNextImage();
     }
   });
 })();
