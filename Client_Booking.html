@@ -2076,7 +2076,7 @@ See you at the nets!`;
     if (currentNewsImages.length) {
       imageWrap.style.display = 'block';
       showNewsImage();
-    } else if (items.length && items.some(n => !n.message && !n.linkUrl)) {
+    } else if (items.length && items.some(n => !n.message && !n.linkUrl && !(Array.isArray(n.links) && n.links.length))) {
       // A category with an entry that has neither text nor a link nor a photo
       // yet — show the same friendly placeholder used for Facilities.
       imageWrap.style.display = 'block';
@@ -2092,30 +2092,44 @@ See you at the nets!`;
   }
   window.openNewsCategory = openNewsCategory;
 
-  // Renders one button per item that has a link (Links category will
-  // typically show several; other categories usually show none or one).
+  // Renders one button per LINK (not per item) — so a single item like a
+  // Support entry can show 2 buttons (e.g. "Call Us" + "WhatsApp Us") side
+  // by side, on top of the existing behaviour where different items (e.g.
+  // several Links entries) each contribute their own button too.
   function renderNewsLinkButtons(items) {
     const container = document.getElementById('newsLinkBtn').parentElement;
     // Remove any previously-rendered extra link buttons
     container.querySelectorAll('.news-link-extra').forEach(el => el.remove());
 
-    const withLinks = items.filter(n => n.linkUrl);
+    // Prefer the new `links` array (supports up to 2 links per item);
+    // fall back to the older single linkUrl/linkLabel fields for any item
+    // that doesn't have a links array (e.g. cached data from before this
+    // feature existed) — so nothing breaks mid-transition.
+    const allLinks = [];
+    items.forEach(n => {
+      if (Array.isArray(n.links) && n.links.length) {
+        n.links.forEach(l => { if (l.url) allLinks.push(l); });
+      } else if (n.linkUrl) {
+        allLinks.push({ url: n.linkUrl, label: n.linkLabel });
+      }
+    });
+
     const mainBtn = document.getElementById('newsLinkBtn');
-    if (withLinks.length === 0) {
+    if (allLinks.length === 0) {
       mainBtn.style.display = 'none';
       return;
     }
     mainBtn.style.display = 'block';
-    mainBtn.href = withLinks[0].linkUrl;
-    mainBtn.textContent = (withLinks[0].linkLabel || 'Open Link') + ' ↗';
+    mainBtn.href = allLinks[0].url;
+    mainBtn.textContent = (allLinks[0].label || 'Open Link') + ' ↗';
 
     // Any additional links beyond the first get their own stacked buttons
-    withLinks.slice(1).forEach(n => {
+    allLinks.slice(1).forEach(l => {
       const a = document.createElement('a');
-      a.href = n.linkUrl; a.target = '_blank'; a.rel = 'noopener';
+      a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
       a.className = 'receipt-btn news-link-extra';
       a.style.cssText = 'display:block;width:100%;text-align:center;margin-top:8px;text-decoration:none;';
-      a.textContent = (n.linkLabel || 'Open Link') + ' ↗';
+      a.textContent = (l.label || 'Open Link') + ' ↗';
       mainBtn.insertAdjacentElement('afterend', a);
     });
   }
