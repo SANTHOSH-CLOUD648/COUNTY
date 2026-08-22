@@ -911,6 +911,7 @@
       </div>
     </div>
     <a id="newsLinkBtn" href="#" target="_blank" rel="noopener" class="receipt-btn" style="display:none;width:100%;text-align:center;margin-top:12px;text-decoration:none;"></a>
+    <div id="newsItemsContainer" style="display:none;"></div>
   </div>
 
 
@@ -2056,19 +2057,21 @@ See you at the nets!`;
       document.getElementById('newsModalMessage').textContent = n.message || '';
       document.getElementById('newsModalMessage').style.display = n.message ? 'block' : 'none';
       currentNewsImages = Array.isArray(n.images) ? n.images.filter(Boolean) : [];
+      document.getElementById('newsItemsContainer').style.display = 'none';
+      document.getElementById('newsItemsContainer').innerHTML = '';
       renderNewsLinkButtons(items);
     } else {
-      // Multiple entries — combine them all into one view under the category name
+      // Multiple entries — show each as its own titled block (title,
+      // message, then that item's own button(s)), stacked in sheet order —
+      // instead of merging every message into one paragraph and every
+      // link into one flat button list. Keeps e.g. two Support contacts
+      // clearly separate rather than blended together.
       document.getElementById('newsModalTitle').textContent = cat.label;
       document.getElementById('newsModalDate').textContent  = '';
-      const combinedMessage = items
-        .map(n => n.message ? (n.title ? `${n.title}: ${n.message}` : n.message) : (n.title || ''))
-        .filter(Boolean)
-        .join('\n\n');
-      document.getElementById('newsModalMessage').textContent = combinedMessage;
-      document.getElementById('newsModalMessage').style.display = combinedMessage ? 'block' : 'none';
+      document.getElementById('newsModalMessage').style.display = 'none';
+      document.getElementById('newsLinkBtn').style.display = 'none';
       currentNewsImages = items.flatMap(n => Array.isArray(n.images) ? n.images.filter(Boolean) : []);
-      renderNewsLinkButtons(items);
+      renderNewsItemsList(items);
     }
 
     currentNewsImageIndex = 0;
@@ -2131,6 +2134,57 @@ See you at the nets!`;
       a.style.cssText = 'display:block;width:100%;text-align:center;margin-top:8px;text-decoration:none;';
       a.textContent = (l.label || 'Open Link') + ' ↗';
       mainBtn.insertAdjacentElement('afterend', a);
+    });
+  }
+
+  // Renders each item as its own stacked block — title, message, then just
+  // that item's own button(s) — used for the multi-item view so entries
+  // like two separate Support contacts stay visually grouped and don't
+  // blend into one combined paragraph / one flat button list.
+  function renderNewsItemsList(items) {
+    const wrap = document.getElementById('newsItemsContainer');
+    wrap.innerHTML = '';
+    wrap.style.display = 'block';
+
+    items.forEach((n, idx) => {
+      const block = document.createElement('div');
+      block.style.cssText = idx === 0
+        ? 'margin-top:4px;'
+        : 'margin-top:18px;padding-top:14px;border-top:1px solid #e4e4e4;';
+
+      if (n.title) {
+        const h = document.createElement('div');
+        h.style.cssText = 'font-weight:700;font-size:14.5px;color:var(--navy,#173a5e);text-align:center;margin-bottom:4px;';
+        h.textContent = n.title;
+        block.appendChild(h);
+      }
+
+      if (n.message) {
+        const p = document.createElement('p');
+        p.className = 'service-modal-body';
+        p.style.marginTop = '0';
+        p.textContent = n.message;
+        block.appendChild(p);
+      }
+
+      // This item's own links only (prefers the new links[] array; falls
+      // back to the older single linkUrl/linkLabel fields for compatibility)
+      const links = [];
+      if (Array.isArray(n.links) && n.links.length) {
+        n.links.forEach(l => { if (l.url) links.push(l); });
+      } else if (n.linkUrl) {
+        links.push({ url: n.linkUrl, label: n.linkLabel });
+      }
+      links.forEach(l => {
+        const a = document.createElement('a');
+        a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+        a.className = 'receipt-btn';
+        a.style.cssText = 'display:block;width:100%;text-align:center;margin-top:8px;text-decoration:none;';
+        a.textContent = (l.label || 'Open Link') + ' ↗';
+        block.appendChild(a);
+      });
+
+      wrap.appendChild(block);
     });
   }
 
