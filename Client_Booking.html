@@ -994,7 +994,7 @@ try {
   let MAX_NETS_PER_BOOKING = 4;
   // Rates loaded from server Rates tab — defaults match current hardcoded values
   let BOOKING_RATES = {
-    Morning: {'1':300,'2':300,'3':400,'4':500,'Team Booking':700},
+    Morning: {'1':400,'2':400,'3':400,'4':500,'Team Booking':700},
     Evening: {'1':500,'2':500,'3':600,'4':700,
               'Team Booking|Leather Ball':1000,'Team Booking|Tennis ball':800}
   };
@@ -1037,6 +1037,15 @@ try {
       }
       if(data && data.rates && typeof data.rates === 'object'){
         BOOKING_RATES = data.rates;
+        // Rates may have just replaced the temporary hardcoded fallback
+        // above with the real, current sheet values — if the person has
+        // already picked session/players/duration by this point (possible
+        // if this fetch was slow, e.g. a cold-start delay), the amount
+        // shown so far was calculated off the stale fallback numbers.
+        // Recalculate now so it's always correct once real rates land,
+        // instead of silently staying wrong until the person changes a
+        // field themselves.
+        if(typeof updateAmount === 'function') updateAmount();
       }
     }catch(e){}
   })();
@@ -1674,7 +1683,7 @@ See you at the nets!`;
         `amount=${encodeURIComponent(amountVal.textContent.replace(/[\u20B9,]/g,'').trim())}`
       ].join('&');
 
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const result = await res.json();
 
       if(result.status === 'ok'){
