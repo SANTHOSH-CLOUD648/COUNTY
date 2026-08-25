@@ -1687,39 +1687,7 @@ See you at the nets!`;
       const result = await res.json();
 
       if(result.status === 'ok'){
-        // ✅ Server confirmed — trigger monthly tab rebuild in background (non-blocking)
-        if(result.month){
-          fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000)
-            .catch(()=>{});
-        }
-
-        // Show receipt
-        document.getElementById('waBtn').href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
-        const smsNumber = '91' + mobile;
-        document.getElementById('smsBtn').href = `sms:+${smsNumber}?body=${encodeURIComponent(smsMessage)}`;
-
-        confirmPanel.classList.add('show');
-        confirmPanel.scrollIntoView({behavior:'smooth', block:'nearest'});
-
-        rememberCustomer(name, mobile, ball);
-        welcomeBackName.textContent = name;
-        welcomeBack.classList.add('show');
-
-        form.reset();
-        dateInput.value = todayStr;
-        nameInput.value = name;
-        mobileInput.value = mobile;
-        document.getElementById('ball').value = ball;
-        document.getElementById('ball').dispatchEvent(new Event('change'));
-        populateTimes(null);
-        netsReqSel.disabled = true;
-        netsReqSel.innerHTML = '<option value="1" selected>1</option>';
-        netsReqMsg.textContent = '';
-        ballTag.style.display = 'none';
-        durationOptionEls.forEach(o=> o.disabled = false);
-        durationNote.textContent = '';
-        updateAmount();
-
+        handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage);
       } else if(result.status === 'full'){
         showBookingError('Sorry, this time slot just filled up. Please select a different time or reduce the number of nets.');
         refreshAvailability(); // update labels immediately
@@ -1727,12 +1695,76 @@ See you at the nets!`;
         showBookingError('Your booking could not be confirmed. Please try again or contact us directly.');
       }
     } catch(err){
-      showBookingError('Connection error — please check your internet and try again, or contact us directly.');
+      // The request failed or timed out — but that doesn't necessarily mean
+      // the booking itself failed. A slow/dropped response after Google's
+      // server already saved it is common (see fetchWithTimeout above).
+      // Before alarming the person with an error, quietly ask the server
+      // whether this exact Ref actually went through.
+      try {
+        const checkRes = await fetchWithTimeout(
+          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000
+        );
+        const checkResult = await checkRes.json();
+        if(checkResult.status === 'ok'){
+          // It DID go through — show the normal success confirmation,
+          // exactly as if the first request had succeeded cleanly.
+          handleBookingSuccess(
+            { nets: checkResult.nets, month: parseInt(date.split('-')[1],10) },
+            name, mobile, ball, waMessage, smsMessage
+          );
+        } else {
+          showBookingError('Connection error — please check your internet and try again, or contact us directly.');
+        }
+      } catch(checkErr){
+        // Even the verification check failed (rare — network would have
+        // to drop twice in a row) — fall back to the error message.
+        showBookingError('Connection error — please check your internet and try again, or contact us directly.');
+      }
     }
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'Confirm Booking';
   });
+
+  // Shared success handling — called whether the booking confirmed on the
+  // first try, or was confirmed afterward by the auto-verify check above.
+  // Takes name/mobile/ball/waMessage/smsMessage as explicit parameters
+  // (rather than relying on closure) since those are local to each
+  // individual submit attempt, not available outside that handler.
+  function handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage){
+    // Trigger monthly tab rebuild in background (non-blocking)
+    if(result.month){
+      fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000)
+        .catch(()=>{});
+    }
+
+    // Show receipt
+    document.getElementById('waBtn').href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+    const smsNumber = '91' + mobile;
+    document.getElementById('smsBtn').href = `sms:+${smsNumber}?body=${encodeURIComponent(smsMessage)}`;
+
+    confirmPanel.classList.add('show');
+    confirmPanel.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+    rememberCustomer(name, mobile, ball);
+    welcomeBackName.textContent = name;
+    welcomeBack.classList.add('show');
+
+    form.reset();
+    dateInput.value = todayStr;
+    nameInput.value = name;
+    mobileInput.value = mobile;
+    document.getElementById('ball').value = ball;
+    document.getElementById('ball').dispatchEvent(new Event('change'));
+    populateTimes(null);
+    netsReqSel.disabled = true;
+    netsReqSel.innerHTML = '<option value="1" selected>1</option>';
+    netsReqMsg.textContent = '';
+    ballTag.style.display = 'none';
+    durationOptionEls.forEach(o=> o.disabled = false);
+    durationNote.textContent = '';
+    updateAmount();
+  }
 
   function showBookingError(msg){
     const el = document.getElementById('bookingErrorBox');
