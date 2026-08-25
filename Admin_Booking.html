@@ -2521,12 +2521,19 @@ Your booking has been updated. See you at the nets!`;
       const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const result = await res.json();
 
-      if(result.status === 'ok'){
-        const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
+      // Nested function (not a separate top-level one) so it has automatic
+      // closure access to every local variable already in scope here
+      // (ref, name, mobile, dateDisplay, session, time, dur, players, ball,
+      // currentGroupRef, addingToExistingGroup, msg, adminBookings) without
+      // needing a long parameter list. Called both on a clean first-try
+      // success, and from the catch block below if the auto-verify check
+      // finds the booking actually went through despite a failed response.
+      function handleAdminSuccess(successResult){
+        const netLabel = Array.isArray(successResult.nets) ? successResult.nets.map(n=>'Net '+n).join(', ') : '';
 
         // Trigger monthly tab rebuild in background (non-blocking)
-        if(result.month){
-          fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000)
+        if(successResult.month){
+          fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${successResult.month}`, null, 30000)
             .catch(()=>{});
         }
 
@@ -2543,6 +2550,10 @@ Your booking has been updated. See you at the nets!`;
         // Clear only Date for next booking
         document.getElementById('aDate').value = '';
         refreshAdminAvailability();
+      }
+
+      if(result.status === 'ok'){
+        handleAdminSuccess(result);
       } else if(result.status === 'full'){
         msg.textContent = `❌ ${time} on ${dateDisplay} — No nets available. Choose another slot.`;
         msg.className = 'admin-msg err';
@@ -2559,8 +2570,33 @@ Your booking has been updated. See you at the nets!`;
         msg.className = 'admin-msg err';
       }
     } catch(e){
-      msg.textContent = '❌ Connection error. Please try again.';
-      msg.className = 'admin-msg err';
+      // The request failed or timed out — that doesn't necessarily mean the
+      // booking itself failed. Before showing an error, quietly ask the
+      // server whether this exact Ref actually went through.
+      try {
+        const checkRes = await fetchWithTimeout(
+          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000
+        );
+        const checkResult = await checkRes.json();
+        if(checkResult.status === 'ok'){
+          const netLabel = Array.isArray(checkResult.nets) ? checkResult.nets.map(n=>'Net '+n).join(', ') : '';
+          adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
+          updateAdminReceipt();
+          const count = adminBookings.length;
+          msg.textContent = addingToExistingGroup
+            ? `✅ Booking Updated — ${dateDisplay} ${time} ${netLabel} added to group ${currentGroupRef}. Add next slot or view receipt.`
+            : `✅ Booking ${count} confirmed — ${dateDisplay} ${time} ${netLabel}. Add next slot or view receipt.`;
+          msg.className = 'admin-msg ok';
+          document.getElementById('aDate').value = '';
+          refreshAdminAvailability();
+        } else {
+          msg.textContent = '❌ Connection error. Please try again.';
+          msg.className = 'admin-msg err';
+        }
+      } catch(checkErr){
+        msg.textContent = '❌ Connection error. Please try again.';
+        msg.className = 'admin-msg err';
+      }
     }
 
     btn.disabled = false;
