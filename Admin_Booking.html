@@ -968,7 +968,7 @@
   let MAX_NETS            = 4;
   let MAX_NETS_PER_BOOKING = 4;
   let BOOKING_RATES = {
-    Morning: {'1':300,'2':300,'3':400,'4':500,'Team Booking':700},
+    Morning: {'1':400,'2':400,'3':400,'4':500,'Team Booking':700},
     Evening: {'1':500,'2':500,'3':600,'4':700,
               'Team Booking|Leather Ball':1000,'Team Booking|Tennis ball':800}
   };
@@ -1062,7 +1062,16 @@
       const data = await res.json();
       if(data && typeof data.maxNets === 'number' && data.maxNets >= 0) MAX_NETS = data.maxNets;
       if(data && typeof data.maxNetsPerBooking === 'number') MAX_NETS_PER_BOOKING = data.maxNetsPerBooking;
-      if(data && data.rates && typeof data.rates === 'object') BOOKING_RATES = data.rates;
+      if(data && data.rates && typeof data.rates === 'object'){
+        BOOKING_RATES = data.rates;
+        // Same self-correction as the client page: if the admin already
+        // selected session/players/duration before this fetch resolved
+        // (e.g. a slow/cold-start request), the amount shown so far was
+        // calculated off the temporary hardcoded fallback rates above,
+        // not the real current sheet values. Recalculate now so it's
+        // always correct once real rates land.
+        if(typeof calcAdminAmount === 'function') calcAdminAmount();
+      }
     }catch(e){}
   })();
 
