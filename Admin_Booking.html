@@ -2518,7 +2518,7 @@ Your booking has been updated. See you at the nets!`;
         `amount=${encodeURIComponent(amount)}`,
         `groupCode=${encodeURIComponent(currentGroupRef)}`
       ].join('&');
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const result = await res.json();
 
       if(result.status === 'ok'){
