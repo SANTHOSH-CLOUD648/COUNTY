@@ -1162,8 +1162,7 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
           </tr></thead>
           <tbody>${bodyHtml}</tbody>
           <tfoot>
-            <tr><td colspan="4">Total Hours</td><td colspan="5">${hoursDisplay} hr${totalHours!==1?'s':''}</td></tr>
-            <tr><td colspan="5">Total Amount</td><td colspan="4">₹${totalAmount.toLocaleString('en-IN')}</td></tr>
+            <tr><td colspan="4">Total</td><td colspan="5">${hoursDisplay} hr${totalHours!==1?'s':''} &nbsp;·&nbsp; ₹${totalAmount.toLocaleString('en-IN')}</td></tr>
           </tfoot>
         </table>`;
     } catch(e){
