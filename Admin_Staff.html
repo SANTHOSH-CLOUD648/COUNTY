@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>County Indoor Netz — Staff Admin</title>
+<style>
+  :root{
+    --navy:#1a5c38;
+    --navy-dark:#0d3320;
+    --gold:#c9a23a;
+    --cream:#f3f9f5;
+    --ink:#21263b;
+    --muted:#6b7088;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #25307e 0%, var(--navy) 45%, var(--navy-dark) 100%);
+    min-height:100vh;
+    color:var(--ink);
+    padding:32px 16px 60px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+
+  .brand{text-align:center;color:#fff;margin-bottom:22px;}
+  .brand .seam{
+    display:inline-flex;align-items:center;gap:10px;
+    font-size:13px;letter-spacing:3px;color:var(--gold);
+    text-transform:uppercase;font-weight:600;margin-bottom:6px;
+  }
+  .brand .seam::before,.brand .seam::after{
+    content:"";width:28px;height:1px;background:var(--gold);opacity:.6;
+  }
+  .brand h1{
+    margin:0;font-family:Georgia, 'Times New Roman', serif;
+    font-size:30px;letter-spacing:.5px;
+  }
+  .brand p{margin:6px 0 0;color:#cfd3ee;font-size:14px;}
+
+  .card{
+    background:var(--cream);
+    border-radius:20px;
+    padding:26px 24px 24px;
+    box-shadow:0 24px 60px rgba(8,12,40,.35);
+    margin-bottom:20px;
+  }
+  .lock-title{
+    font-family:Georgia,serif;font-weight:700;font-size:17px;color:var(--navy);
+    margin:0 0 16px;display:flex;align-items:center;gap:10px;
+  }
+  .badge{
+    background:var(--navy);color:#fff;font-size:11px;font-weight:700;
+    padding:3px 9px;border-radius:20px;letter-spacing:.5px;
+  }
+
+  /* ── Free Slots search ── */
+  .free-slot-row{
+    display:flex;align-items:center;justify-content:space-between;
+    background:#fff;border:1.5px solid #d9d3c0;border-radius:10px;
+    padding:11px 16px;margin-bottom:8px;cursor:pointer;transition:all .12s;
+  }
+  .free-slot-row:hover{background:#eef6ee;border-color:var(--navy);}
+  .free-slot-time{font-weight:700;color:var(--navy);font-size:14px;}
+  .free-slot-count{
+    background:var(--navy);color:#fff;font-size:12px;font-weight:700;
+    padding:4px 10px;border-radius:20px;white-space:nowrap;
+  }
+
+  /* ── Search box ── */
+  .normal-search-box{
+    background:#f0f4ff;border:1.5px solid #c9d0f0;border-radius:12px;
+    padding:14px 16px;
+  }
+  .normal-search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .normal-search-row input{
+    flex:1;min-width:120px;border:1.5px solid #d9d3c0;background:#fff;
+    border-radius:8px;padding:9px 12px;font-size:13.5px;
+    font-family:inherit;color:var(--ink);outline:none;
+  }
+  .normal-search-row input:focus{border-color:var(--navy);}
+  .normal-search-row button{
+    background:var(--navy);color:#fff;border:none;border-radius:8px;
+    padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .normal-search-row button:hover{background:var(--navy-dark);}
+
+  .bulk-group-card{
+    background:#fff;border:1.5px solid #e2ddd0;border-radius:12px;
+    margin-top:10px;overflow:hidden;
+  }
+  .bulk-group-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;cursor:pointer;gap:10px;transition:background .12s;
+  }
+  .bulk-group-header:hover{background:#f7f4ec;}
+  .bulk-group-info{flex:1;}
+  .bulk-group-name{font-size:14px;font-weight:700;color:var(--navy);}
+  .bulk-group-meta{font-size:12px;color:var(--muted);}
+  .bulk-group-badge{
+    background:var(--navy);color:#fff;font-size:11px;font-weight:700;
+    padding:3px 8px;border-radius:20px;white-space:nowrap;
+  }
+  .bulk-group-chevron{font-size:12px;color:var(--muted);transition:transform .2s;}
+  .bulk-group-chevron.open{transform:rotate(180deg);}
+  .bulk-group-detail{display:none;border-top:1px solid #e8e4d8;padding:12px 16px;}
+  .bulk-group-detail.open{display:block;}
+  .normal-slot-info{flex:1;font-size:13px;color:var(--ink);line-height:1.7;}
+  .normal-slot-btns{display:flex;gap:6px;flex-shrink:0;align-items:center;}
+  .bulk-slot-past{font-size:11px;color:var(--muted);font-style:italic;padding:4px 10px;}
+  .bulk-slot-cancel{
+    background:none;border:1.5px solid #b3261e;color:#b3261e;
+    border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;
+    cursor:pointer;font-family:inherit;white-space:nowrap;
+  }
+  .bulk-slot-cancel:hover{background:#b3261e;color:#fff;}
+  .bulk-slot-cancel:disabled{opacity:.5;cursor:not-allowed;}
+  .bulk-slot-cancelled{color:#1c4a22;font-weight:600;font-size:13px;}
+
+  /* ── Name Search ── */
+  .name-search-wrap{position:relative;max-width:320px;}
+  .name-autocomplete{
+    position:absolute;top:100%;left:0;right:0;background:#fff;
+    border:1.5px solid #d9d3c0;border-top:none;border-radius:0 0 10px 10px;
+    max-height:220px;overflow-y:auto;z-index:10;
+    box-shadow:0 8px 20px rgba(0,0,0,.12);display:none;
+  }
+  .name-autocomplete.show{display:block;}
+  .name-autocomplete-item{
+    padding:9px 14px;cursor:pointer;font-size:13.5px;border-bottom:1px solid #f0ede2;
+  }
+  .name-autocomplete-item:last-child{border-bottom:none;}
+  .name-autocomplete-item:hover{background:#eef6ee;}
+  .name-autocomplete-item .nm{font-weight:700;color:var(--navy);}
+  .name-autocomplete-item .mb{color:var(--muted);font-size:12px;margin-left:6px;}
+
+  .selected-person-chip{
+    display:inline-flex;align-items:center;gap:8px;background:#eef6ee;
+    border:1.5px solid #bfe2c0;border-radius:20px;padding:6px 12px;
+    font-size:13px;font-weight:600;color:#1c4a22;margin-top:8px;
+  }
+  .selected-person-chip button{
+    background:none;border:none;color:#8b1c1c;font-weight:700;cursor:pointer;
+    font-size:14px;padding:0;line-height:1;
+  }
+
+  .name-history-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:14px;}
+  .name-history-table th{
+    background:var(--navy);color:#fff;padding:8px 6px;text-align:center;
+    font-size:11px;letter-spacing:.2px;white-space:nowrap;
+  }
+  .name-history-table td{
+    padding:9px 6px;text-align:center;border-bottom:1px solid #eee;
+    color:var(--ink);white-space:nowrap;font-weight:600;
+  }
+  .name-history-table tr:nth-child(even) td{background:#f7f4ec;}
+  .name-history-table tfoot td{
+    background:var(--navy);color:#fff;font-weight:700;padding:10px 6px;
+  }
+
+  /* ── New Booking form ── */
+  .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;}
+  .admin-grid .full{grid-column:1/-1;}
+  .admin-lbl{font-size:12px;font-weight:700;color:var(--navy);display:block;margin-bottom:4px;}
+  .admin-grid input,.admin-grid select{
+    width:100%;border:1.5px solid #d9d3c0;background:#fff;
+    border-radius:10px;padding:10px 12px;font-size:14px;
+    font-family:inherit;color:var(--ink);outline:none;
+  }
+  .admin-grid input:focus,.admin-grid select:focus{
+    border-color:var(--navy);box-shadow:0 0 0 3px rgba(28,42,120,.1);
+  }
+  .admin-grid select{
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%231c2a78'><path d='M5.5 7.5l4.5 4.5 4.5-4.5'/></svg>");
+    background-repeat:no-repeat;background-position:right 10px center;background-size:16px;
+    padding-right:30px;
+  }
+  .admin-amount-row{
+    grid-column:1/-1;background:var(--navy);border-radius:10px;
+    padding:10px 14px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .admin-amount-label{font-size:12px;color:#cfd3ee;text-transform:uppercase;letter-spacing:.5px;}
+  .admin-amount-val{font-size:20px;font-weight:700;color:var(--gold);font-family:Georgia,serif;}
+  .admin-amount-note{font-size:11px;color:#aab0e0;margin-top:2px;}
+  .ball-tag{
+    display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:2px 8px;
+    border-radius:20px;margin-left:auto;font-weight:600;
+  }
+  .add-btn{
+    grid-column:1/-1;background:var(--navy);color:#fff;border:none;
+    padding:12px;border-radius:10px;font-size:14.5px;font-weight:700;
+    cursor:pointer;font-family:inherit;transition:background .15s;
+  }
+  .add-btn:hover{background:var(--navy-dark);}
+
+  .admin-msg{margin-top:12px;padding:12px 16px;border-radius:10px;font-size:13.5px;font-weight:600;display:none;}
+  .admin-msg.ok{background:#eef6ee;color:#1c4a22;border:1px solid #bfe2c0;display:block;}
+  .admin-msg.err{background:#fff0f0;color:#8b1c1c;border:1px solid #e8b4b4;display:block;}
+
+  /* ── Receipt ── */
+  .confirm{
+    display:none;margin-top:18px;background:#eef6ee;
+    border:1px solid #bfe2c0;border-radius:14px;padding:18px 20px;color:#1c4a22;
+  }
+  .confirm.show{display:block;}
+  .confirm h3{margin:0 0 8px;font-size:15px;display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;}
+  .confirm h3 .ref-badge{
+    background:var(--navy);color:var(--gold);font-family:Georgia,serif;
+    font-weight:700;letter-spacing:.5px;font-size:14px;padding:3px 10px;border-radius:20px;
+  }
+  .confirm dl{margin:0;display:grid;grid-template-columns:120px 1fr;row-gap:4px;font-size:13px;}
+  .confirm dt{color:#3c6b40;font-weight:600;}
+  .confirm dd{margin:0;}
+  .share-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .share-btn{
+    flex:1;min-width:160px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:11px 14px;border-radius:10px;font-size:13.5px;font-weight:700;text-decoration:none;
+    cursor:pointer;border:none;transition:transform .12s;
+  }
+  .share-btn:hover{transform:translateY(-1px);}
+  .share-btn.wa{background:#25D366;color:#fff;}
+  .share-btn.sms{background:var(--navy);color:#fff;}
+
+  .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .admin-tab{
+    background:#fff;border:1.5px solid #d9d3c0;border-radius:10px;
+    padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;
+    font-family:inherit;color:var(--navy);transition:all .15s;
+  }
+  .admin-tab:hover{background:#f0f4ff;border-color:#c9d0f0;}
+  .admin-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  @media(max-width:520px){.admin-grid{grid-template-columns:1fr;}.admin-tabs{gap:6px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <div class="seam">County Indoor Netz</div>
+    <h1>Staff Admin</h1>
+    <p>Search bookings, cancel, or make a simple new booking</p>
+  </div>
+
+  <div class="admin-tabs">
+    <button class="admin-tab active" id="tabBtnFree" onclick="showStaffTab('free')">🕒 Free Slots</button>
+    <button class="admin-tab" id="tabBtnSearch" onclick="showStaffTab('search')">🔍 Search Bookings</button>
+    <button class="admin-tab" id="tabBtnName" onclick="showStaffTab('name')">🧑 Name Search</button>
+    <button class="admin-tab" id="tabBtnBooking" onclick="showStaffTab('booking')">➕ New Booking</button>
+  </div>
+
+  <!-- ── Free Slots Search ── -->
+  <div class="admin-tab-content" id="staffTabFree">
+  <div class="card">
+    <div class="lock-title">🕒 Free Slots Search <span class="badge">STAFF</span></div>
+    <label class="admin-lbl">Date</label>
+    <div class="normal-search-row" style="margin-top:4px;">
+      <input type="date" id="freeSlotsDate" style="max-width:220px;border:1.5px solid #d9d3c0;background:#fff;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;">
+      <button onclick="loadFreeSlots()">Search</button>
+      <button onclick="loadFreeSlots()" title="Refresh results">🔄 Refresh</button>
+    </div>
+    <div class="admin-msg" id="freeSlotsMsg"></div>
+    <div id="freeSlotsResultArea" style="margin-top:14px;"></div>
+  </div>
+  </div>
+
+  <!-- ── Search Bookings ── -->
+  <div class="admin-tab-content" id="staffTabSearch" style="display:none;">
+  <div class="card">
+    <div class="lock-title">🔍 Search Bookings <span class="badge">STAFF</span></div>
+    <div class="normal-search-box">
+      <div class="normal-search-row">
+        <input type="date" id="searchDate">
+        <span style="font-size:12px;color:var(--muted);">or</span>
+        <input type="text" id="searchRef" placeholder="Ref #">
+        <button onclick="searchNormalBookings()">Search</button>
+        <button onclick="searchNormalBookings()" title="Refresh results">🔄 Refresh</button>
+      </div>
+    </div>
+    <div class="admin-msg" id="normalSearchMsg"></div>
+    <div id="normalSearchResults"></div>
+  </div>
+  </div>
+
+  <!-- ── Name Search ── -->
+  <div class="admin-tab-content" id="staffTabName" style="display:none;">
+  <div class="card">
+    <div class="lock-title">🧑 Name Search <span class="badge">STAFF</span></div>
+
+    <label class="admin-lbl">Customer Name</label>
+    <div class="name-search-wrap">
+      <input type="text" id="nameSearchInput" class="report-input" style="max-width:100%;"
+             placeholder="Type at least 3 letters…" oninput="onNameSearchInput()" autocomplete="off">
+      <div class="name-autocomplete" id="nameAutocomplete"></div>
+    </div>
+    <div id="selectedPersonArea"></div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+      <div>
+        <label class="admin-lbl">From Date</label>
+        <input type="date" id="nameFromDate" style="border:1.5px solid #d9d3c0;background:#fff;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;">
+      </div>
+      <div>
+        <label class="admin-lbl">To Date</label>
+        <input type="date" id="nameToDate" style="border:1.5px solid #d9d3c0;background:#fff;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;">
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button onclick="searchNameHistory()" style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">Search</button>
+      </div>
+    </div>
+
+    <div class="admin-msg" id="nameSearchMsg"></div>
+    <div id="nameHistoryResultArea" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"></div>
+  </div>
+  </div>
+
+  <!-- ── New Booking ── -->
+  <div class="admin-tab-content" id="staffTabBooking" style="display:none;">
+  <div class="card" id="newBookingCard">
+    <div class="lock-title">➕ New Booking <span class="badge">STAFF</span></div>
+    <div class="admin-grid">
+      <div><label class="admin-lbl">Name</label><input type="text" id="aName" placeholder="Customer name"></div>
+      <div><label class="admin-lbl">Mobile</label><input type="tel" id="aMobile" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
+      <div><label class="admin-lbl">Date</label><input type="date" id="aDate"></div>
+      <div><label class="admin-lbl">Session</label>
+        <select id="aSession">
+          <option value="" disabled selected>Select</option>
+          <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
+          <option value="Evening (06:00 pm to 11:00 pm)">Evening</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">Time</label>
+        <select id="aTime"><option value="" disabled selected>Select session first</option></select>
+        <div id="aTimeErr" style="font-size:11.5px;color:#b3261e;min-height:14px;margin-top:3px;"></div>
+      </div>
+      <div><label class="admin-lbl">Players</label>
+        <select id="aPlayers">
+          <option value="" disabled selected>Select</option>
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option value="Team Booking">5 &amp; Above (Team Booking)</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">Duration</label>
+        <select id="aDuration">
+          <option value="" disabled selected>Select</option>
+          <option>1 hr</option><option>1.5 hrs</option><option>2 hrs</option>
+          <option>2.5 hrs</option><option>3 hrs</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">No. of Nets</label>
+        <select id="aNets">
+          <option value="1" selected>1</option>
+          <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">Ball Type</label>
+        <select id="aBall">
+          <option value="" disabled selected>Select</option>
+          <option value="Leather Ball">Leather Ball</option>
+          <option value="Tennis ball">Tennis ball</option>
+        </select>
+      </div>
+      <button class="add-btn full" id="adminBookBtn" onclick="adminBookNow()">✅ Book Now</button>
+    </div>
+    <div class="admin-amount-row" style="margin:10px 0 0;">
+      <div>
+        <div class="admin-amount-label">Amount</div>
+        <div class="admin-amount-val" id="aAmountVal">— Pending —</div>
+        <div class="admin-amount-note" id="aAmountNote">Select session, players &amp; duration</div>
+      </div>
+      <div class="ball-tag" id="aBallTag" style="display:none;"></div>
+    </div>
+    <div class="admin-msg" id="adminMsg"></div>
+
+    <div class="confirm" id="confirmPanel">
+      <h3>✅ Booking confirmed <span class="ref-badge">Ref #<span id="refNo"></span></span></h3>
+      <dl id="confirmDetails"></dl>
+      <div class="share-row">
+        <a id="waBtn" class="share-btn wa" target="_blank" rel="noopener">
+          <svg viewBox="0 0 32 32" width="18" height="18" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+          Send via WhatsApp
+        </a>
+        <a id="smsBtn" class="share-btn sms">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          Send via SMS
+        </a>
+      </div>
+    </div>
+  </div>
+  </div>
+
+</div>
+
+<script>
+  const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
+
+  const STAFF_TABS = ['free','search','name','booking'];
+  function showStaffTab(tab){
+    STAFF_TABS.forEach(function(t){
+      const cap = t.charAt(0).toUpperCase()+t.slice(1);
+      document.getElementById('staffTab'+cap).style.display = (t===tab) ? 'block' : 'none';
+      const btn = document.getElementById('tabBtn'+cap);
+      if(btn) btn.classList.toggle('active', t===tab);
+    });
+  }
+  window.showStaffTab = showStaffTab;
+
+  const today = new Date();
+  const yyyy  = today.getFullYear();
+  const pad   = n => String(n).padStart(2,'0');
+  const todayStr = `${yyyy}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+
+  let MAX_NETS             = 4;
+  let MAX_NETS_PER_BOOKING = 4;
+  let BOOKING_RATES = {
+    Morning: {'1':400,'2':400,'3':500,'4':600,'Team Booking':800},
+    Evening: {'1':500,'2':600,'3':700,'4':800,
+              'Team Booking|Leather Ball':1000,'Team Booking|Tennis ball':900}
+  };
+  let ALL_CLOSED   = false;
+  let CLOSED_NETS  = [];
+  let FROM_MINUTES = -1;
+
+  function fetchWithTimeout(url, options, timeoutMs){
+    timeoutMs = timeoutMs || 20000;
+    return Promise.race([
+      options ? fetch(url, options) : fetch(url),
+      new Promise(function(_,reject){
+        setTimeout(function(){ reject(new Error('Request timed out')); }, timeoutMs);
+      })
+    ]);
+  }
+
+  async function fetchAvailability(dateStr){
+    try{
+      const res = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateStr}`);
+      if(!res.ok) return null;
+      const data = await res.json();
+      if(data && typeof data.maxNets === 'number' && data.maxNets >= 0) MAX_NETS = data.maxNets;
+      if(data && typeof data.maxNetsPerBooking === 'number') MAX_NETS_PER_BOOKING = data.maxNetsPerBooking;
+      ALL_CLOSED   = !!(data && data.allClosed);
+      CLOSED_NETS  = (data && Array.isArray(data.closedNets)) ? data.closedNets : [];
+      FROM_MINUTES = (data && typeof data.fromMinutes === 'number') ? data.fromMinutes : -1;
+      return (data && data.counts) ? data.counts : data;
+    }catch(err){ return null; }
+  }
+
+  function parseSlotMinutes(label){
+    const [time, ap] = label.split(' ');
+    let [h,m] = time.split(':').map(Number);
+    if(ap === 'am'){ if(h === 12) h = 0; } else { if(h !== 12) h += 12; }
+    return h*60 + m;
+  }
+
+  const ALL_TIMES_ADMIN = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
+    "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
+    "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm","11:00 pm"];
+  const MORNING_A = ALL_TIMES_ADMIN.slice(0, ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
+  const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("06:00 pm"));
+  const DURATION_SLOTS = {'1 hr':2, '1.5 hrs':3, '2 hrs':4, '2.5 hrs':5, '3 hrs':6};
+
+  function getSpanSlots(startTime, durationLabel){
+    const idx = ALL_TIMES_ADMIN.indexOf(startTime);
+    const span = DURATION_SLOTS[durationLabel] || 2;
+    if(idx === -1) return [];
+    return ALL_TIMES_ADMIN.slice(idx, idx + span);
+  }
+
+  function lookupRate(session, players, ball){
+    const sk = session.startsWith('Morning') ? 'Morning' : 'Evening';
+    const r  = BOOKING_RATES[sk] || {};
+    const keys = players === 'Team Booking' ? ['5 and above', 'Team Booking'] : [players];
+    for(const p of keys){
+      if(p === '5 and above' || p === 'Team Booking'){
+        if(ball && r[p+'|'+ball] !== undefined) return r[p+'|'+ball];
+      }
+      if(r[p] !== undefined) return r[p];
+    }
+    return null;
+  }
+
+  function isSlotPast(dateStr, timeStr){
+    if(dateStr < todayStr) return true;
+    if(dateStr > todayStr) return false;
+    const now = new Date();
+    return parseSlotMinutes(timeStr) <= (now.getHours()*60 + now.getMinutes());
+  }
+
+  function toTitleCase(str){
+    return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // Fetch live settings (max nets, rates) on load
+  (async function initSettings(){
+    try{
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=settings`);
+      if(!res.ok) return;
+      const data = await res.json();
+      if(data && typeof data.maxNets === 'number' && data.maxNets >= 0) MAX_NETS = data.maxNets;
+      if(data && typeof data.maxNetsPerBooking === 'number') MAX_NETS_PER_BOOKING = data.maxNetsPerBooking;
+      if(data && data.rates && typeof data.rates === 'object'){
+        BOOKING_RATES = data.rates;
+        if(typeof calcAdminAmount === 'function') calcAdminAmount();
+      }
+    }catch(e){}
+  })();
+
+  const aSession  = document.getElementById('aSession');
+  const aTime     = document.getElementById('aTime');
+  const aPlayers  = document.getElementById('aPlayers');
+  const aDuration = document.getElementById('aDuration');
+  const aBall     = document.getElementById('aBall');
+  const aNetsEl   = document.getElementById('aNets');
+  const aAmtVal   = document.getElementById('aAmountVal');
+  const aAmtNote  = document.getElementById('aAmountNote');
+  const aDateEl   = document.getElementById('aDate');
+  const aBallTag  = document.getElementById('aBallTag');
+
+  aDateEl.min = todayStr;
+  aDateEl.value = todayStr;
+  document.getElementById('searchDate').min = todayStr;
+  document.getElementById('freeSlotsDate').min = todayStr;
+  aDateEl.addEventListener('change', ()=>{
+    if (aDateEl.value && aDateEl.value < todayStr) {
+      alert('Cannot book a past date.');
+      aDateEl.value = todayStr;
+    }
+    applyAdminPastTimeFilter();
+    refreshAdminAvailability();
+  });
+
+  const ADMIN_DUR_HRS = {'1 hr':1,'1.5 hrs':1.5,'2 hrs':2,'2.5 hrs':2.5,'3 hrs':3};
+
+  aBall.addEventListener('change', ()=>{
+    if(aBall.value === 'Leather Ball'){
+      aBallTag.style.display='inline-flex'; aBallTag.style.background='#5c1414';
+      aBallTag.style.color='#fff'; aBallTag.textContent='Leather';
+    } else if(aBall.value === 'Tennis ball'){
+      aBallTag.style.display='inline-flex'; aBallTag.style.background='#234d29';
+      aBallTag.style.color='#fff'; aBallTag.textContent='Tennis';
+    } else {
+      aBallTag.style.display='none';
+    }
+  });
+
+  function calcAdminAmount(){
+    const d    = aDuration.value;
+    const nets = parseInt(aNetsEl.value)||1;
+    const rate = lookupRate(aSession.value, aPlayers.value, aBall.value);
+    const hrs  = ADMIN_DUR_HRS[d];
+    if(rate && hrs){
+      const amt = rate * hrs * nets;
+      aAmtVal.textContent  = '₹' + amt.toLocaleString('en-IN');
+      aAmtNote.textContent = `₹${rate}/hr × ${d}${nets>1?' × '+nets+' Nets':''}`;
+    } else {
+      aAmtVal.textContent  = '— Pending —';
+      aAmtNote.textContent = 'Select session, players & duration';
+    }
+  }
+
+  aPlayers.addEventListener('change', ()=>{
+    if(aPlayers.value !== 'Team Booking'){
+      aNetsEl.value = '1'; aNetsEl.disabled = true;
+    } else {
+      aNetsEl.disabled = false;
+    }
+    calcAdminAmount();
+  });
+  [aDuration, aBall].forEach(el => el.addEventListener('change', calcAdminAmount));
+  aNetsEl.addEventListener('change', calcAdminAmount);
+
+  function populateAdminTimes(list){
+    aTime.innerHTML = '';
+    const ph = document.createElement('option');
+    ph.value=''; ph.disabled=true; ph.selected=true;
+    ph.textContent = list ? 'Select time' : 'Select session first';
+    aTime.appendChild(ph);
+    (list||[]).forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; aTime.appendChild(o); });
+    aTime.disabled = !list;
+  }
+
+  async function refreshAdminAvailability(){
+    const dateStr = aDateEl.value;
+    if(!dateStr || aTime.disabled) return;
+    const ph = aTime.querySelector('option[disabled]');
+    if(ph) ph.textContent = '⏳ Checking availability…';
+    const counts = await fetchAvailability(dateStr);
+    if(ph) ph.textContent = 'Select time';
+    if(!counts) return;
+    const dur = aDuration.value;
+    const errEl = document.getElementById('aTimeErr');
+    Array.from(aTime.options).forEach(o=>{
+      if(!o.value) return;
+      const slots = getSpanSlots(o.value, dur||'1 hr');
+      const used  = slots.length ? Math.max(...slots.map(s => counts[s]||0)) : (counts[o.value]||0);
+      const left  = MAX_NETS - used;
+      if(left <= 0){
+        o.textContent = `${o.value} — Full`;
+        o.style.color = '#b3261e'; o.disabled = true;
+        if(aTime.value === o.value){
+          aTime.value = '';
+          if(dur) errEl.textContent = `${o.value} has no nets available for the selected duration. Please choose another time slot.`;
+        }
+      } else {
+        o.textContent = left < MAX_NETS ? `${o.value} (${left} net${left>1?'s':''} left)` : o.value;
+        o.style.color = ''; o.disabled = false;
+      }
+    });
+    updateAdminNetsLimit(counts, dur);
+    applyAdminPastTimeFilter();
+    filterAdminDurations();
+  }
+
+  function updateAdminNetsLimit(counts, dur){
+    if(!counts) return;
+    const t = aTime.value;
+    if(!t) return;
+    const slots = getSpanSlots(t, dur||'1 hr');
+    const used  = slots.length ? Math.max(...slots.map(s => counts[s]||0)) : (counts[t]||0);
+    const avail = Math.max(0, MAX_NETS - used);
+    const cur   = parseInt(aNetsEl.value)||1;
+    aNetsEl.innerHTML = '';
+    for(let i=1; i<=Math.min(avail, MAX_NETS_PER_BOOKING||4); i++){
+      const o = document.createElement('option');
+      o.value = i; o.textContent = i; aNetsEl.appendChild(o);
+    }
+    aNetsEl.value = Math.min(cur, avail) || 1;
+    if(avail === 0) aNetsEl.innerHTML = '<option value="0">No nets free</option>';
+  }
+
+  const ADMIN_DUR_MINS = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
+
+  function filterAdminDurations(){
+    const sessionVal = aSession.value;
+    const timeVal    = aTime.value;
+    if(!sessionVal || !timeVal) return;
+    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 24*60;
+    const timeMins       = parseSlotMinutes(timeVal);
+    Array.from(aDuration.options).forEach(o=>{
+      if(!o.value) return;
+      const endMins = timeMins + (ADMIN_DUR_MINS[o.value]||60);
+      if(endMins > sessionEndMins){
+        o.disabled = true;
+        if(aDuration.value === o.value){ aDuration.value = ''; }
+      } else {
+        o.disabled = false;
+      }
+    });
+  }
+
+  function applyAdminPastTimeFilter(){
+    const dateVal = aDateEl.value;
+    const now = new Date();
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    Array.from(aTime.options).forEach(o=>{
+      if(!o.value) return;
+      if(dateVal === todayStr && parseSlotMinutes(o.value) <= nowMins){
+        o.disabled = true;
+        o.textContent = o.value.replace(/ \(.*\)/,'') + ' — Past';
+        if(aTime.value === o.value) aTime.value = '';
+      } else if(o.textContent.includes('Past')){
+        o.disabled = false;
+      }
+    });
+  }
+
+  aSession.addEventListener('change', ()=>{
+    populateAdminTimes(aSession.value.startsWith('Morning') ? MORNING_A : EVENING_A);
+    document.getElementById('aTimeErr').textContent = '';
+    applyAdminPastTimeFilter();
+    filterAdminDurations();
+    refreshAdminAvailability();
+    calcAdminAmount();
+  });
+  aDateEl.addEventListener('change', ()=>{
+    applyAdminPastTimeFilter();
+    refreshAdminAvailability();
+  });
+  aDuration.addEventListener('change', ()=>{
+    refreshAdminAvailability();
+    calcAdminAmount();
+  });
+  aTime.addEventListener('change', ()=>{
+    document.getElementById('aTimeErr').textContent = '';
+    filterAdminDurations();
+    calcAdminAmount();
+  });
+
+  populateAdminTimes(null);
+
+  const ALL_TIMES_FS = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
+    "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
+    "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm","11:00 pm"];
+
+  async function loadFreeSlots(){
+    const dateVal = document.getElementById('freeSlotsDate').value;
+    const msg     = document.getElementById('freeSlotsMsg');
+    const area    = document.getElementById('freeSlotsResultArea');
+
+    area.innerHTML = '';
+    if(!dateVal){ msg.textContent = ''; msg.className = 'admin-msg'; return; }
+    if(dateVal < todayStr){
+      msg.textContent = '⚠️ Cannot search a past date.';
+      msg.className = 'admin-msg err';
+      document.getElementById('freeSlotsDate').value = todayStr;
+      return;
+    }
+
+    msg.textContent = '⏳ Checking availability…';
+    msg.className = 'admin-msg';
+
+    try {
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateVal}`, null, 20000);
+      const data = await res.json();
+      const maxNets = data.maxNets || 0;
+      const counts  = data.counts || {};
+
+      const DURATION_SPAN = 2; // "1 hr" minimum — a slot only counts as
+                                 // truly free if nets are free across the
+                                 // whole span, not just the single 30-min
+                                 // mark (otherwise it can look free right
+                                 // up until it collides with the next
+                                 // hour's booking).
+      const freeSlots = ALL_TIMES_FS
+        .map((t, i) => {
+          const span = ALL_TIMES_FS.slice(i, i + DURATION_SPAN);
+          const used = Math.max(...span.map(s => counts[s] || 0));
+          return { time: t, free: maxNets - used };
+        })
+        .filter(s => s.free > 0 && !isSlotPast(dateVal, s.time));
+
+      if(freeSlots.length === 0){
+        msg.textContent = 'No free slots on this date.';
+        msg.className = 'admin-msg err';
+        return;
+      }
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+
+      area.innerHTML = freeSlots.map(s => `
+        <div class="free-slot-row" onclick="bookFreeSlot('${dateVal}','${s.time}')">
+          <span class="free-slot-time">${s.time}</span>
+          <span class="free-slot-count">${s.free} net${s.free>1?'s':''} free</span>
+        </div>
+      `).join('');
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.loadFreeSlots = loadFreeSlots;
+
+  function bookFreeSlot(dateVal, timeVal){
+    // Pre-fills the New Booking form right here on the same page (rather
+    // than navigating elsewhere) and scrolls it into view.
+    aDateEl.value = dateVal;
+    const isMorning = MORNING_A.includes(timeVal);
+    const isEvening = EVENING_A.includes(timeVal);
+    if(isMorning || isEvening){
+      aSession.value = isMorning ? 'Morning (09:00 am to 05:00 pm)' : 'Evening (06:00 pm to 11:00 pm)';
+      populateAdminTimes(isMorning ? MORNING_A : EVENING_A);
+      aTime.value = timeVal;
+      applyAdminPastTimeFilter();
+      filterAdminDurations();
+      refreshAdminAvailability();
+      calcAdminAmount();
+    }
+    showStaffTab('booking');
+    document.getElementById('aName').focus();
+  }
+  window.bookFreeSlot = bookFreeSlot;
+
+  // Default Free Slots date to today and auto-load
+  document.getElementById('freeSlotsDate').value = todayStr;
+  loadFreeSlots();
+
+  async function adminBookNow(){
+    const name    = toTitleCase(document.getElementById('aName').value.trim());
+    const mobile  = document.getElementById('aMobile').value.trim();
+    const date    = aDateEl.value;
+    const session = aSession.value;
+    const time    = aTime.value;
+    const players = aPlayers.value;
+    const dur     = aDuration.value;
+    const nets    = parseInt(aNetsEl.value)||1;
+    const ball    = aBall.value;
+    const msg     = document.getElementById('adminMsg');
+
+    if(!name || !mobile || !date || !session || !time || !players || !dur || !ball){
+      msg.textContent = '⚠️ Please fill in every field.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    if(!/^[6-9]\d{9}$/.test(mobile)){
+      msg.textContent = '⚠️ Enter a valid 10-digit mobile number.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+
+    const btn = document.getElementById('adminBookBtn');
+    btn.disabled = true; btn.textContent = 'Booking…';
+    document.getElementById('confirmPanel').classList.remove('show');
+
+    const ref = 'STF'+Math.random().toString(36).slice(2,7).toUpperCase();
+    const rate = lookupRate(session, players, ball);
+    const amount = rate ? rate * ADMIN_DUR_HRS[dur] * nets : '';
+    const qs = `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}`+
+      `&mobile=${encodeURIComponent(mobile)}&date=${encodeURIComponent(date)}&session=${encodeURIComponent(session)}`+
+      `&time=${encodeURIComponent(time)}&players=${encodeURIComponent(players)}&netsRequired=${nets}`+
+      `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`;
+
+    function handleSuccess(result){
+      if(result.month){
+        fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000).catch(()=>{});
+      }
+
+      const dp = date.split('-');
+      const dateDisplay = dp[2]+'/'+dp[1]+'/'+dp[0].slice(2);
+      const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
+
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+
+      document.getElementById('refNo').textContent = ref;
+      document.getElementById('confirmDetails').innerHTML = `
+        <dt>Name</dt><dd>${name}</dd>
+        <dt>Mobile</dt><dd>${mobile}</dd>
+        <dt>Date</dt><dd>${dateDisplay}</dd>
+        <dt>Session</dt><dd>${session}</dd>
+        <dt>Time</dt><dd>${time}</dd>
+        <dt>Players</dt><dd>${players}</dd>
+        <dt>Duration</dt><dd>${dur}</dd>
+        <dt>Nets</dt><dd>${netLabel}</dd>
+        <dt>Ball Type</dt><dd>${ball}</dd>
+        <dt>Amount</dt><dd>₹${amount}</dd>
+      `;
+
+      const waMessage =
+`*County Indoor Netz — Booking Confirmed*
+Ref #${ref}
+
+Name: ${name}
+Mobile: ${mobile}
+Date: ${dateDisplay}
+Session: ${session}
+Time: ${time}
+Players: ${players}
+Duration: ${dur}
+Ball Type: ${ball}
+Amount: ₹${amount}
+
+⛑️ Helmet compulsory for leather balls.
+🧍🧍🧍 Rate changes if player count exceeds booking.
+
+⏱️ Late arrivals will affect other bookings. Kindly report on time for your slot.
+⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.
+
+👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
+https://tinyurl.com/2hta9v6t?v=2
+
+🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
+
+See you at the nets! 🏏`;
+
+      const smsMessage =
+`County Indoor Netz - Booking Confirmed
+Ref #${ref}
+Name: ${name}
+Mobile: ${mobile}
+Date: ${dateDisplay}
+Session: ${session}
+Time: ${time}
+Players: ${players}
+Duration: ${dur}
+Ball Type: ${ball}
+Amount: Rs.${amount}
+
+Helmet compulsory for leather balls.
+Rate changes if player count exceeds booking.
+Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
+
+      document.getElementById('waBtn').href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+      document.getElementById('smsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMessage)}`;
+
+      const confirmPanel = document.getElementById('confirmPanel');
+      confirmPanel.classList.add('show');
+      confirmPanel.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+      document.getElementById('aName').value = '';
+      document.getElementById('aMobile').value = '';
+      aSession.value = ''; populateAdminTimes(null);
+      aDuration.value = ''; aBall.value = ''; aPlayers.value = '';
+      calcAdminAmount();
+    }
+
+    try {
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
+      const result = await res.json();
+
+      if(result.status === 'ok'){
+        handleSuccess(result);
+      } else if(result.status === 'full'){
+        msg.textContent = `❌ ${time} on ${date} — No nets available. Choose another slot.`;
+        msg.className = 'admin-msg err';
+        refreshAdminAvailability();
+      } else if(result.status === 'too_late'){
+        msg.textContent = `❌ This slot has already passed. Choose a future time.`;
+        msg.className = 'admin-msg err';
+        refreshAdminAvailability();
+      } else {
+        msg.textContent = '❌ Booking could not be confirmed. Please try again.';
+        msg.className = 'admin-msg err';
+      }
+    } catch(e){
+      // Auto-verify: request may have failed/timed out even though it
+      // actually saved — check before showing an error (see Client page
+      // for the same protection and reasoning).
+      try {
+        const checkRes = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000);
+        const checkResult = await checkRes.json();
+        if(checkResult.status === 'ok'){
+          handleSuccess({ nets: checkResult.nets, month: parseInt(date.split('-')[1],10) });
+        } else {
+          msg.textContent = '❌ Connection error. Please try again.';
+          msg.className = 'admin-msg err';
+        }
+      } catch(checkErr){
+        msg.textContent = '❌ Connection error. Please try again.';
+        msg.className = 'admin-msg err';
+      }
+    }
+
+    btn.disabled = false; btn.textContent = '✅ Book Now';
+  }
+  window.adminBookNow = adminBookNow;
+
+  // ── Search Bookings (view + cancel only, no edit) ──────────────
+  let lastSearchDate = '', lastSearchRef = '';
+
+  async function searchNormalBookings(){
+    const dateVal = document.getElementById('searchDate').value;
+    const refVal  = document.getElementById('searchRef').value.trim().toUpperCase();
+    const msg     = document.getElementById('normalSearchMsg');
+    const results = document.getElementById('normalSearchResults');
+
+    if(!dateVal && !refVal){
+      msg.textContent = '⚠️ Enter a date or Ref # to search.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    if(dateVal && dateVal < todayStr){
+      msg.textContent = '⚠️ Cannot search a past date.';
+      msg.className = 'admin-msg err';
+      document.getElementById('searchDate').value = todayStr;
+      return;
+    }
+    lastSearchDate = dateVal; lastSearchRef = refVal;
+
+    msg.textContent = '⏳ Searching…';
+    msg.className = 'admin-msg';
+    results.innerHTML = '';
+
+    try {
+      const qs = refVal
+        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}`
+        : `action=searchBookings&date=${encodeURIComponent(dateVal)}`;
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+      const data = await res.json();
+
+      if(!data.results || !data.results.length){
+        msg.textContent = 'No bookings found.';
+        msg.className = 'admin-msg';
+        return;
+      }
+      msg.textContent = `${data.results.length} booking${data.results.length>1?'s':''} found.`;
+      msg.className = 'admin-msg ok';
+
+      results.innerHTML = data.results.map((b,i)=>{
+        const isCancelled = b.status === 'Cancelled';
+        const isPast = isSlotPast(b.dateISO || b.date, b.time);
+        return `
+        <div class="bulk-group-card" id="nslot_${i}">
+          <div class="bulk-group-header" onclick="toggleNormalResult(${i})">
+            <div class="bulk-group-info">
+              <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
+              <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
+              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+            </div>
+            ${isCancelled ? '<span class="bulk-group-badge" style="background:#b3261e;">🚫 Cancelled</span>'
+              : isPast ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
+            <span class="bulk-group-chevron" id="nchev${i}">▾</span>
+          </div>
+          <div class="bulk-group-detail" id="ndetail${i}">
+            <div class="normal-slot-info">
+              📱 ${b.mobile}<br>
+              ⏱ ${b.duration} &nbsp; 🎾 ${b.net || ''}<br>
+              ${b.session && b.session.startsWith('Morning')?'Morning':'Evening'} &nbsp; ${b.ball} &nbsp; ${b.amount}
+            </div>
+            <div class="normal-slot-btns" style="margin-top:10px;">
+              ${isCancelled ? '<span class="bulk-slot-past" style="color:#b3261e;">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
+                : isPast ? '<span class="bulk-slot-past">Past</span>' : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e){
+      msg.textContent = '❌ Search failed. Check connection.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.searchNormalBookings = searchNormalBookings;
+
+  // ── Name Search (autocomplete + custom date range history) ─────
+  let selectedPersonMobile = '';
+  let nameSearchDebounce = null;
+
+  function onNameSearchInput(){
+    const input = document.getElementById('nameSearchInput');
+    const box   = document.getElementById('nameAutocomplete');
+    const q = input.value.trim();
+
+    // Typing again invalidates any previously selected person
+    selectedPersonMobile = '';
+    document.getElementById('selectedPersonArea').innerHTML = '';
+
+    clearTimeout(nameSearchDebounce);
+    if(q.length < 3){
+      box.classList.remove('show');
+      box.innerHTML = '';
+      return;
+    }
+    nameSearchDebounce = setTimeout(async ()=>{
+      try {
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 15000);
+        const data = await res.json();
+        const matches = data.matches || [];
+        if(!matches.length){
+          box.innerHTML = '<div class="name-autocomplete-item" style="color:var(--muted);">No matching names</div>';
+          box.classList.add('show');
+          return;
+        }
+        box.innerHTML = matches.map(m => `
+          <div class="name-autocomplete-item" onclick="selectPerson('${m.name.replace(/'/g,"\\'")}','${m.mobile}')">
+            <span class="nm">${m.name}</span><span class="mb">${m.mobile}</span>
+          </div>
+        `).join('');
+        box.classList.add('show');
+      } catch(e){
+        box.innerHTML = '<div class="name-autocomplete-item" style="color:#b3261e;">⚠️ Could not load matches — check connection, or make sure the latest backend code is deployed.</div>';
+        box.classList.add('show');
+      }
+    }, 300);
+  }
+  window.onNameSearchInput = onNameSearchInput;
+
+  function selectPerson(name, mobile){
+    selectedPersonMobile = mobile;
+    document.getElementById('nameSearchInput').value = name;
+    document.getElementById('nameAutocomplete').classList.remove('show');
+    document.getElementById('selectedPersonArea').innerHTML = `
+      <div class="selected-person-chip">
+        ${name} — ${mobile}
+        <button onclick="clearSelectedPerson()" title="Clear">✕</button>
+      </div>`;
+  }
+  window.selectPerson = selectPerson;
+
+  function clearSelectedPerson(){
+    selectedPersonMobile = '';
+    document.getElementById('nameSearchInput').value = '';
+    document.getElementById('selectedPersonArea').innerHTML = '';
+    document.getElementById('nameHistoryResultArea').innerHTML = '';
+    document.getElementById('nameSearchMsg').className = 'admin-msg';
+  }
+  window.clearSelectedPerson = clearSelectedPerson;
+
+  // Close the autocomplete dropdown if clicking elsewhere on the page
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('.name-search-wrap')){
+      document.getElementById('nameAutocomplete').classList.remove('show');
+    }
+  });
+
+  async function searchNameHistory(){
+    const msg  = document.getElementById('nameSearchMsg');
+    const area = document.getElementById('nameHistoryResultArea');
+    const fromDate = document.getElementById('nameFromDate').value;
+    const toDate   = document.getElementById('nameToDate').value;
+
+    if(!selectedPersonMobile){
+      msg.textContent = '⚠️ Please select a name from the suggestions first.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    if(!fromDate || !toDate){
+      msg.textContent = '⚠️ Please select both From and To dates.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    if(fromDate > toDate){
+      msg.textContent = '⚠️ From Date must be before To Date.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+
+    msg.textContent = '⏳ Loading…';
+    msg.className = 'admin-msg';
+    area.innerHTML = '';
+
+    try {
+      const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(selectedPersonMobile)}&fromDate=${fromDate}&toDate=${toDate}`;
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const data = await res.json();
+      const rows = data.rows || [];
+
+      if(!rows.length){
+        msg.textContent = 'No bookings found in this date range.';
+        msg.className = 'admin-msg';
+        return;
+      }
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+
+      let total = 0;
+      const rowHtml = r => {
+        const amt = parseFloat(r.amount) || 0;
+        total += amt;
+        return `
+          <tr>
+            <td>${r.date}</td><td>${r.time}</td><td>${r.nets}</td>
+            <td>${r.players}</td><td>${r.duration}</td>
+            <td>₹${amt.toLocaleString('en-IN')}</td><td>${r.ref}</td><td>${r.groupCode||''}</td>
+          </tr>`;
+      };
+      const bodyHtml = rows.map(rowHtml).join('');
+
+      area.innerHTML = `
+        <table class="name-history-table">
+          <thead><tr>
+            <th>Date</th><th>Time</th><th>No. of Nets</th><th>Players</th>
+            <th>Duration</th><th>Amount</th><th>Ref</th><th>Group Code</th>
+          </tr></thead>
+          <tbody>${bodyHtml}</tbody>
+          <tfoot><tr><td colspan="5">Total</td><td colspan="3">₹${total.toLocaleString('en-IN')}</td></tr></tfoot>
+        </table>`;
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.searchNameHistory = searchNameHistory;
+
+
+  function toggleNormalResult(i){
+    const detail = document.getElementById('ndetail'+i);
+    const chev   = document.getElementById('nchev'+i);
+    detail.classList.toggle('open');
+    chev.classList.toggle('open');
+  }
+  window.toggleNormalResult = toggleNormalResult;
+</script>
+</body>
+</html>
