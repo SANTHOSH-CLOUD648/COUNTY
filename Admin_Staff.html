@@ -246,14 +246,14 @@
   </div>
 
   <div class="admin-tabs">
-    <button class="admin-tab active" id="tabBtnFree" onclick="showStaffTab('free')">🕒 Free Slots</button>
+    <button class="admin-tab" id="tabBtnFree" onclick="showStaffTab('free')">🕒 Free Slots</button>
     <button class="admin-tab" id="tabBtnSearch" onclick="showStaffTab('search')">🔍 Search Bookings</button>
     <button class="admin-tab" id="tabBtnName" onclick="showStaffTab('name')">🧑 Name Search</button>
     <button class="admin-tab" id="tabBtnBooking" onclick="showStaffTab('booking')">➕ New Booking</button>
   </div>
 
   <!-- ── Free Slots Search ── -->
-  <div class="admin-tab-content" id="staffTabFree">
+  <div class="admin-tab-content" id="staffTabFree" style="display:none;">
   <div class="card">
     <div class="lock-title">🕒 Free Slots Search <span class="badge">STAFF</span></div>
     <label class="admin-lbl">Date</label>
@@ -980,9 +980,11 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
       msg.textContent = `${data.results.length} booking${data.results.length>1?'s':''} found.`;
       msg.className = 'admin-msg ok';
 
+      let totalAmount = 0;
       results.innerHTML = data.results.map((b,i)=>{
         const isCancelled = b.status === 'Cancelled';
         const isPast = isSlotPast(b.dateISO || b.date, b.time);
+        if(!isCancelled) totalAmount += parseFloat(String(b.amount).replace(/[₹,]/g,'')) || 0;
         return `
         <div class="bulk-group-card" id="nslot_${i}">
           <div class="bulk-group-header" onclick="toggleNormalResult(${i})">
@@ -1007,7 +1009,10 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
             </div>
           </div>
         </div>`;
-      }).join('');
+      }).join('') + `
+        <div style="background:var(--navy);color:#fff;border-radius:10px;padding:12px 16px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-weight:700;">
+          <span>Total Amount</span><span>₹${totalAmount.toLocaleString('en-IN')}</span>
+        </div>`;
     } catch(e){
       msg.textContent = '❌ Search failed. Check connection.';
       msg.className = 'admin-msg err';
@@ -1037,7 +1042,7 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
     }
     nameSearchDebounce = setTimeout(async ()=>{
       try {
-        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 15000);
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
         const data = await res.json();
         const matches = data.matches || [];
         if(!matches.length){
@@ -1133,13 +1138,17 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
       let totalHours  = 0;
       const rowHtml = r => {
         const amt = parseFloat(r.amount) || 0;
-        totalAmount += amt;
-        totalHours  += ADMIN_DUR_HRS[r.duration] || 0;
+        const isCancelled = r.status === 'Cancelled';
+        if(!isCancelled){
+          totalAmount += amt;
+          totalHours  += ADMIN_DUR_HRS[r.duration] || 0;
+        }
         return `
-          <tr>
+          <tr${isCancelled ? ' style="opacity:.6;"' : ''}>
             <td>${r.date}</td><td>${r.time}</td><td>${r.netsCount}</td>
             <td>${r.players}</td><td>${r.duration}</td>
             <td>₹${amt.toLocaleString('en-IN')}</td><td>${r.ref}</td><td>${r.groupCode||''}</td>
+            <td>${isCancelled ? '🚫 Cancelled' : '✅ Confirmed'}</td>
           </tr>`;
       };
       const bodyHtml = rows.map(rowHtml).join('');
@@ -1149,12 +1158,12 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
         <table class="name-history-table">
           <thead><tr>
             <th>Date</th><th>Time</th><th>No. of Nets</th><th>Players</th>
-            <th>Duration</th><th>Amount</th><th>Ref</th><th>Group Code</th>
+            <th>Duration</th><th>Amount</th><th>Ref</th><th>Group Code</th><th>Status</th>
           </tr></thead>
           <tbody>${bodyHtml}</tbody>
           <tfoot>
-            <tr><td colspan="4">Total Hours</td><td colspan="4">${hoursDisplay} hr${totalHours!==1?'s':''}</td></tr>
-            <tr><td colspan="5">Total Amount</td><td colspan="3">₹${totalAmount.toLocaleString('en-IN')}</td></tr>
+            <tr><td colspan="4">Total Hours</td><td colspan="5">${hoursDisplay} hr${totalHours!==1?'s':''}</td></tr>
+            <tr><td colspan="5">Total Amount</td><td colspan="4">₹${totalAmount.toLocaleString('en-IN')}</td></tr>
           </tfoot>
         </table>`;
     } catch(e){
