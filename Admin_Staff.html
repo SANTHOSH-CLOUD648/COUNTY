@@ -1017,6 +1017,7 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
 
   // ── Name Search (autocomplete + custom date range history) ─────
   let selectedPersonMobile = '';
+  let selectedPersonName = '';
   let nameSearchDebounce = null;
 
   function onNameSearchInput(){
@@ -1060,6 +1061,7 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
 
   function selectPerson(name, mobile){
     selectedPersonMobile = mobile;
+    selectedPersonName = name;
     document.getElementById('nameSearchInput').value = name;
     document.getElementById('nameAutocomplete').classList.remove('show');
     document.getElementById('selectedPersonArea').innerHTML = `
@@ -1072,6 +1074,7 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
 
   function clearSelectedPerson(){
     selectedPersonMobile = '';
+    selectedPersonName = '';
     document.getElementById('nameSearchInput').value = '';
     document.getElementById('selectedPersonArea').innerHTML = '';
     document.getElementById('nameHistoryResultArea').innerHTML = '';
@@ -1113,7 +1116,7 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
     area.innerHTML = '';
 
     try {
-      const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(selectedPersonMobile)}&fromDate=${fromDate}&toDate=${toDate}`;
+      const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(selectedPersonMobile)}&name=${encodeURIComponent(selectedPersonName)}&fromDate=${fromDate}&toDate=${toDate}`;
       const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
       const data = await res.json();
       const rows = data.rows || [];
@@ -1126,18 +1129,21 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
       msg.textContent = '';
       msg.className = 'admin-msg';
 
-      let total = 0;
+      let totalAmount = 0;
+      let totalHours  = 0;
       const rowHtml = r => {
         const amt = parseFloat(r.amount) || 0;
-        total += amt;
+        totalAmount += amt;
+        totalHours  += ADMIN_DUR_HRS[r.duration] || 0;
         return `
           <tr>
-            <td>${r.date}</td><td>${r.time}</td><td>${r.nets}</td>
+            <td>${r.date}</td><td>${r.time}</td><td>${r.netsCount}</td>
             <td>${r.players}</td><td>${r.duration}</td>
             <td>₹${amt.toLocaleString('en-IN')}</td><td>${r.ref}</td><td>${r.groupCode||''}</td>
           </tr>`;
       };
       const bodyHtml = rows.map(rowHtml).join('');
+      const hoursDisplay = totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1);
 
       area.innerHTML = `
         <table class="name-history-table">
@@ -1146,7 +1152,10 @@ Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mam
             <th>Duration</th><th>Amount</th><th>Ref</th><th>Group Code</th>
           </tr></thead>
           <tbody>${bodyHtml}</tbody>
-          <tfoot><tr><td colspan="5">Total</td><td colspan="3">₹${total.toLocaleString('en-IN')}</td></tr></tfoot>
+          <tfoot>
+            <tr><td colspan="4">Total Hours</td><td colspan="4">${hoursDisplay} hr${totalHours!==1?'s':''}</td></tr>
+            <tr><td colspan="5">Total Amount</td><td colspan="3">₹${totalAmount.toLocaleString('en-IN')}</td></tr>
+          </tfoot>
         </table>`;
     } catch(e){
       msg.textContent = '❌ Connection error. Please try again.';
