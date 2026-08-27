@@ -430,17 +430,19 @@
     .receipt-table td{padding:6px 4px;}
   }
   .receipt-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap;}
-  .receipt-note{
-    margin-top:14px;padding-top:10px;border-top:1px dashed #c9d0f0;
+  .receipt-box{
+    margin-top:12px;padding:11px 13px;border-radius:10px;
     font-size:11.5px;color:var(--ink);line-height:1.7;
   }
-  .receipt-note div{display:flex;align-items:center;gap:6px;}
-  .receipt-policy-box{
-    margin-top:20px;padding:10px 12px;
-    background:#fbf2ec;border:1px solid #e9d2bf;border-radius:10px;
-    font-size:11.5px;color:var(--ink);line-height:1.7;
+  .receipt-box .box-title{
+    display:flex;align-items:center;gap:6px;font-weight:700;
+    font-size:12.5px;margin-bottom:4px;
   }
-  .receipt-policy-box div{display:flex;align-items:flex-start;gap:6px;}
+  .receipt-box div.line{display:flex;align-items:flex-start;gap:6px;}
+  .receipt-box-general{background:#fdf0ee;border:1px solid #f0cfc9;}
+  .receipt-box-punctuality{background:#eaf2fb;border:1px solid #c9dcf0;}
+  .receipt-box-cancellation{background:#fff7ee;border:1px solid #f0dcc0;}
+  .receipt-box-network{background:#f3f0fa;border:1px solid #dcd2ef;}
   .receipt-btn{
     background:var(--navy);color:#fff;border:none;border-radius:8px;
     padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
@@ -517,6 +519,41 @@
     width:100%;max-width:260px;padding:9px 12px;border:1.5px solid #e2ddd0;
     border-radius:8px;font-size:14px;font-family:inherit;background:#fffdf8;
   }
+
+  /* ── Custom Dates: optional Name Search ── */
+  .name-search-wrap{position:relative;max-width:320px;}
+  .name-autocomplete{
+    position:absolute;top:100%;left:0;right:0;background:#fff;
+    border:1.5px solid #d9d3c0;border-top:none;border-radius:0 0 10px 10px;
+    max-height:220px;overflow-y:auto;z-index:10;
+    box-shadow:0 8px 20px rgba(0,0,0,.12);display:none;
+  }
+  .name-autocomplete.show{display:block;}
+  .name-autocomplete-item{
+    padding:9px 14px;cursor:pointer;font-size:13.5px;border-bottom:1px solid #f0ede2;
+  }
+  .name-autocomplete-item:last-child{border-bottom:none;}
+  .name-autocomplete-item:hover{background:#eef6ee;}
+  .name-autocomplete-item .nm{font-weight:700;color:var(--navy);}
+  .name-autocomplete-item .mb{color:var(--muted);font-size:12px;margin-left:6px;}
+  .selected-person-chip{
+    display:inline-flex;align-items:center;gap:8px;background:#eef6ee;
+    border:1.5px solid #bfe2c0;border-radius:20px;padding:6px 12px;
+    font-size:13px;font-weight:600;color:#1c4a22;margin-top:8px;
+  }
+  .selected-person-chip button{
+    background:none;border:none;color:#8b1c1c;font-weight:700;cursor:pointer;
+    font-size:14px;padding:0;line-height:1;
+  }
+  .person-summary-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;
+  }
+  .person-summary-card{
+    background:var(--navy);color:#fff;border-radius:12px;padding:14px 16px;text-align:center;
+  }
+  .person-summary-card .val{font-size:22px;font-weight:700;font-family:Georgia,serif;color:var(--gold);}
+  .person-summary-card .lbl{font-size:11.5px;color:#cfd3ee;margin-top:2px;text-transform:uppercase;letter-spacing:.3px;}
+
   .report-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px;}
   .report-table th{
     background:var(--navy);color:#fff;padding:8px 6px;text-align:center;
@@ -525,6 +562,9 @@
   .report-table td{
     padding:9px 6px;text-align:center;border-bottom:1px solid #eee;
     color:var(--ink);white-space:nowrap;font-weight:600;
+  }
+  .report-table tfoot td{
+    background:var(--navy);color:#fff;font-weight:700;
   }
   .report-summary-card{
     display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px;
@@ -657,14 +697,14 @@
 
   <div class="brand">
     <h1 style="font-family:Georgia,serif;">County Indoor Netz</h1>
-    <p style="margin-top:4px;">🔐 Admin Panel</p>
+    <p style="margin-top:4px;">🔐 ADMIN PANEL</p>
   </div>
 
     <div class="admin-wrap">
 
       <!-- Admin navigation tabs -->
       <div class="admin-nav">
-        <div class="admin-nav-title">🔐 Admin Panel <span class="badge">STAFF ONLY</span></div>
+        <div class="admin-nav-title">🔐 ADMIN PANEL</div>
         <div class="admin-tabs">
           <button class="admin-tab active" id="tabBtnBook"   onclick="showAdminTab('book')">📅 Bulk Booking</button>
           <button class="admin-tab"        id="tabBtnCancel" onclick="showAdminTab('cancel')">✏️ Edit Booking</button>
@@ -688,7 +728,7 @@
             <select id="aSession">
               <option value="" disabled selected>Select</option>
               <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
-              <option value="Evening (06:00 pm to 11:00 pm)">Evening</option>
+              <option value="Evening (06:00 pm to 11:30 pm)">Evening</option>
             </select>
           </div>
           <div><label class="admin-lbl">Time</label>
@@ -742,20 +782,31 @@
               <tbody id="adminReceiptBody"></tbody>
             </table>
           </div>
-          <div class="receipt-note">
-            <div><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
-            <div>🧍🧍🧍 Rate changes if player count exceeds booking.</div>
-          </div>
-          <div class="receipt-policy-box">
-            <div>⏱️ Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
-            <div>⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.</div>
-            <div>
+          <div class="receipt-box receipt-box-general">
+            <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
+            <div class="line">🧍🧍🧍 Rate changes if player count exceeds booking.</div>
+            <div class="line">
               <a href="https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi"
                  target="_blank" rel="noopener" style="color:var(--navy);font-weight:600;">
                 🚗 Get directions on Google Maps
               </a>
             </div>
           </div>
+          <div class="receipt-box receipt-box-punctuality">
+            <div class="box-title">🕐 Punctuality is Mandatory</div>
+            <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
+            <div class="line">If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.</div>
+          </div>
+          <div class="receipt-box receipt-box-cancellation">
+            <div class="box-title">📋 Cancellation Policy</div>
+            <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
+            <div class="line">⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+          </div>
+          <div class="receipt-box receipt-box-network">
+            <div class="box-title">📶 Network / Technical Issues</div>
+            <div class="line">In case of any network issues, please contact us directly.</div>
+          </div>
+          <div style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:600;color:var(--navy);">Thank you for your cooperation! See you at the nets! 🏏</div>
           <div class="receipt-actions">
             <a id="adminWaBtn" class="share-btn wa" target="_blank" rel="noopener" style="display:none;">
               <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
@@ -822,6 +873,15 @@
           <input type="date" id="repCustomFrom" class="report-input">
           <label class="report-label" style="margin-top:8px;">To</label>
           <input type="date" id="repCustomTo" class="report-input">
+
+          <label class="report-label" style="margin-top:12px;">Name <span style="font-weight:400;color:var(--muted);">(optional — leave blank for the normal date-range report)</span></label>
+          <div class="name-search-wrap">
+            <input type="text" id="repCustomNameInput" class="report-input" style="max-width:100%;"
+                   placeholder="Type at least 3 letters…" oninput="onRepCustomNameInput()" autocomplete="off">
+            <div class="name-autocomplete" id="repCustomNameAutocomplete"></div>
+          </div>
+          <div id="repCustomSelectedPersonArea"></div>
+
           <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('custom')">Generate Report</button>
         </div>
 
@@ -843,6 +903,15 @@
         <div id="repPanelYearly" class="report-panel" style="display:none;">
           <label class="report-label">Year</label>
           <input type="number" id="repYearlyYear" class="report-input" style="width:100px;">
+
+          <label class="report-label" style="margin-top:12px;">Name <span style="font-weight:400;color:var(--muted);">(optional — leave blank for the normal yearly report)</span></label>
+          <div class="name-search-wrap">
+            <input type="text" id="repYearlyNameInput" class="report-input" style="max-width:100%;"
+                   placeholder="Type at least 3 letters…" oninput="onRepYearlyNameInput()" autocomplete="off">
+            <div class="name-autocomplete" id="repYearlyNameAutocomplete"></div>
+          </div>
+          <div id="repYearlySelectedPersonArea"></div>
+
           <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('yearly')">Generate Report</button>
         </div>
 
@@ -868,7 +937,7 @@
         <select id="editSession">
           <option value="" disabled selected>Select</option>
           <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
-          <option value="Evening (06:00 pm to 11:00 pm)">Evening</option>
+          <option value="Evening (06:00 pm to 11:30 pm)">Evening</option>
         </select>
       </div>
       <div><label class="admin-lbl">Time</label>
@@ -920,20 +989,31 @@
     <div class="edit-receipt" id="editReceipt" style="display:none;">
       <div class="receipt-title">🧾 Updated Booking Receipt</div>
       <dl id="editReceiptDetails"></dl>
-      <div class="receipt-note">
-        <div><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
-        <div>🧍🧍🧍 Rate changes if player count exceeds booking.</div>
-      </div>
-      <div class="receipt-policy-box">
-        <div>⏱️ Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
-        <div>⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.</div>
-        <div>
+      <div class="receipt-box receipt-box-general">
+        <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
+        <div class="line">🧍🧍🧍 Rate changes if player count exceeds booking.</div>
+        <div class="line">
           <a href="https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi"
              target="_blank" rel="noopener" style="color:var(--navy);font-weight:600;">
             🚗 Get directions on Google Maps
           </a>
         </div>
       </div>
+      <div class="receipt-box receipt-box-punctuality">
+        <div class="box-title">🕐 Punctuality is Mandatory</div>
+        <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
+        <div class="line">If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.</div>
+      </div>
+      <div class="receipt-box receipt-box-cancellation">
+        <div class="box-title">📋 Cancellation Policy</div>
+        <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
+        <div class="line">⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+      </div>
+      <div class="receipt-box receipt-box-network">
+        <div class="box-title">📶 Network / Technical Issues</div>
+        <div class="line">In case of any network issues, please contact us directly.</div>
+      </div>
+      <div style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:600;color:var(--navy);">Thank you for your cooperation! See you at the nets! 🏏</div>
       <div class="share-row" style="margin-top:12px;">
         <a id="editWaBtn" class="share-btn wa" target="_blank" rel="noopener">
           <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
@@ -1079,7 +1159,7 @@
   const ALL_TIMES_ADMIN = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
     "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
-    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm","11:00 pm"];
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
   const MORNING_A = ALL_TIMES_ADMIN.slice(0, ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
   const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("06:00 pm"));
 
@@ -1235,6 +1315,36 @@
 
   populateAdminTimes(null);
 
+  // Pre-fill Date/Session/Time from URL parameters (?date=YYYY-MM-DD&time=HH:MM%20am)
+  // — used by the Monthly Tabs "Free Slots" page so clicking a free slot
+  // there jumps straight into a ready-to-book form here, instead of the
+  // admin having to re-select everything manually.
+  (function prefillFromUrl(){
+    const params = new URLSearchParams(window.location.search);
+    const prefDate = params.get('date');
+    const prefTime = params.get('time');
+    if(!prefDate || !prefTime) return;
+
+    document.getElementById('aDate').value = prefDate;
+
+    const isMorning = MORNING_A.includes(prefTime);
+    const isEvening = EVENING_A.includes(prefTime);
+    if(!isMorning && !isEvening) return; // unrecognised time — leave form blank rather than guess
+
+    aSession.value = isMorning
+      ? 'Morning (09:00 am to 05:00 pm)'
+      : 'Evening (06:00 pm to 11:30 pm)';
+
+    // Mirrors aSession's own change handler: populate the time list for
+    // this session, then apply the specific pre-filled time on top of it.
+    populateAdminTimes(isMorning ? MORNING_A : EVENING_A);
+    aTime.value = prefTime;
+    applyAdminPastTimeFilter();
+    filterAdminDurations();
+    refreshAdminAvailability();
+    calcAdminAmount();
+  })();
+
   // Filter admin durations so bookings don't extend past session end
   const ADMIN_DUR_MINS = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
 
@@ -1243,7 +1353,7 @@
     const timeVal    = aTime.value;
     if(!sessionVal || !timeVal) return;
     // Morning ends at 6pm (5pm slot + 1hr), Evening ends at midnight (11pm + 1hr)
-    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 24*60;
+    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 23*60+30;
     const timeMins       = parseSlotMinutes(timeVal);
     Array.from(aDuration.options).forEach(o=>{
       if(!o.value) return;
@@ -1357,12 +1467,279 @@
     document.getElementById('repYearlyYear').value    = String(y);
   }
 
+  // ── Custom Dates: optional Name Search (person summary) ─────────
+  let repCustomSelectedMobile = '';
+  let repCustomSelectedName = '';
+  let repCustomNameDebounce = null;
+
+  function onRepCustomNameInput(){
+    const input = document.getElementById('repCustomNameInput');
+    const box   = document.getElementById('repCustomNameAutocomplete');
+    const q = input.value.trim();
+
+    repCustomSelectedMobile = '';
+    repCustomSelectedName = '';
+    document.getElementById('repCustomSelectedPersonArea').innerHTML = '';
+
+    clearTimeout(repCustomNameDebounce);
+    if(q.length < 3){
+      box.classList.remove('show');
+      box.innerHTML = '';
+      return;
+    }
+    repCustomNameDebounce = setTimeout(async ()=>{
+      try {
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const data = await res.json();
+        const matches = data.matches || [];
+        if(!matches.length){
+          box.innerHTML = '<div class="name-autocomplete-item" style="color:var(--muted);">No matching names</div>';
+          box.classList.add('show');
+          return;
+        }
+        box.innerHTML = matches.map(m => `
+          <div class="name-autocomplete-item" onclick="selectRepCustomPerson('${m.name.replace(/'/g,"\\'")}','${m.mobile}')">
+            <span class="nm">${m.name}</span><span class="mb">${m.mobile}</span>
+          </div>
+        `).join('');
+        box.classList.add('show');
+      } catch(e){
+        box.innerHTML = '<div class="name-autocomplete-item" style="color:#b3261e;">⚠️ Could not load matches — check connection.</div>';
+        box.classList.add('show');
+      }
+    }, 300);
+  }
+  window.onRepCustomNameInput = onRepCustomNameInput;
+
+  function selectRepCustomPerson(name, mobile){
+    repCustomSelectedMobile = mobile;
+    repCustomSelectedName = name;
+    document.getElementById('repCustomNameInput').value = name;
+    document.getElementById('repCustomNameAutocomplete').classList.remove('show');
+    document.getElementById('repCustomSelectedPersonArea').innerHTML = `
+      <div class="selected-person-chip">
+        ${name} — ${mobile}
+        <button onclick="clearRepCustomPerson()" title="Clear">✕</button>
+      </div>`;
+  }
+  window.selectRepCustomPerson = selectRepCustomPerson;
+
+  function clearRepCustomPerson(){
+    repCustomSelectedMobile = '';
+    repCustomSelectedName = '';
+    document.getElementById('repCustomNameInput').value = '';
+    document.getElementById('repCustomSelectedPersonArea').innerHTML = '';
+  }
+  window.clearRepCustomPerson = clearRepCustomPerson;
+
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('.name-search-wrap')){
+      const box = document.getElementById('repCustomNameAutocomplete');
+      if(box) box.classList.remove('show');
+    }
+  });
+
+  async function generatePersonSummaryReport(fromDate, toDate){
+    const msg = document.getElementById('reportMsg');
+    const resultArea = document.getElementById('reportResultArea');
+    try {
+      const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(repCustomSelectedMobile)}&name=${encodeURIComponent(repCustomSelectedName)}&fromDate=${fromDate}&toDate=${toDate}`;
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const data = await res.json();
+      const rows = data.rows || [];
+
+      if(!rows.length){
+        msg.textContent = 'No bookings found for this person in this date range.';
+        msg.className = 'admin-msg err';
+        return;
+      }
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+
+      const totalBookings = rows.length;
+      const totalCancelled = rows.filter(r => r.status === 'Cancelled').length;
+      const totalActive = totalBookings - totalCancelled;
+      const totalAmount = rows.filter(r => r.status !== 'Cancelled')
+        .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+      resultArea.innerHTML = `
+        <div class="person-summary-grid">
+          <div class="person-summary-card"><div class="val">${totalBookings}</div><div class="lbl">Total Bookings</div></div>
+          <div class="person-summary-card"><div class="val">${totalCancelled}</div><div class="lbl">Total Cancellations</div></div>
+          <div class="person-summary-card"><div class="val">${totalActive}</div><div class="lbl">Active Bookings</div></div>
+          <div class="person-summary-card"><div class="val">₹${totalAmount.toLocaleString('en-IN')}</div><div class="lbl">Total Amount</div></div>
+        </div>`;
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+
+  // ── Yearly: optional Name Search (month-by-month person breakdown) ──
+  let repYearlySelectedMobile = '';
+  let repYearlySelectedName = '';
+  let repYearlyNameDebounce = null;
+
+  function onRepYearlyNameInput(){
+    const input = document.getElementById('repYearlyNameInput');
+    const box   = document.getElementById('repYearlyNameAutocomplete');
+    const q = input.value.trim();
+
+    repYearlySelectedMobile = '';
+    repYearlySelectedName = '';
+    document.getElementById('repYearlySelectedPersonArea').innerHTML = '';
+
+    clearTimeout(repYearlyNameDebounce);
+    if(q.length < 3){
+      box.classList.remove('show');
+      box.innerHTML = '';
+      return;
+    }
+    repYearlyNameDebounce = setTimeout(async ()=>{
+      try {
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const data = await res.json();
+        const matches = data.matches || [];
+        if(!matches.length){
+          box.innerHTML = '<div class="name-autocomplete-item" style="color:var(--muted);">No matching names</div>';
+          box.classList.add('show');
+          return;
+        }
+        box.innerHTML = matches.map(m => `
+          <div class="name-autocomplete-item" onclick="selectRepYearlyPerson('${m.name.replace(/'/g,"\\'")}','${m.mobile}')">
+            <span class="nm">${m.name}</span><span class="mb">${m.mobile}</span>
+          </div>
+        `).join('');
+        box.classList.add('show');
+      } catch(e){
+        box.innerHTML = '<div class="name-autocomplete-item" style="color:#b3261e;">⚠️ Could not load matches — check connection.</div>';
+        box.classList.add('show');
+      }
+    }, 300);
+  }
+  window.onRepYearlyNameInput = onRepYearlyNameInput;
+
+  function selectRepYearlyPerson(name, mobile){
+    repYearlySelectedMobile = mobile;
+    repYearlySelectedName = name;
+    document.getElementById('repYearlyNameInput').value = name;
+    document.getElementById('repYearlyNameAutocomplete').classList.remove('show');
+    document.getElementById('repYearlySelectedPersonArea').innerHTML = `
+      <div class="selected-person-chip">
+        ${name} — ${mobile}
+        <button onclick="clearRepYearlyPerson()" title="Clear">✕</button>
+      </div>`;
+  }
+  window.selectRepYearlyPerson = selectRepYearlyPerson;
+
+  function clearRepYearlyPerson(){
+    repYearlySelectedMobile = '';
+    repYearlySelectedName = '';
+    document.getElementById('repYearlyNameInput').value = '';
+    document.getElementById('repYearlySelectedPersonArea').innerHTML = '';
+  }
+  window.clearRepYearlyPerson = clearRepYearlyPerson;
+
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('.name-search-wrap')){
+      const box = document.getElementById('repYearlyNameAutocomplete');
+      if(box) box.classList.remove('show');
+    }
+  });
+
+  async function generatePersonYearlyReport(year){
+    const msg = document.getElementById('reportMsg');
+    const resultArea = document.getElementById('reportResultArea');
+    try {
+      // Same fiscal-year window as the normal Yearly report: April of the
+      // chosen year through March of the following year.
+      const fromDate = `${year}-04-01`;
+      const toDate   = `${parseInt(year,10)+1}-03-31`;
+      const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(repYearlySelectedMobile)}&name=${encodeURIComponent(repYearlySelectedName)}&fromDate=${fromDate}&toDate=${toDate}`;
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const data = await res.json();
+      const rows = data.rows || [];
+
+      if(!rows.length){
+        msg.textContent = 'No bookings found for this person in this year.';
+        msg.className = 'admin-msg err';
+        return;
+      }
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+
+      const MONTH_ORDER  = [4,5,6,7,8,9,10,11,12,1,2,3];
+      const MONTH_LABELS = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'};
+
+      const buckets = {};
+      MONTH_ORDER.forEach(m => { buckets[m] = { total:0, cancelled:0, amount:0 }; });
+
+      rows.forEach(r => {
+        const m = parseInt(String(r.dateISO).split('-')[1], 10);
+        if(!buckets[m]) return;
+        buckets[m].total++;
+        if(r.status === 'Cancelled'){
+          buckets[m].cancelled++;
+        } else {
+          buckets[m].amount += parseFloat(r.amount) || 0;
+        }
+      });
+
+      let grandTotal=0, grandCancelled=0, grandActive=0, grandAmount=0;
+      const bodyHtml = MONTH_ORDER.map(m => {
+        const b = buckets[m];
+        const active = b.total - b.cancelled;
+        grandTotal += b.total; grandCancelled += b.cancelled; grandActive += active; grandAmount += b.amount;
+        return `<tr>
+          <td>${MONTH_LABELS[m]}</td><td>${b.total}</td><td>${b.cancelled}</td><td>${active}</td><td>₹${b.amount.toLocaleString('en-IN')}</td>
+        </tr>`;
+      }).join('');
+
+      resultArea.innerHTML = `
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+          <table class="report-table">
+            <thead><tr>
+              <th>Month</th><th>Total Bookings</th><th>Cancellations</th><th>Active</th><th>Amount</th>
+            </tr></thead>
+            <tbody>${bodyHtml}</tbody>
+            <tfoot><tr>
+              <td>Total</td><td>${grandTotal}</td><td>${grandCancelled}</td><td>${grandActive}</td><td>₹${grandAmount.toLocaleString('en-IN')}</td>
+            </tr></tfoot>
+          </table>
+        </div>`;
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+
   async function generateReport(type){
     const msg = document.getElementById('reportMsg');
     const resultArea = document.getElementById('reportResultArea');
     msg.textContent = '⏳ Generating report…';
-    msg.className = 'admin-msg';
+    msg.className = 'admin-msg ok';
     resultArea.innerHTML = '';
+
+    // If a person is selected in Custom Dates, show their summary instead
+    // of the normal day-by-day breakdown — everything else (no name typed)
+    // continues exactly as before, unchanged.
+    if (type === 'custom' && repCustomSelectedMobile){
+      const f = document.getElementById('repCustomFrom').value;
+      const t = document.getElementById('repCustomTo').value;
+      if (!f || !t){ msg.textContent = '⚠️ Please select both dates.'; msg.className='admin-msg err'; return; }
+      if (f > t){ msg.textContent = '⚠️ "From" date must be before "To" date.'; msg.className='admin-msg err'; return; }
+      await generatePersonSummaryReport(f, t);
+      return;
+    }
+
+    // Same idea for Yearly — if a person is selected, show their
+    // month-by-month breakdown instead of the normal all-customers report.
+    if (type === 'yearly' && repYearlySelectedMobile){
+      const yr = document.getElementById('repYearlyYear').value;
+      if (!yr){ msg.textContent = '⚠️ Please enter a year.'; msg.className='admin-msg err'; return; }
+      await generatePersonYearlyReport(yr);
+      return;
+    }
 
     let qs = `action=report&type=${type}`;
     if (type === 'daily'){
@@ -1643,15 +2020,15 @@ To cancel any or all active slots quote your individual Booking Ref No. and Grou
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://tinyurl.com/2hta9v6t?v=2
 
-🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
+🚗 Location: https://tinyurl.com/ufufks5u
 
-See you at the nets! 🏏`;
+Thank you for your cooperation! See you at the nets! 🏏`;
 
     const smsLines = g.slots.map((s,i) => {
       const netsCount = (s.net.match(/Net/g)||[]).length || 1;
       return `${i+1}. ${s.date} ${s.time} ${s.duration} Nets:${netsCount} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`;
     }).join('\n');
-    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
+    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://tinyurl.com/ufufks5u`;
 
     document.getElementById(`groupReceiptBtns${gi}`).innerHTML = `
       <a class="share-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(waMsg)}">
@@ -1959,7 +2336,7 @@ https://tinyurl.com/2hta9v6t?v=2`;
   const ALL_TIMES_EDIT = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
     "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
-    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm","11:00 pm"];
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
   const MORNING_E = ALL_TIMES_EDIT.slice(0, ALL_TIMES_EDIT.indexOf('05:00 pm')+1);
   const EVENING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('06:00 pm'));
 
@@ -1996,7 +2373,7 @@ https://tinyurl.com/2hta9v6t?v=2`;
     const hour = parseInt(time.split(':')[0],10);
     const isPM = time.includes('pm');
     const hour24 = isPM && hour!==12 ? hour+12 : (!isPM && hour===12 ? 0 : hour);
-    const session = hour24 < 18 ? 'Morning (09:00 am to 05:00 pm)' : 'Evening (06:00 pm to 11:00 pm)';
+    const session = hour24 < 18 ? 'Morning (09:00 am to 05:00 pm)' : 'Evening (06:00 pm to 11:30 pm)';
     document.getElementById('editSession').value = session;
     populateEditTimes(hour24 < 18 ? MORNING_E : EVENING_E);
     applyEditPastTimeFilter(); // hide past times if today
@@ -2207,7 +2584,7 @@ https://tinyurl.com/2hta9v6t?v=2`;
     const timeVal    = document.getElementById('editTime').value;
     const durSel     = document.getElementById('editDuration');
     if(!sessionVal || !timeVal) return;
-    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 24*60;
+    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 23*60+30;
     const timeMins = parseSlotMinutes(timeVal);
     Array.from(durSel.options).forEach(o=>{
       if(!o.value) return;
@@ -2400,11 +2777,11 @@ https://tinyurl.com/2hta9v6t?v=2`;
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://tinyurl.com/2hta9v6t?v=2
 
-🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
+🚗 Location: https://tinyurl.com/ufufks5u
 
-Your booking has been updated. See you at the nets!`;
+Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://tinyurl.com/ufufks5u`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -2643,15 +3020,15 @@ ${waLines}
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://tinyurl.com/2hta9v6t?v=2
 
-🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
+🚗 Location: https://tinyurl.com/ufufks5u
 
 To cancel any or all slots quote your individual Booking Ref No. and Group Ref *${b0.groupRef}*
-See you at the nets! 🏏`;
+Thank you for your cooperation! See you at the nets! 🏏`;
 
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://tinyurl.com/ufufks5u\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');

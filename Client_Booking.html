@@ -308,6 +308,24 @@
     display:flex;gap:10px;
     max-width:640px;margin:0 auto 18px;
   }
+  .promo-banner{
+    max-width:640px;margin:0 auto;border-radius:14px;overflow:hidden;
+    box-shadow:0 6px 18px rgba(0,0,0,.18);
+  }
+  .promo-banner-text{
+    padding:12px 18px;text-align:center;font-weight:700;font-size:14.5px;
+    color:#fff;letter-spacing:.2px;
+  }
+  .promo-banner-video{
+    position:relative;display:block;cursor:pointer;line-height:0;
+  }
+  .promo-banner-video img{width:100%;display:block;}
+  .promo-banner-play{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:56px;height:56px;border-radius:50%;
+    background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;
+  }
+  .promo-banner-play svg{margin-left:4px;}
   .dual-bar-row .services-bar{
     flex:1;margin:0;min-width:0;
   }
@@ -454,17 +472,19 @@
   .receipt-table tr:last-child td{border-bottom:none;}
   .receipt-table tr:nth-child(even) td{background:#f7f4ec;}
   .receipt-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;}
-  .receipt-note{
-    margin-top:14px;padding-top:10px;border-top:1px dashed #c9d0f0;
+  .receipt-box{
+    margin-top:12px;padding:11px 13px;border-radius:10px;
     font-size:11.5px;color:var(--ink);line-height:1.7;
   }
-  .receipt-note div{display:flex;align-items:center;gap:6px;}
-  .receipt-policy-box{
-    margin-top:20px;padding:10px 12px;
-    background:#fbf2ec;border:1px solid #e9d2bf;border-radius:10px;
-    font-size:11.5px;color:var(--ink);line-height:1.7;
+  .receipt-box .box-title{
+    display:flex;align-items:center;gap:6px;font-weight:700;
+    font-size:12.5px;margin-bottom:4px;
   }
-  .receipt-policy-box div{display:flex;align-items:flex-start;gap:6px;}
+  .receipt-box div.line{display:flex;align-items:flex-start;gap:6px;}
+  .receipt-box-general{background:#fdf0ee;border:1px solid #f0cfc9;}
+  .receipt-box-punctuality{background:#eaf2fb;border:1px solid #c9dcf0;}
+  .receipt-box-cancellation{background:#fff7ee;border:1px solid #f0dcc0;}
+  .receipt-box-network{background:#f3f0fa;border:1px solid #dcd2ef;}
   .receipt-btn{
     background:var(--navy);color:#fff;border:none;border-radius:8px;
     padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
@@ -660,6 +680,8 @@
     <p style="margin-top:2px;">Book your practice session in under a minute</p>
   </div>
 
+  <div id="promoBanner" style="display:none;margin-bottom:14px;"></div>
+
   <!-- More Services + Our Facilities, side by side -->
   <div class="dual-bar-row">
     <div class="services-bar" id="servicesBar">
@@ -739,7 +761,7 @@
         <select id="session">
           <option value="" disabled selected>Select session</option>
           <option value="Morning (09:00 am to 05:00 pm)">Morning (09:00 am – 05:00 pm)</option>
-          <option value="Evening (06:00 pm to 11:00 pm)">Evening (06:00 pm – 11:00 pm)</option>
+          <option value="Evening (06:00 pm to 11:30 pm)">Evening (06:00 pm – 11:30 pm)</option>
         </select>
         <div class="errmsg"></div>
       </div>
@@ -817,20 +839,34 @@
     <div class="confirm" id="confirmPanel">
       <h3>✅ Booking received <span class="ref-badge">Ref #<span id="refNo"></span></span></h3>
       <dl id="confirmDetails"></dl>
-      <div class="receipt-note">
-        <div><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
-        <div>🧍🧍🧍 Rate changes if player count exceeds booking.</div>
-      </div>
-      <div class="receipt-policy-box">
-        <div>⏱️ Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
-        <div>⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.</div>
-        <div>
+      <div class="receipt-box receipt-box-general">
+        <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
+        <div class="line">🧍🧍🧍 Rate changes if player count exceeds booking.</div>
+        <div class="line">
           <a href="https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi"
              target="_blank" rel="noopener" style="color:var(--navy);font-weight:600;">
             🚗 Get directions on Google Maps
           </a>
         </div>
       </div>
+
+      <div class="receipt-box receipt-box-punctuality">
+        <div class="box-title">🕐 Punctuality is Mandatory</div>
+        <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
+        <div class="line">If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.</div>
+      </div>
+
+      <div class="receipt-box receipt-box-cancellation">
+        <div class="box-title">📋 Cancellation Policy</div>
+        <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
+        <div class="line">⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+      </div>
+
+      <div class="receipt-box receipt-box-network">
+        <div class="box-title">📶 Network / Technical Issues</div>
+        <div class="line">In case of any network issues, please contact us directly.</div>
+      </div>
+      <div style="text-align:center;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--navy);">Thank you for your cooperation! See you at the nets! 🏏</div>
       <div class="share-row">
         <div class="receipt-header">🧾 Booking Receipt</div>
         <a id="waBtn" class="share-btn wa" target="_blank" rel="noopener">
@@ -848,6 +884,7 @@
 
     <div class="cancel-toggle">
       <button type="button" id="cancelToggleBtn" class="link-btn">Need to cancel a booking?</button>
+      <div style="color:#c0392b;font-size:12.5px;margin-top:4px;font-weight:600;">Read the Cancellation Policy in the Receipt</div>
     </div>
 
     <div class="cancel-box" id="cancelBox">
@@ -859,6 +896,11 @@
         <button type="button" id="cancelSubmitBtn" class="cancel-submit">Cancel Booking</button>
       </div>
       <div class="cancel-result" id="cancelResult"></div>
+      <div style="margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px solid #f0dcc0;border-radius:10px;font-size:13px;color:var(--ink);line-height:1.6;">
+        <strong style="color:var(--navy);">Cancellation Policy</strong><br>
+        Cancellation allowed up to 2 hours before the slot or inform us.<br>
+        For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+      </div>
     </div>
   </div>
 
@@ -992,6 +1034,10 @@ try {
   const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
   let MAX_NETS            = 4;
   let MAX_NETS_PER_BOOKING = 4;
+  // Holds the currently-active promo/festival banner (if any), so it's
+  // available later when building the receipt message, not just at the
+  // moment it's first fetched.
+  let currentBanner = null;
   // Rates loaded from server Rates tab — defaults match current hardcoded values
   let BOOKING_RATES = {
     Morning: {'1':400,'2':400,'3':500,'4':600,'Team Booking':800},
@@ -1047,14 +1093,49 @@ try {
         // field themselves.
         if(typeof updateAmount === 'function') updateAmount();
       }
+      if(data && data.banner){
+        currentBanner = data.banner;
+        renderPromoBanner(data.banner);
+      }
     }catch(e){}
   })();
+
+  // Renders the occasional festival/promo banner between the header and
+  // the tab buttons. Only ever called when the server has already
+  // confirmed it's Active and within any set date range — this function
+  // just decides HOW to display it (text-only vs clickable video
+  // thumbnail), never whether to.
+  function renderPromoBanner(banner){
+    const el = document.getElementById('promoBanner');
+    let html = '';
+
+    if(banner.thumbnail){
+      const openVideo = banner.videoLink
+        ? `onclick="window.open('${banner.videoLink}','_blank','noopener')"`
+        : '';
+      html += `
+        <div class="promo-banner-video" ${openVideo}>
+          <img src="${banner.thumbnail}" alt="Promotional video">
+          ${banner.videoLink ? `
+          <div class="promo-banner-play">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+          </div>` : ''}
+        </div>`;
+    }
+    if(banner.message){
+      html += `<div class="promo-banner-text" style="background:${banner.bgColor};color:${banner.textColor};font-size:${banner.fontSize};">${banner.message}</div>`;
+    }
+
+    if(!html) return;
+    el.innerHTML = `<div class="promo-banner">${html}</div>`;
+    el.style.display = 'block';
+  }
 
   // Full half-hour slot list as given, 9:00am -> 11:00pm
   const ALL_TIMES = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
     "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
-    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm","11:00 pm"];
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
 
   // Morning = 09:00am..05:00pm ; Evening = 06:00pm..11:00pm ; 05:30pm is a changeover buffer, included in neither.
   const MORNING_TIMES = ALL_TIMES.slice(0, ALL_TIMES.indexOf("05:00 pm")+1);
@@ -1245,6 +1326,36 @@ try {
     refreshDurationLimit();
     refreshAvailability();
   });
+
+  // Pre-fill Date/Session/Time from URL parameters (?date=YYYY-MM-DD&time=HH:MM%20am)
+  // — used by the Admin's "Free Slots" search page, so tapping a free slot
+  // there opens this booking page with the slot already selected, ready
+  // for the customer's details to be filled in.
+  (function prefillFromUrl(){
+    const params = new URLSearchParams(window.location.search);
+    const prefDate = params.get('date');
+    const prefTime = params.get('time');
+    if(!prefDate || !prefTime) return;
+
+    dateInput.value = prefDate;
+    ALL_CLOSED = false; CLOSED_NETS = []; FROM_MINUTES = -1;
+
+    const isMorning = MORNING_TIMES.includes(prefTime);
+    const isEvening = EVENING_TIMES.includes(prefTime);
+    if(!isMorning && !isEvening) return; // unrecognised time — leave form blank rather than guess
+
+    sessionSel.value = isMorning
+      ? 'Morning (09:00 am to 05:00 pm)'
+      : 'Evening (06:00 pm to 11:30 pm)';
+
+    populateTimes(isMorning ? MORNING_TIMES : EVENING_TIMES);
+    timeSel.value = prefTime;
+    clearError('f-time');
+    applyPastTimeFilter();
+    refreshDurationLimit();
+    refreshAvailability();
+    if(typeof refreshPrimeTimeCheck === 'function') refreshPrimeTimeCheck();
+  })();
 
   // Ball type tag color, amount stays "pending" until pricing is configured
   const ballSel = document.getElementById('ball');
@@ -1438,7 +1549,7 @@ try {
     if(!sk || !players) return null;
     const sessionLabel = sk === 'Morning'
       ? 'Morning (09:00 am to 05:00 pm)'
-      : 'Evening (06:00 pm to 11:00 pm)';
+      : 'Evening (06:00 pm to 11:30 pm)';
     return lookupRate(sessionLabel, players, ballSel.value);
   }
 
@@ -1612,11 +1723,18 @@ try {
       <dt>Amount</dt><dd>${amountVal.textContent}</dd>
     `;
 
+    // Occasional festival/promo greeting — only included if the Banner
+    // sheet has "Show in Receipts" set to Yes, and only the text message
+    // (the video/thumbnail has no equivalent in a plain-text message).
+    const bannerLine = (currentBanner && currentBanner.showInReceipts && currentBanner.message)
+      ? `\n${currentBanner.message}\n`
+      : '';
+
     // WhatsApp message — supports bold (*text*) and emoji
     const waMessage =
 `*County Indoor Netz — Booking Confirmed*
 Ref #${ref}
-
+${bannerLine}
 Name: ${name}
 Mobile: ${mobile}
 Date: ${dateDisplay}
@@ -1630,22 +1748,29 @@ Amount: ${amountVal.textContent}
 
 ⛑️ Helmet compulsory for leather balls.
 🧍🧍🧍 Rate changes if player count exceeds booking.
+🚗 Get directions on Google Maps: https://tinyurl.com/ufufks5u
 
-⏱️ Late arrivals will affect other bookings. Kindly report on time for your slot.
-⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.
+*🕐 Punctuality is Mandatory*
+Late arrivals will affect other bookings. Kindly report on time for your slot.
+If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
+
+*📋 Cancellation Policy*
+Cancellation allowed up to 2 hours before the slot or inform us.
+⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+
+*📶 Network / Technical Issues*
+In case of any network issues, please contact us directly.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://tinyurl.com/2hta9v6t?v=2
 
-🚗 Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
-
-See you at the nets! 🏏`;
+Thank you for your cooperation! See you at the nets! 🏏`;
 
     // SMS message — plain text only, no special chars, no emoji (for max compatibility)
     const smsMessage =
 `County Indoor Netz - Booking Confirmed
 Ref #${ref}
-Name: ${name}
+${bannerLine}Name: ${name}
 Mobile: ${mobile}
 Date: ${dateDisplay}
 Session: ${session}
@@ -1656,13 +1781,17 @@ Nets Required: ${netsRequired}
 Ball Type: ${ball}
 Amount: ${amountVal.textContent.replace('₹','Rs.')}
 
-Helmet compulsory for leather balls.
-Rate changes if player count exceeds booking.
-Late arrivals will affect other bookings, kindly report on time. For Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.
+Helmet compulsory for leather balls. Rate changes if player count exceeds booking.
+
+Punctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
+
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.
+
+Network/Technical Issues: please contact us directly.
 Tip: Click the link below and use "Add to Home screen" for quick access anytime.
 https://tinyurl.com/2hta9v6t?v=2
-Location: https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Kochi
-See you at the nets!`;
+Location: https://tinyurl.com/ufufks5u
+Thank you for your cooperation! See you at the nets!`;
 
     // Send booking via GET so we can read the server response.
     // This prevents fake confirmations when the server rejects (e.g. slot just filled up).
