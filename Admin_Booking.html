@@ -2770,18 +2770,25 @@ https://tinyurl.com/2hta9v6t?v=2`;
 
 ⛑️ Helmet compulsory for leather balls.
 🧍🧍🧍 Rate changes if player count exceeds booking.
+🚗 Get directions on Google Maps: https://tinyurl.com/ufufks5u
 
-⏱️ Late arrivals will affect other bookings. Kindly report on time for your slot.
-⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.
+*🕐 Punctuality is Mandatory*
+Late arrivals will affect other bookings. Kindly report on time for your slot.
+If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
+
+*📋 Cancellation Policy*
+Cancellation allowed up to 2 hours before the slot or inform us.
+⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+
+*📶 Network / Technical Issues*
+In case of any network issues, please contact us directly.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://tinyurl.com/2hta9v6t?v=2
 
-🚗 Location: https://tinyurl.com/ufufks5u
-
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://tinyurl.com/ufufks5u`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://tinyurl.com/ufufks5u`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -3013,14 +3020,21 @@ ${waLines}
 
 ⛑️ Helmet compulsory for leather balls.
 🧍🧍🧍 Rate changes if player count exceeds booking.
+🚗 Get directions on Google Maps: https://tinyurl.com/ufufks5u
 
-⏱️ Late arrivals will affect other bookings. Kindly report on time for your slot.
-⭐ For Prime Time slots (7 pm to 10 pm) Cancellation - Please cancel at least 5 hours prior or inform us earlier.
+*🕐 Punctuality is Mandatory*
+Late arrivals will affect other bookings. Kindly report on time for your slot.
+If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
+
+*📋 Cancellation Policy*
+Cancellation allowed up to 2 hours before the slot or inform us.
+⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+
+*📶 Network / Technical Issues*
+In case of any network issues, please contact us directly.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://tinyurl.com/2hta9v6t?v=2
-
-🚗 Location: https://tinyurl.com/ufufks5u
 
 To cancel any or all slots quote your individual Booking Ref No. and Group Ref *${b0.groupRef}*
 Thank you for your cooperation! See you at the nets! 🏏`;
@@ -3028,7 +3042,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking. Late arrivals affect other bookings, report on time. Prime Time (7pm-10pm) Cancellation - cancel at least 5 hours prior or inform us earlier.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://tinyurl.com/ufufks5u\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: https://tinyurl.com/ufufks5u\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');
