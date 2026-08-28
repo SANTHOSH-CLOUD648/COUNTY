@@ -2020,7 +2020,7 @@ To cancel any or all active slots quote your individual Booking Ref No. and Grou
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://tinyurl.com/2hta9v6t?v=2
 
-🚗 Location: Mamangalam, Kochi
+🚗 Location: geo:0,0?q=County+Indoor+Netz,+Mamangalam,+Kochi
 
 Thank you for your cooperation! See you at the nets! 🏏`;
 
@@ -2028,7 +2028,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
       const netsCount = (s.net.match(/Net/g)||[]).length || 1;
       return `${i+1}. ${s.date} ${s.time} ${s.duration} Nets:${netsCount} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`;
     }).join('\n');
-    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: Mamangalam, Kochi`;
+    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: geo:0,0?q=County+Indoor+Netz,+Mamangalam,+Kochi`;
 
     document.getElementById(`groupReceiptBtns${gi}`).innerHTML = `
       <a class="share-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(waMsg)}">
@@ -2770,7 +2770,7 @@ https://tinyurl.com/2hta9v6t?v=2`;
 
 ⛑️ Helmet compulsory for leather balls.
 🧍🧍🧍 Rate changes if player count exceeds booking.
-🚗 Location: Mamangalam, Kochi
+🚗 Location: geo:0,0?q=County+Indoor+Netz,+Mamangalam,+Kochi
 
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
@@ -2788,7 +2788,7 @@ https://tinyurl.com/2hta9v6t?v=2
 
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: Mamangalam, Kochi`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: geo:0,0?q=County+Indoor+Netz,+Mamangalam,+Kochi`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -3020,7 +3020,7 @@ ${waLines}
 
 ⛑️ Helmet compulsory for leather balls.
 🧍🧍🧍 Rate changes if player count exceeds booking.
-🚗 Location: Mamangalam, Kochi
+🚗 Location: geo:0,0?q=County+Indoor+Netz,+Mamangalam,+Kochi
 
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
@@ -3042,7 +3042,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: Mamangalam, Kochi\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: geo:0,0?q=County+Indoor+Netz,+Mamangalam,+Kochi\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');
