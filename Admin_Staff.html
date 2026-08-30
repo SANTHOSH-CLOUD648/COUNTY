@@ -823,6 +823,12 @@
   document.getElementById('freeSlotsDate').value = todayStr;
   loadFreeSlots();
 
+  // Default Name Search's From/To dates to today, so the fields aren't
+  // blank when the tab is first opened — matches the request to always
+  // show a sensible starting point rather than empty pickers.
+  document.getElementById('nameFromDate').value = todayStr;
+  document.getElementById('nameToDate').value = todayStr;
+
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
     const mobile  = document.getElementById('aMobile').value.trim();
