@@ -860,6 +860,7 @@
           <button class="report-subtab"        id="repSubBtnCustom"  onclick="showReportSubTab('custom')">Custom Dates</button>
           <button class="report-subtab"        id="repSubBtnMonthly" onclick="showReportSubTab('monthly')">Monthly</button>
           <button class="report-subtab"        id="repSubBtnYearly"  onclick="showReportSubTab('yearly')">Yearly</button>
+          <button class="report-subtab"        id="repSubBtnLeaderboard" onclick="showReportSubTab('leaderboard')">Leaderboard</button>
         </div>
 
         <div id="repPanelDaily" class="report-panel">
@@ -913,6 +914,13 @@
           <div id="repYearlySelectedPersonArea"></div>
 
           <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('yearly')">Generate Report</button>
+        </div>
+
+        <div id="repPanelLeaderboard" class="report-panel" style="display:none;">
+          <label class="report-label">Year <span style="font-weight:400;color:var(--muted);">(optional — leave blank for the all-time lifetime leaderboard)</span></label>
+          <input type="number" id="repLeaderboardYear" class="report-input" style="width:100px;" min="2026" placeholder="e.g. 2026">
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">A year of 2026 shows the fiscal year Apr 2026 – Mar 2027, matching the Yearly report.</div>
+          <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('leaderboard')">Generate Report</button>
         </div>
 
         <div id="reportMsg" class="admin-msg" style="margin-top:12px;"></div>
@@ -1440,7 +1448,7 @@
 
   // ── Reports tab ──────────────────────────────────────────
   function showReportSubTab(sub){
-    ['daily','custom','monthly','yearly'].forEach(function(s){
+    ['daily','custom','monthly','yearly','leaderboard'].forEach(function(s){
       document.getElementById('repPanel'+s.charAt(0).toUpperCase()+s.slice(1)).style.display = (s===sub) ? 'block' : 'none';
       var btn = document.getElementById('repSubBtn'+s.charAt(0).toUpperCase()+s.slice(1));
       if (btn) btn.classList.toggle('active', s===sub);
@@ -1762,6 +1770,9 @@
       const yr = document.getElementById('repYearlyYear').value;
       if (!yr){ msg.textContent = '⚠️ Please enter a year.'; msg.className='admin-msg err'; return; }
       qs += `&year=${yr}`;
+    } else if (type === 'leaderboard'){
+      const yr = document.getElementById('repLeaderboardYear').value;
+      if (yr){ qs += `&year=${yr}`; } // omitted entirely = all-time leaderboard
     }
 
     try {
@@ -1793,6 +1804,34 @@
           <th>Tot No. Of<br>Active Bookings</th><th>Morning<br>Session</th><th>Evening<br>Session</th>
           <th>Leather<br>Ball</th><th>Tennis<br>Ball</th><th>Amount</th>
         </tr></thead>`;
+
+      if (data.mode === 'leaderboard') {
+        const titleHtml2 = data.title ? `<div style="font-weight:700;color:var(--navy);margin-bottom:6px;">${data.title}</div>` : '';
+        if (!data.rows || data.rows.length === 0) {
+          resultArea.innerHTML = `${titleHtml2}<div class="admin-msg">No bookings found for this period.</div>`;
+          return;
+        }
+        const lRowHtml = (r, i) => `
+          <tr>
+            <td>${i+1}</td>
+            <td>${r.name || '(no name)'}</td>
+            <td>${r.mobile}</td>
+            <td>${r.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+            <td>₹${r.amount.toLocaleString('en-IN')}</td>
+            <td>${r.bookings}</td>
+          </tr>`;
+        resultArea.innerHTML = `
+          ${titleHtml2}
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table class="report-table">
+              <thead><tr>
+                <th>Rank</th><th>Name</th><th>Mobile</th><th>Total Hours</th><th>Total Amount</th><th>Total Bookings</th>
+              </tr></thead>
+              <tbody>${data.rows.map(lRowHtml).join('')}</tbody>
+            </table>
+          </div>`;
+        return;
+      }
 
       let bodyHtml, titleHtml = '';
       if (data.mode === 'single') {
