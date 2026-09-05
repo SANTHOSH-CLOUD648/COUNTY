@@ -1811,16 +1811,27 @@
           resultArea.innerHTML = `${titleHtml2}<div class="admin-msg">No bookings found for this period.</div>`;
           return;
         }
-        const lRowHtml = (r, i) => `
+        let lastBallType = null, lRank = 0;
+        const lRowsHtml = data.rows.map((r) => {
+          const ballType = r.ballType || '(unspecified)';
+          let groupHeaderHtml = '';
+          if (ballType !== lastBallType) {
+            groupHeaderHtml = `<tr style="background:var(--sand);"><td colspan="7" style="font-weight:700;color:var(--navy);">${ballType}</td></tr>`;
+            lastBallType = ballType;
+            lRank = 0;
+          }
+          lRank++;
+          return groupHeaderHtml + `
           <tr>
-            <td>${i+1}</td>
+            <td>${lRank}</td>
             <td>${r.name || '(no name)'}</td>
             <td>${r.mobile}</td>
-            <td>${r.ballType || '(unspecified)'}</td>
+            <td>${ballType}</td>
             <td>${r.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
             <td>₹${r.amount.toLocaleString('en-IN')}</td>
             <td>${r.bookings}</td>
           </tr>`;
+        }).join('');
         const lTotalHtml = data.total ? `
           <tr style="font-weight:700;border-top:2px solid var(--navy);">
             <td colspan="4">TOTAL</td>
@@ -1835,7 +1846,7 @@
               <thead><tr>
                 <th>Rank</th><th>Name</th><th>Mobile</th><th>Ball Type</th><th>Total Hours</th><th>Total Amount</th><th>Total Bookings</th>
               </tr></thead>
-              <tbody>${data.rows.map(lRowHtml).join('')}${lTotalHtml}</tbody>
+              <tbody>${lRowsHtml}${lTotalHtml}</tbody>
             </table>
           </div>`;
         return;
