@@ -1812,16 +1812,35 @@
           return;
         }
         let lastBallType = null, lRank = 0;
-        const lRowsHtml = data.rows.map((r) => {
+        let groupSub = { hours:0, amount:0, bookings:0 };
+        let lRowsHtml = '';
+
+        data.rows.forEach((r, idx) => {
           const ballType = r.ballType || '(unspecified)';
-          let groupHeaderHtml = '';
+
           if (ballType !== lastBallType) {
-            groupHeaderHtml = `<tr style="background:var(--sand);"><td colspan="7" style="font-weight:700;color:var(--navy);">${ballType}</td></tr>`;
+            // Close out the previous group with its subtotal (skip on the very first group).
+            if (lastBallType !== null) {
+              lRowsHtml += `
+              <tr style="font-weight:700;background:#eef3f0;">
+                <td colspan="4">Subtotal — ${lastBallType}</td>
+                <td>${groupSub.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+                <td>₹${groupSub.amount.toLocaleString('en-IN')}</td>
+                <td>${groupSub.bookings}</td>
+              </tr>`;
+            }
+            lRowsHtml += `<tr style="background:var(--sand);"><td colspan="7" style="font-weight:700;color:var(--navy);">${ballType}</td></tr>`;
             lastBallType = ballType;
             lRank = 0;
+            groupSub = { hours:0, amount:0, bookings:0 };
           }
+
           lRank++;
-          return groupHeaderHtml + `
+          groupSub.hours    += r.hours;
+          groupSub.amount   += r.amount;
+          groupSub.bookings += r.bookings;
+
+          lRowsHtml += `
           <tr>
             <td>${lRank}</td>
             <td>${r.name || '(no name)'}</td>
@@ -1831,10 +1850,22 @@
             <td>₹${r.amount.toLocaleString('en-IN')}</td>
             <td>${r.bookings}</td>
           </tr>`;
-        }).join('');
+
+          // Close out the FINAL group's subtotal once we hit the last row.
+          if (idx === data.rows.length - 1) {
+            lRowsHtml += `
+            <tr style="font-weight:700;background:#eef3f0;">
+              <td colspan="4">Subtotal — ${ballType}</td>
+              <td>${groupSub.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+              <td>₹${groupSub.amount.toLocaleString('en-IN')}</td>
+              <td>${groupSub.bookings}</td>
+            </tr>`;
+          }
+        });
+
         const lTotalHtml = data.total ? `
           <tr style="font-weight:700;border-top:2px solid var(--navy);">
-            <td colspan="4">TOTAL</td>
+            <td colspan="4">GRAND TOTAL</td>
             <td>${data.total.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
             <td>₹${data.total.amount.toLocaleString('en-IN')}</td>
             <td>${data.total.bookings}</td>
