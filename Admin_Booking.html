@@ -1816,18 +1816,26 @@
             <td>${i+1}</td>
             <td>${r.name || '(no name)'}</td>
             <td>${r.mobile}</td>
+            <td>${r.ballType || '(unspecified)'}</td>
             <td>${r.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
             <td>₹${r.amount.toLocaleString('en-IN')}</td>
             <td>${r.bookings}</td>
           </tr>`;
+        const lTotalHtml = data.total ? `
+          <tr style="font-weight:700;border-top:2px solid var(--navy);">
+            <td colspan="4">TOTAL</td>
+            <td>${data.total.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+            <td>₹${data.total.amount.toLocaleString('en-IN')}</td>
+            <td>${data.total.bookings}</td>
+          </tr>` : '';
         resultArea.innerHTML = `
           ${titleHtml2}
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
             <table class="report-table">
               <thead><tr>
-                <th>Rank</th><th>Name</th><th>Mobile</th><th>Total Hours</th><th>Total Amount</th><th>Total Bookings</th>
+                <th>Rank</th><th>Name</th><th>Mobile</th><th>Ball Type</th><th>Total Hours</th><th>Total Amount</th><th>Total Bookings</th>
               </tr></thead>
-              <tbody>${data.rows.map(lRowHtml).join('')}</tbody>
+              <tbody>${data.rows.map(lRowHtml).join('')}${lTotalHtml}</tbody>
             </table>
           </div>`;
         return;
