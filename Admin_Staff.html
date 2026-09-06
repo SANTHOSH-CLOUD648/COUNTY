@@ -289,10 +289,8 @@
   <div class="admin-tab-content" id="staffTabFreetime" style="display:none;">
   <div class="card">
     <div class="lock-title">🟢 Free Time <span class="badge">STAFF</span></div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Shows completely open time slots — where NO bookings exist on any net. <b>[TEMP: date picker enabled for testing — will be restricted back to today only.]</b></div>
-    <label class="admin-lbl">Date</label>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Shows today's completely open time slots — where NO bookings exist on any net. Always today's date only.</div>
     <div class="normal-search-row" style="margin-top:4px;">
-      <input type="date" id="freeTimeDate" style="max-width:220px;border:1.5px solid #d9d3c0;background:#fff;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;">
       <button onclick="loadFreeTime()">Search</button>
       <button onclick="loadFreeTime()" title="Refresh results">🔄 Refresh</button>
     </div>
@@ -833,21 +831,14 @@
   }
 
   async function loadFreeTime(){
-    const dateVal = document.getElementById('freeTimeDate').value || todayStr;
     const msg  = document.getElementById('freeTimeMsg');
     const area = document.getElementById('freeTimeResultArea');
     area.innerHTML = '';
-    if(dateVal < todayStr){
-      msg.textContent = '⚠️ Cannot search a past date.';
-      msg.className = 'admin-msg err';
-      document.getElementById('freeTimeDate').value = todayStr;
-      return;
-    }
-    msg.textContent = '⏳ Checking availability…';
+    msg.textContent = '⏳ Checking today\'s availability…';
     msg.className = 'admin-msg ok';
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateVal}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${todayStr}`, null, 20000);
       const data = await res.json();
       const counts = data.counts || {};
 
@@ -856,7 +847,7 @@
       // is deliberately not shown here, per how this search is meant to work.
       // Consecutive free half-hour slots are merged into one continuous
       // range (e.g. 08:00 pm–11:00 pm) rather than listed individually.
-      const freeFlags = ALL_TIMES_FS.map(t => (counts[t]||0)===0 && !isSlotPast(dateVal, t));
+      const freeFlags = ALL_TIMES_FS.map(t => (counts[t]||0)===0 && !isSlotPast(todayStr, t));
       const ranges = [];
       let i = 0;
       while (i < ALL_TIMES_FS.length) {
@@ -910,11 +901,6 @@
   // Default Free Slots date to today and auto-load
   document.getElementById('freeSlotsDate').value = todayStr;
   loadFreeSlots();
-
-  // TEMP: Free Time date picker default/min (to be removed once reverted
-  // back to today-only)
-  document.getElementById('freeTimeDate').value = todayStr;
-  document.getElementById('freeTimeDate').min = todayStr;
 
   // Default Name Search's From/To dates to today, so the fields aren't
   // blank when the tab is first opened — matches the request to always
