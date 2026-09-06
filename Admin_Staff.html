@@ -264,6 +264,7 @@
 
   <div class="admin-tabs">
     <button class="admin-tab" id="tabBtnFree" onclick="showStaffTab('free')">🕒 Free Slots</button>
+    <button class="admin-tab" id="tabBtnFreetime" onclick="showStaffTab('freetime')">🟢 Free Time</button>
     <button class="admin-tab" id="tabBtnSearch" onclick="showStaffTab('search')">🔍 Search Bookings</button>
     <button class="admin-tab" id="tabBtnName" onclick="showStaffTab('name')">🧑 Name Search</button>
     <button class="admin-tab" id="tabBtnBooking" onclick="showStaffTab('booking')">➕ New Booking</button>
@@ -281,6 +282,20 @@
     </div>
     <div class="admin-msg" id="freeSlotsMsg"></div>
     <div id="freeSlotsResultArea" style="margin-top:14px;"></div>
+  </div>
+  </div>
+
+  <!-- ── Free Time Search (today only, fully-free slots only) ── -->
+  <div class="admin-tab-content" id="staffTabFreetime" style="display:none;">
+  <div class="card">
+    <div class="lock-title">🟢 Free Time <span class="badge">STAFF</span></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Shows today's completely open time slots — where NO bookings exist on any net. Always today's date only.</div>
+    <div class="normal-search-row" style="margin-top:4px;">
+      <button onclick="loadFreeTime()">Search</button>
+      <button onclick="loadFreeTime()" title="Refresh results">🔄 Refresh</button>
+    </div>
+    <div class="admin-msg" id="freeTimeMsg"></div>
+    <div id="freeTimeResultArea" style="margin-top:14px;"></div>
   </div>
   </div>
 
@@ -441,7 +456,7 @@
 <script>
   const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
 
-  const STAFF_TABS = ['free','search','name','booking'];
+  const STAFF_TABS = ['free','freetime','search','name','booking'];
   function showStaffTab(tab){
     STAFF_TABS.forEach(function(t){
       const cap = t.charAt(0).toUpperCase()+t.slice(1);
@@ -449,6 +464,7 @@
       const btn = document.getElementById('tabBtn'+cap);
       if(btn) btn.classList.toggle('active', t===tab);
     });
+    if(tab === 'freetime' && typeof loadFreeTime === 'function') loadFreeTime();
   }
   window.showStaffTab = showStaffTab;
 
@@ -798,6 +814,60 @@
     }
   }
   window.loadFreeSlots = loadFreeSlots;
+
+  // Adds 30 minutes to a "hh:mm am/pm" style time string, returning the
+  // same format — used to compute each free slot's END label.
+  function addHalfHour(timeStr){
+    const m = timeStr.trim().match(/^(\d{2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return timeStr;
+    let h = parseInt(m[1],10), mins = parseInt(m[2],10);
+    const ampm = m[3].toLowerCase();
+    let h24 = (ampm==='pm' && h!==12) ? h+12 : (ampm==='am' && h===12) ? 0 : h;
+    mins += 30;
+    if(mins >= 60){ mins -= 60; h24 = (h24+1) % 24; }
+    const outAmpm = h24 < 12 ? 'am' : 'pm';
+    let outH = h24 % 12; if(outH===0) outH = 12;
+    return `${String(outH).padStart(2,'0')}:${String(mins).padStart(2,'0')} ${outAmpm}`;
+  }
+
+  async function loadFreeTime(){
+    const msg  = document.getElementById('freeTimeMsg');
+    const area = document.getElementById('freeTimeResultArea');
+    area.innerHTML = '';
+    msg.textContent = '⏳ Checking today\'s availability…';
+    msg.className = 'admin-msg ok';
+
+    try {
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${todayStr}`, null, 20000);
+      const data = await res.json();
+      const counts = data.counts || {};
+
+      // Fully free = ZERO bookings on ANY net at this slot — not partial
+      // availability (that's what "Free Slots" already covers). Net count
+      // is deliberately not shown here, per how this search is meant to work.
+      const freeSlots = ALL_TIMES_FS
+        .filter(t => (counts[t] || 0) === 0 && !isSlotPast(todayStr, t))
+        .map(t => ({ start: t, end: addHalfHour(t) }));
+
+      if(freeSlots.length === 0){
+        msg.textContent = 'No fully free slots remaining today.';
+        msg.className = 'admin-msg err';
+        return;
+      }
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+
+      area.innerHTML = freeSlots.map(s => `
+        <div class="free-slot-row">
+          <span class="free-slot-time">${s.start} to ${s.end}</span>
+        </div>
+      `).join('');
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.loadFreeTime = loadFreeTime;
 
   function bookFreeSlot(dateVal, timeVal){
     // Pre-fills the New Booking form right here on the same page (rather
