@@ -2224,7 +2224,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     btn.disabled = true; btn.textContent = 'Cancelling…';
     try {
       const res  = await fetchWithTimeout(
-        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(groupRef)}&mobile=${encodeURIComponent(mobile)}`,
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(groupRef)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
         null, 20000);
       const data = await res.json();
       if(data.status && data.status.startsWith('group_cancelled:')){
@@ -2260,7 +2260,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     btn.disabled = true; btn.textContent = '…';
     try {
       const res  = await fetchWithTimeout(
-        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`,
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
         null, 15000);
       const data = await res.json();
       if(data.status === 'cancelled'){
@@ -2446,7 +2446,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     btn.disabled = true; btn.textContent = '…';
     try {
       const res  = await fetchWithTimeout(
-        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`,
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
         null, 15000);
       const data = await res.json();
       if(data.status === 'cancelled'){

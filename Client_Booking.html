@@ -1944,6 +1944,9 @@ Thank you for your cooperation! See you at the nets!`;
         cancelResult.className = 'cancel-result ok';
         cancelResult.textContent = `✅ Group booking ${ref} cancelled — ${count} slot${count>1?'s':''} freed up.`;
         cancelRefInput.value = ''; cancelMobileInput.value = '';
+      } else if(data.status === 'admin_only'){
+        cancelResult.className = 'cancel-result err';
+        cancelResult.textContent = 'This booking is part of a group booking and can only be cancelled by contacting us directly.';
       } else if(data.status === 'already_cancelled'){
         cancelResult.className = 'cancel-result err';
         cancelResult.textContent = 'This booking has already been cancelled.';
