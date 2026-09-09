@@ -307,7 +307,7 @@
       <div class="normal-search-row">
         <input type="date" id="searchDate">
         <span style="font-size:12px;color:var(--muted);">or</span>
-        <input type="text" id="searchRef" placeholder="Ref #">
+        <input type="text" id="searchRef" placeholder="Ref #" style="text-transform:uppercase;">
         <button onclick="searchNormalBookings()">Search</button>
         <button onclick="searchNormalBookings()" title="Refresh results">🔄 Refresh</button>
       </div>
@@ -908,6 +908,38 @@
   document.getElementById('nameFromDate').value = todayStr;
   document.getElementById('nameToDate').value = todayStr;
 
+  // ---- "Prime Time" rule (same as the customer-facing page): Evening +
+  // fewer than 5 players can only be booked same-day, after 5pm. Applies
+  // here too so staff can't accidentally bypass it — enforced both live
+  // (as a warning while filling the form) and again at submit time.
+  const PRIME_TIME_MSG_STF = "Since the number of players is less than 5, Prime Time booking is available only after 5 pm.";
+  const PRIME_TIME_PLAYER_VALUES_STF = ['1','2','3','4'];
+
+  function primeTimeRuleAppliesStf(){
+    return aSession.value.startsWith('Evening') && PRIME_TIME_PLAYER_VALUES_STF.includes(aPlayers.value);
+  }
+
+  function primeTimeAllowedNowStf(){
+    if(aDateEl.value !== todayStr) return false; // future date: never allowed under this rule
+    const nowMinutes = new Date().getHours()*60 + new Date().getMinutes();
+    return nowMinutes >= 17*60; // 5:00 pm
+  }
+
+  function refreshPrimeTimeCheckStf(){
+    const msg = document.getElementById('adminMsg');
+    if(primeTimeRuleAppliesStf() && !primeTimeAllowedNowStf()){
+      msg.textContent = '⚠️ ' + PRIME_TIME_MSG_STF;
+      msg.className = 'admin-msg err';
+    } else if(msg.textContent === '⚠️ ' + PRIME_TIME_MSG_STF){
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+    }
+  }
+  aSession.addEventListener('change', refreshPrimeTimeCheckStf);
+  aPlayers.addEventListener('change', refreshPrimeTimeCheckStf);
+  aDateEl.addEventListener('change', refreshPrimeTimeCheckStf);
+  setInterval(refreshPrimeTimeCheckStf, 30000); // auto-unlocks the moment it turns 5pm
+
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
     const mobile  = document.getElementById('aMobile').value.trim();
@@ -922,6 +954,11 @@
 
     if(!name || !mobile || !date || !session || !time || !players || !dur || !ball){
       msg.textContent = '⚠️ Please fill in every field.';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    if(primeTimeRuleAppliesStf() && !primeTimeAllowedNowStf()){
+      msg.textContent = '⚠️ ' + PRIME_TIME_MSG_STF;
       msg.className = 'admin-msg err';
       return;
     }
