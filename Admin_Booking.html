@@ -2975,6 +2975,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   let addingToExistingGroup = false;
 
   function newGroupRef(){
+    // If the group we're leaving actually had bookings added to it, fire
+    // off the one consolidated summary email for that group now — this is
+    // the natural "staff is done with this customer" signal. Fire-and-
+    // forget (not awaited) so switching to a new group feels instant.
+    if (currentGroupRef && adminBookings.length > 0) {
+      fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=sendGroupSummary&groupCode=${encodeURIComponent(currentGroupRef)}`, null, 20000).catch(()=>{});
+    }
     currentGroupRef = 'GRP-' + Math.random().toString(36).slice(2,7).toUpperCase();
     addingToExistingGroup = false; // this is a brand new group, not adding to an existing one
     document.getElementById('grpRefDisplay').textContent = currentGroupRef;
