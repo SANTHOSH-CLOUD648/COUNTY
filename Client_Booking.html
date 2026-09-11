@@ -683,11 +683,20 @@
   <!-- More Services -->
   <!-- Service Popup Modal -->
   <div class="service-overlay" id="serviceOverlay" onclick="closeService()"></div>
-  <div class="service-modal" id="serviceModal">
+  <div class="service-modal" id="serviceModal" style="max-width:480px;">
     <button class="service-close" onclick="closeService()">✕</button>
     <div class="service-modal-icon" id="serviceModalIcon"></div>
     <h3 class="service-modal-title" id="serviceModalTitle"></h3>
     <p class="service-modal-body" id="serviceModalBody"></p>
+    <div id="serviceImageWrap" style="margin-top:6px;display:none;">
+      <img id="serviceModalImage" src="" alt=""
+           style="display:block;max-width:100%;max-height:280px;margin:0 auto;border-radius:12px;object-fit:cover;">
+      <div id="serviceGalleryNav" style="display:none;align-items:center;justify-content:space-between;margin-top:10px;">
+        <button type="button" onclick="servicePrevImage()" class="receipt-btn" style="padding:7px 14px;">◀ Prev</button>
+        <span id="serviceGalleryCounter" style="font-size:12.5px;color:var(--muted);font-weight:600;"></span>
+        <button type="button" onclick="serviceNextImage()" class="receipt-btn" style="padding:7px 14px;">Next ▶</button>
+      </div>
+    </div>
   </div>
 
   <!-- Facility Image Popup Modal -->
@@ -1772,6 +1781,9 @@ Thank you for your cooperation! See you at the nets!`;
     }
   });
 
+  let currentServiceImages = [];
+  let currentServiceImageIndex = 0;
+
   function openServiceByIndex(i) {
     document.getElementById('servicesDropdown').classList.remove('open');
     document.getElementById('servicesArrow').classList.remove('open');
@@ -1780,10 +1792,51 @@ Thank you for your cooperation! See you at the nets!`;
     document.getElementById('serviceModalIcon').textContent  = s.icon;
     document.getElementById('serviceModalTitle').textContent = s.name;
     document.getElementById('serviceModalBody').textContent  = s.message;
+
+    currentServiceImages = Array.isArray(s.images) ? s.images.filter(Boolean) : [];
+    currentServiceImageIndex = 0;
+    const imageWrap = document.getElementById('serviceImageWrap');
+    if (currentServiceImages.length) {
+      imageWrap.style.display = 'block';
+      showServiceImage();
+    } else {
+      imageWrap.style.display = 'none';
+    }
+
     document.getElementById('serviceOverlay').classList.add('show');
     document.getElementById('serviceModal').classList.add('show');
   }
   window.openServiceByIndex = openServiceByIndex;
+
+  function showServiceImage() {
+    const img     = document.getElementById('serviceModalImage');
+    const nav     = document.getElementById('serviceGalleryNav');
+    const counter = document.getElementById('serviceGalleryCounter');
+    if (!currentServiceImages.length) return;
+    img.style.display = 'block';
+    img.onerror = () => { img.style.display = 'none'; };
+    img.src = currentServiceImages[currentServiceImageIndex];
+    if (currentServiceImages.length > 1) {
+      nav.style.display = 'flex';
+      counter.textContent = (currentServiceImageIndex + 1) + ' / ' + currentServiceImages.length;
+    } else {
+      nav.style.display = 'none';
+    }
+  }
+
+  function servicePrevImage() {
+    if (!currentServiceImages.length) return;
+    currentServiceImageIndex = (currentServiceImageIndex - 1 + currentServiceImages.length) % currentServiceImages.length;
+    showServiceImage();
+  }
+  window.servicePrevImage = servicePrevImage;
+
+  function serviceNextImage() {
+    if (!currentServiceImages.length) return;
+    currentServiceImageIndex = (currentServiceImageIndex + 1) % currentServiceImages.length;
+    showServiceImage();
+  }
+  window.serviceNextImage = serviceNextImage;
 
   function openService(key) {} // legacy stub, no longer used
   window.openService = openService;
@@ -1924,10 +1977,14 @@ Thank you for your cooperation! See you at the nets!`;
   window.closeFacility = closeFacility;
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeFacility();
+    if (e.key === 'Escape') { closeFacility(); closeService(); }
     if (document.getElementById('facilityModal').classList.contains('show')) {
       if (e.key === 'ArrowLeft')  facilityPrevImage();
       if (e.key === 'ArrowRight') facilityNextImage();
+    }
+    if (document.getElementById('serviceModal').classList.contains('show')) {
+      if (e.key === 'ArrowLeft')  servicePrevImage();
+      if (e.key === 'ArrowRight') serviceNextImage();
     }
   });
 
