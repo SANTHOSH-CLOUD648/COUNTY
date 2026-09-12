@@ -324,6 +324,19 @@
     background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;
   }
   .promo-banner-play svg{margin-left:4px;}
+  /* Reusable clickable video-thumbnail style, used inside the Service,
+     Facility, and News popups — same look as the Banner video above. */
+  .modal-video-thumb{
+    position:relative;display:block;cursor:pointer;line-height:0;
+    border-radius:12px;overflow:hidden;margin-top:10px;
+  }
+  .modal-video-thumb img{width:100%;display:block;max-height:220px;object-fit:cover;}
+  .modal-video-play{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:52px;height:52px;border-radius:50%;
+    background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;
+  }
+  .modal-video-play svg{margin-left:3px;}
   .dual-bar-row .services-bar{
     flex:1;margin:0;min-width:0;
   }
@@ -697,6 +710,7 @@
         <button type="button" onclick="serviceNextImage()" class="receipt-btn" style="padding:7px 14px;">Next ▶</button>
       </div>
     </div>
+    <div id="serviceVideoWrap"></div>
   </div>
 
   <!-- Facility Image Popup Modal -->
@@ -717,6 +731,7 @@
         <button type="button" onclick="facilityNextImage()" class="receipt-btn" style="padding:7px 14px;">Next ▶</button>
       </div>
     </div>
+    <div id="facilityVideoWrap"></div>
   </div>
 
   <!-- News Category Detail Modal — tapping a category goes straight here,
@@ -740,6 +755,7 @@
         📷 Photo coming soon
       </div>
     </div>
+    <div id="newsVideoWrap"></div>
     <a id="newsLinkBtn" href="#" target="_blank" rel="noopener" class="receipt-btn" style="display:none;width:100%;text-align:center;margin-top:12px;text-decoration:none;"></a>
     <div id="newsItemsContainer" style="display:none;"></div>
   </div>
@@ -1749,6 +1765,25 @@ Thank you for your cooperation! See you at the nets!`;
     return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  // Shared helper — builds a clickable video-thumbnail (same visual pattern
+  // as the Banner feature): tapping it opens the video link (e.g. YouTube)
+  // in a new tab. Returns '' if no thumbnail+link pair is present, so
+  // callers can just blindly insert the result with no extra checks.
+  function buildVideoThumbHtml(item){
+    if(!item || !item.videoThumbnail) return '';
+    const openVideo = item.videoLink
+      ? `onclick="window.open('${item.videoLink}','_blank','noopener')"`
+      : '';
+    return `
+      <div class="modal-video-thumb" ${openVideo}>
+        <img src="${item.videoThumbnail}" alt="Video">
+        ${item.videoLink ? `
+        <div class="modal-video-play">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+        </div>` : ''}
+      </div>`;
+  }
+
   let SERVICES = []; // filled by initSettings
 
   function buildServicesDropdown(services) {
@@ -1805,6 +1840,7 @@ Thank you for your cooperation! See you at the nets!`;
 
     document.getElementById('serviceOverlay').classList.add('show');
     document.getElementById('serviceModal').classList.add('show');
+    document.getElementById('serviceVideoWrap').innerHTML = buildVideoThumbHtml(s);
   }
   window.openServiceByIndex = openServiceByIndex;
 
@@ -1927,6 +1963,7 @@ Thank you for your cooperation! See you at the nets!`;
 
     document.getElementById('facilityOverlay').classList.add('show');
     document.getElementById('facilityModal').classList.add('show');
+    document.getElementById('facilityVideoWrap').innerHTML = buildVideoThumbHtml(f);
   }
   window.openFacilityByIndex = openFacilityByIndex;
 
@@ -2057,6 +2094,7 @@ Thank you for your cooperation! See you at the nets!`;
       currentNewsImages = Array.isArray(n.images) ? n.images.filter(Boolean) : [];
       document.getElementById('newsItemsContainer').style.display = 'none';
       document.getElementById('newsItemsContainer').innerHTML = '';
+      document.getElementById('newsVideoWrap').innerHTML = buildVideoThumbHtml(n);
       renderNewsLinkButtons(items);
     } else {
       // Multiple entries — show each as its own titled block (title,
@@ -2068,6 +2106,7 @@ Thank you for your cooperation! See you at the nets!`;
       document.getElementById('newsModalDate').textContent  = '';
       document.getElementById('newsModalMessage').style.display = 'none';
       document.getElementById('newsLinkBtn').style.display = 'none';
+      document.getElementById('newsVideoWrap').innerHTML = ''; // each item renders its own video inline instead
       currentNewsImages = items.flatMap(n => Array.isArray(n.images) ? n.images.filter(Boolean) : []);
       renderNewsItemsList(items);
     }
@@ -2163,6 +2202,13 @@ Thank you for your cooperation! See you at the nets!`;
         p.style.marginTop = '0';
         p.textContent = n.message;
         block.appendChild(p);
+      }
+
+      const videoHtml = buildVideoThumbHtml(n);
+      if (videoHtml) {
+        const videoDiv = document.createElement('div');
+        videoDiv.innerHTML = videoHtml;
+        block.appendChild(videoDiv);
       }
 
       // This item's own links only (prefers the new links[] array; falls
