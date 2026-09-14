@@ -1258,8 +1258,8 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
     try {
       const qs = refVal
-        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}`
-        : `action=searchBookings&date=${encodeURIComponent(dateVal)}`;
+        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}&includeBulk=true`
+        : `action=searchBookings&date=${encodeURIComponent(dateVal)}&includeBulk=true`;
       const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
       const data = await res.json();
 
@@ -1276,6 +1276,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
         const isCancelled = b.status === 'Cancelled';
         const isPast = isSlotPast(b.dateISO || b.date, b.time);
         if(!isCancelled) totalAmount += parseFloat(String(b.amount).replace(/[₹,]/g,'')) || 0;
+        const groupLine = b.groupCode ? `<div class="bulk-group-meta">👥 Group: <strong style="color:var(--leather);">${b.groupCode}</strong></div>` : '';
         return `
         <div class="bulk-group-card" id="nslot_${i}">
           <div class="bulk-group-header" onclick="toggleNormalResult(${i})">
@@ -1283,6 +1284,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
               <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
               <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
               <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+              ${groupLine}
             </div>
             ${isCancelled ? '<span class="bulk-group-badge" style="background:#b3261e;">🚫 Cancelled</span>'
               : isPast ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
