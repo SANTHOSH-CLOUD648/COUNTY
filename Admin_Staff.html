@@ -926,7 +926,7 @@
     msg.className = 'admin-msg ok';
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchBookings&date=${dateVal}`, null, 15000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchBookings&date=${dateVal}&includeBulk=true`, null, 15000);
       const data = await res.json();
 
       if(!data.results || !data.results.length){
@@ -956,12 +956,15 @@
         const color = dayViewHourColor(t);
         const rows = grouped[t].map(b => {
           const cancelled = b.status === 'Cancelled';
+          const groupBadge = b.groupCode
+            ? ` · <span style="color:var(--leather);font-weight:700;">${b.groupCode}</span>`
+            : '';
           return `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #f0ece0;${cancelled ? 'opacity:.55;' : ''}">
             <div style="flex:1;">
               <strong style="color:var(--navy);">${b.name}</strong> · ${b.mobile}
               <div style="font-size:12px;color:var(--muted);">
-                Net ${b.net} · ${b.duration} · ${b.ball} · ₹${b.amount}
+                Net ${b.net} · ${b.players} player${b.players=='1'?'':'s'} · ${b.duration} · ${b.ball} · ₹${b.amount}${groupBadge}
                 ${cancelled ? ' · <span style="color:#b3261e;font-weight:700;">CANCELLED</span>' : ''}
               </div>
             </div>
