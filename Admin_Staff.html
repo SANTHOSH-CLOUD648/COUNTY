@@ -1283,7 +1283,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
             <div class="bulk-group-info">
               <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
               <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
-              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 👥 ${b.players} player${b.players=='1'?'':'s'} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
               ${groupLine}
             </div>
             ${isCancelled ? '<span class="bulk-group-badge" style="background:#b3261e;">🚫 Cancelled</span>'
