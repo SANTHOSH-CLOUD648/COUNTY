@@ -265,6 +265,7 @@
   <div class="admin-tabs">
     <button class="admin-tab" id="tabBtnFree" onclick="showStaffTab('free')">🕒 Free Slots</button>
     <button class="admin-tab" id="tabBtnFreetime" onclick="showStaffTab('freetime')">🟢 Free Time</button>
+    <button class="admin-tab" id="tabBtnDayview" onclick="showStaffTab('dayview')">📅 Day View</button>
     <button class="admin-tab" id="tabBtnSearch" onclick="showStaffTab('search')">🔍 Search Bookings</button>
     <button class="admin-tab" id="tabBtnName" onclick="showStaffTab('name')">🧑 Name Search</button>
     <button class="admin-tab" id="tabBtnBooking" onclick="showStaffTab('booking')">➕ New Booking</button>
@@ -296,6 +297,22 @@
     </div>
     <div class="admin-msg" id="freeTimeMsg"></div>
     <div id="freeTimeResultArea" style="margin-top:14px;"></div>
+  </div>
+  </div>
+
+  <!-- ── Day View — bookings grouped by time slot, colour-coded like the Monthly Schedule sheet ── -->
+  <div class="admin-tab-content" id="staffTabDayview" style="display:none;">
+  <div class="card">
+    <div class="lock-title">📅 Day View <span class="badge">STAFF</span></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">See every booking for a chosen date, grouped by time slot and colour-coded by hour — same style as the Monthly Schedule sheet, without needing to open it.</div>
+    <label class="admin-lbl">Date</label>
+    <div class="normal-search-row" style="margin-top:4px;">
+      <input type="date" id="dayViewDate">
+      <button onclick="loadDayView()">Search</button>
+      <button onclick="loadDayView()" title="Refresh results">🔄 Refresh</button>
+    </div>
+    <div class="admin-msg" id="dayViewMsg"></div>
+    <div id="dayViewResultArea" style="margin-top:14px;"></div>
   </div>
   </div>
 
@@ -456,7 +473,7 @@
 <script>
   const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
 
-  const STAFF_TABS = ['free','freetime','search','name','booking'];
+  const STAFF_TABS = ['free','freetime','dayview','search','name','booking'];
   function showStaffTab(tab){
     STAFF_TABS.forEach(function(t){
       const cap = t.charAt(0).toUpperCase()+t.slice(1);
@@ -465,6 +482,7 @@
       if(btn) btn.classList.toggle('active', t===tab);
     });
     if(tab === 'freetime' && typeof loadFreeTime === 'function') loadFreeTime();
+    if(tab === 'dayview' && typeof loadDayView === 'function') loadDayView();
   }
   window.showStaffTab = showStaffTab;
 
@@ -878,6 +896,93 @@
   }
   window.loadFreeTime = loadFreeTime;
 
+  // ── Day View — reuses the existing searchBookings endpoint (already
+  // returns everything needed: time, net, name, ball, status, etc.) and
+  // groups the results by time slot on the frontend, colour-coding each
+  // group by hour to match the Monthly Schedule sheet's own colour scheme
+  // exactly, so it reads as "the same thing", just without opening that
+  // separate sheet.
+  const DAY_VIEW_HOUR_COLORS = {
+     9:'#4a90d9', 10:'#e8923f', 11:'#57a85d', 12:'#d4a017', 13:'#8b6fc4',
+    14:'#e06060', 15:'#3d9a8a', 16:'#b87333', 17:'#6b8fbf', 18:'#c46e3a',
+    19:'#5b9a5b', 20:'#a06090', 21:'#7a7a3a', 22:'#4a7a9a', 23:'#8a5a5a'
+  };
+
+  function dayViewHourColor(timeStr){
+    const m = timeStr.trim().match(/^(\d{2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return '#888';
+    let h = parseInt(m[1],10);
+    const ampm = m[3].toLowerCase();
+    let h24 = (ampm==='pm' && h!==12) ? h+12 : (ampm==='am' && h===12) ? 0 : h;
+    return DAY_VIEW_HOUR_COLORS[h24] || '#888';
+  }
+
+  async function loadDayView(){
+    const dateVal = document.getElementById('dayViewDate').value || todayStr;
+    const msg  = document.getElementById('dayViewMsg');
+    const area = document.getElementById('dayViewResultArea');
+    area.innerHTML = '';
+    msg.textContent = '⏳ Loading…';
+    msg.className = 'admin-msg ok';
+
+    try {
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchBookings&date=${dateVal}`, null, 15000);
+      const data = await res.json();
+
+      if(!data.results || !data.results.length){
+        msg.textContent = 'No bookings found for this date.';
+        msg.className = 'admin-msg err';
+        return;
+      }
+
+      // Group by time slot, in chronological order (using ALL_TIMES_FS's
+      // order as the reference, so slots appear in real time order rather
+      // than however they happened to come back from the server).
+      const grouped = {};
+      data.results.forEach(b => {
+        if(!grouped[b.time]) grouped[b.time] = [];
+        grouped[b.time].push(b);
+      });
+      const orderedTimes = ALL_TIMES_FS.filter(t => grouped[t]);
+      // Catch any time value that somehow isn't in ALL_TIMES_FS (shouldn't
+      // normally happen) — append it at the end rather than silently
+      // dropping those bookings from the view.
+      Object.keys(grouped).forEach(t => { if(!orderedTimes.includes(t)) orderedTimes.push(t); });
+
+      msg.textContent = `${data.results.length} booking${data.results.length>1?'s':''} across ${orderedTimes.length} time slot${orderedTimes.length>1?'s':''}.`;
+      msg.className = 'admin-msg ok';
+
+      area.innerHTML = orderedTimes.map(t => {
+        const color = dayViewHourColor(t);
+        const rows = grouped[t].map(b => {
+          const cancelled = b.status === 'Cancelled';
+          return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #f0ece0;${cancelled ? 'opacity:.55;' : ''}">
+            <div style="flex:1;">
+              <strong style="color:var(--navy);">${b.name}</strong> · ${b.mobile}
+              <div style="font-size:12px;color:var(--muted);">
+                Net ${b.net} · ${b.duration} · ${b.ball} · ₹${b.amount}
+                ${cancelled ? ' · <span style="color:#b3261e;font-weight:700;">CANCELLED</span>' : ''}
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);">Ref: ${b.ref}</div>
+          </div>`;
+        }).join('');
+        return `
+        <div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1.5px solid ${color};">
+          <div style="background:${color};color:#fff;font-weight:700;padding:8px 12px;font-size:13.5px;">
+            ${t} — ${grouped[t].length} booking${grouped[t].length>1?'s':''}
+          </div>
+          <div style="background:#fff;">${rows}</div>
+        </div>`;
+      }).join('');
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.loadDayView = loadDayView;
+
   function bookFreeSlot(dateVal, timeVal){
     // Pre-fills the New Booking form right here on the same page (rather
     // than navigating elsewhere) and scrolls it into view.
@@ -901,6 +1006,9 @@
   // Default Free Slots date to today and auto-load
   document.getElementById('freeSlotsDate').value = todayStr;
   loadFreeSlots();
+
+  // Default Day View date to today (auto-loads separately when its tab is opened)
+  document.getElementById('dayViewDate').value = todayStr;
 
   // Default Name Search's From/To dates to today, so the fields aren't
   // blank when the tab is first opened — matches the request to always
