@@ -826,7 +826,7 @@
 
         <!-- Normal Bookings Search -->
         <div class="normal-search-box">
-          <div class="cancel-tab-title" style="margin-bottom:10px;">🔍 Search Normal Bookings</div>
+          <div class="cancel-tab-title" style="margin-bottom:10px;">🔍 Search Bookings</div>
           <div class="normal-search-row">
             <input type="date" id="searchDate" placeholder="Search by date">
             <span style="color:var(--muted);font-size:12px;align-self:center;">or</span>
@@ -2075,7 +2075,7 @@
               return `
               <div class="bulk-slot-row" id="slot_${gi}_${si}">
                 <div class="bulk-slot-info">
-                  📅 ${s.date} &nbsp; ⏰ ${s.time} &nbsp; ⏱ ${s.duration} &nbsp; 🎾 ${s.net}
+                  📅 ${s.date} &nbsp; ⏰ ${s.time} &nbsp; ⏱ ${s.duration} &nbsp; 👥 ${s.players} player${s.players=='1'?'':'s'} &nbsp; 🎾 ${s.net}
                   <div class="bulk-slot-ref">Ref: ${s.ref}</div>
                 </div>
                 <div class="bulk-slot-btns">
