@@ -793,7 +793,7 @@
     msg.className = 'admin-msg ok';
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateVal}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateVal}`, null, 25000);
       const data = await res.json();
       const maxNets = data.maxNets || 0;
       const counts  = data.counts || {};
@@ -856,7 +856,7 @@
     msg.className = 'admin-msg ok';
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${todayStr}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${todayStr}`, null, 25000);
       const data = await res.json();
       const counts = data.counts || {};
 
@@ -926,7 +926,7 @@
     msg.className = 'admin-msg ok';
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchBookings&date=${dateVal}&includeBulk=true`, null, 15000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchBookings&date=${dateVal}&includeBulk=true`, null, 20000);
       const data = await res.json();
 
       if(!data.results || !data.results.length){
@@ -1190,7 +1190,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
 
     try {
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
       const result = await res.json();
 
       if(result.status === 'ok'){
@@ -1212,7 +1212,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       // actually saved — check before showing an error (see Client page
       // for the same protection and reasoning).
       try {
-        const checkRes = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000);
+        const checkRes = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 20000);
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){
           handleSuccess({ nets: checkResult.nets, month: parseInt(date.split('-')[1],10) });
@@ -1260,7 +1260,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       const qs = refVal
         ? `action=searchBookings&ref=${encodeURIComponent(refVal)}&includeBulk=true`
         : `action=searchBookings&date=${encodeURIComponent(dateVal)}&includeBulk=true`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
       const data = await res.json();
 
       if(!data.results || !data.results.length){
@@ -1335,7 +1335,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
     nameSearchDebounce = setTimeout(async ()=>{
       try {
-        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 30000);
         const data = await res.json();
         const matches = data.matches || [];
         if(!matches.length){
@@ -1415,7 +1415,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
     try {
       const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(selectedPersonMobile)}&name=${encodeURIComponent(selectedPersonName)}&fromDate=${fromDate}&toDate=${toDate}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       const rows = data.rows || [];
 

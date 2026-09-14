@@ -1504,7 +1504,7 @@
     }
     repCustomNameDebounce = setTimeout(async ()=>{
       try {
-        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 30000);
         const data = await res.json();
         const matches = data.matches || [];
         if(!matches.length){
@@ -1559,7 +1559,7 @@
     const resultArea = document.getElementById('reportResultArea');
     try {
       const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(repCustomSelectedMobile)}&name=${encodeURIComponent(repCustomSelectedName)}&fromDate=${fromDate}&toDate=${toDate}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       const rows = data.rows || [];
 
@@ -1612,7 +1612,7 @@
     }
     repYearlyNameDebounce = setTimeout(async ()=>{
       try {
-        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 30000);
         const data = await res.json();
         const matches = data.matches || [];
         if(!matches.length){
@@ -1671,7 +1671,7 @@
       const fromDate = `${year}-04-01`;
       const toDate   = `${parseInt(year,10)+1}-03-31`;
       const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(repYearlySelectedMobile)}&name=${encodeURIComponent(repYearlySelectedName)}&fromDate=${fromDate}&toDate=${toDate}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       const rows = data.rows || [];
 
@@ -1913,7 +1913,7 @@
     }
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       if (data.status !== 'ok'){
         msg.textContent = '❌ ' + (data.message || 'Could not generate report.');
@@ -2033,7 +2033,7 @@
     area.innerHTML = '<div class="cancel-empty">⏳ Loading active bulk bookings…</div>';
     msg.textContent = '';
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 15000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 20000);
       const data = await res.json();
       if(data.status !== 'ok' || !data.groups.length){
         area.innerHTML = '<div class="cancel-empty">No active bulk bookings found.</div>';
@@ -2113,7 +2113,7 @@
     // relying on already-loaded data here could show a stale/outdated
     // status. This targets just this one group, without disrupting the
     // rest of the (possibly expanded) list on screen.
-    fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 15000)
+    fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 20000)
       .then(res => res.json())
       .then(data => {
         const fresh = (data.groups || []).find(x => x.groupRef === g.groupRef);
@@ -2261,7 +2261,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     try {
       const res  = await fetchWithTimeout(
         `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
-        null, 15000);
+        null, 20000);
       const data = await res.json();
       if(data.status === 'cancelled'){
         rowEl.innerHTML = `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>
@@ -2385,7 +2385,7 @@ https://countyindoornetz.com/Client_Booking.html`;
       const qs = refVal
         ? `action=searchBookings&ref=${encodeURIComponent(refVal)}&includeBulk=true`
         : `action=searchBookings&date=${encodeURIComponent(dateVal)}&includeBulk=true`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
       const data = await res.json();
 
       if(!data.results || !data.results.length){
@@ -2449,7 +2449,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     try {
       const res  = await fetchWithTimeout(
         `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
-        null, 15000);
+        null, 20000);
       const data = await res.json();
       if(data.status === 'cancelled'){
         rowEl.innerHTML =
@@ -2881,7 +2881,7 @@ https://countyindoornetz.com/Client_Booking.html`;
         players ? `players=${encodeURIComponent(players)}` : '',
         (amountVal && amountVal !== '—') ? `amount=${encodeURIComponent(amountVal)}` : ''
       ].filter(Boolean).join('&');
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const result = await res.json();
       if(result.status === 'ok'){
         const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
@@ -2982,7 +2982,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     // the natural "staff is done with this customer" signal. Fire-and-
     // forget (not awaited) so switching to a new group feels instant.
     if (currentGroupRef && adminBookings.length > 0) {
-      fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=sendGroupSummary&groupCode=${encodeURIComponent(currentGroupRef)}`, null, 20000).catch(()=>{});
+      fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=sendGroupSummary&groupCode=${encodeURIComponent(currentGroupRef)}`, null, 25000).catch(()=>{});
     }
     currentGroupRef = 'GRP-' + Math.random().toString(36).slice(2,7).toUpperCase();
     addingToExistingGroup = false; // this is a brand new group, not adding to an existing one
@@ -3066,7 +3066,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         `amount=${encodeURIComponent(amount)}`,
         `groupCode=${encodeURIComponent(currentGroupRef)}`
       ].join('&');
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
       const result = await res.json();
 
       // Nested function (not a separate top-level one) so it has automatic
@@ -3123,7 +3123,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       // server whether this exact Ref actually went through.
       try {
         const checkRes = await fetchWithTimeout(
-          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000
+          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 20000
         );
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){

@@ -1602,7 +1602,7 @@ Thank you for your cooperation! See you at the nets!`;
         `amount=${encodeURIComponent(amountVal.textContent.replace(/[\u20B9,]/g,'').trim())}`
       ].join('&');
 
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
       const result = await res.json();
 
       if(result.status === 'ok'){
@@ -1621,7 +1621,7 @@ Thank you for your cooperation! See you at the nets!`;
       // whether this exact Ref actually went through.
       try {
         const checkRes = await fetchWithTimeout(
-          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000
+          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 20000
         );
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){
@@ -1722,7 +1722,7 @@ Thank you for your cooperation! See you at the nets!`;
 
     try{
       const cancelUrl = `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`;
-      const res = await fetchWithTimeout(cancelUrl, null, 15000);
+      const res = await fetchWithTimeout(cancelUrl, null, 20000);
       const data = await res.json();
 
       if(data.status === 'cancelled'){
