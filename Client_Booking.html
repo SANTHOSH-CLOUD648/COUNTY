@@ -1412,6 +1412,13 @@
   }
 
   const form = document.getElementById('bookingForm');
+  // Tracks whether the CURRENT booking attempt is a retry of an earlier
+  // one that already failed — set to true only when an error is shown,
+  // and reset to false after any successful booking. A normal, first-time
+  // "Confirm Booking" click always sends retry=false (the common case),
+  // so the server's extra duplicate-check only ever runs on a genuine
+  // re-click after a failure.
+  let bookingIsRetry = false;
   const confirmPanel = document.getElementById('confirmPanel');
   const confirmDetails = document.getElementById('confirmDetails');
   const refNo = document.getElementById('refNo');
@@ -1599,7 +1606,8 @@ Thank you for your cooperation! See you at the nets!`;
         `netsRequired=${netsRequired}`,
         `duration=${encodeURIComponent(duration)}`,
         `ball=${encodeURIComponent(ball)}`,
-        `amount=${encodeURIComponent(amountVal.textContent.replace(/[\u20B9,]/g,'').trim())}`
+        `amount=${encodeURIComponent(amountVal.textContent.replace(/[\u20B9,]/g,'').trim())}`,
+        `retry=${bookingIsRetry}`
       ].join('&');
 
       const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
@@ -1632,11 +1640,13 @@ Thank you for your cooperation! See you at the nets!`;
             name, mobile, ball, waMessage, smsMessage
           );
         } else {
+          bookingIsRetry = true; // a re-click now should ask the server to check for a duplicate
           showBookingError('Connection error — please check your internet and try again, or contact us directly.');
         }
       } catch(checkErr){
         // Even the verification check failed (rare — network would have
         // to drop twice in a row) — fall back to the error message.
+        bookingIsRetry = true; // a re-click now should ask the server to check for a duplicate
         showBookingError('Connection error — please check your internet and try again, or contact us directly.');
       }
     }
@@ -1651,6 +1661,7 @@ Thank you for your cooperation! See you at the nets!`;
   // (rather than relying on closure) since those are local to each
   // individual submit attempt, not available outside that handler.
   function handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage){
+    bookingIsRetry = false; // this attempt succeeded — the next "Confirm Booking" click is a brand new booking, not a retry
     // Trigger monthly tab rebuild in background (non-blocking)
     if(result.month){
       fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000)

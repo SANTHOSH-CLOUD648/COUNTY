@@ -3008,6 +3008,15 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   // Auto-generate on load
   newGroupRef();
 
+  // Tracks whether the CURRENT admin booking attempt is a retry of an
+  // earlier one (for the same slot) that already failed — set to true only
+  // when a connection error is shown, reset to false after any successful
+  // booking. A normal, first-time "Book Now" click always sends
+  // retry=false, so the server's extra duplicate-check only runs on a
+  // genuine re-click after a failure. Shared across both single admin
+  // bookings and each individual slot in a bulk group booking.
+  let adminBookIsRetry = false;
+
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
     const mobile  = document.getElementById('aMobile').value.trim();
@@ -3064,7 +3073,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         `duration=${encodeURIComponent(dur)}`,
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amount)}`,
-        `groupCode=${encodeURIComponent(currentGroupRef)}`
+        `groupCode=${encodeURIComponent(currentGroupRef)}`,
+        `retry=${adminBookIsRetry}`
       ].join('&');
       const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
       const result = await res.json();
@@ -3077,6 +3087,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       // success, and from the catch block below if the auto-verify check
       // finds the booking actually went through despite a failed response.
       function handleAdminSuccess(successResult){
+        adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
         const netLabel = Array.isArray(successResult.nets) ? successResult.nets.map(n=>'Net '+n).join(', ') : '';
 
         // Trigger monthly tab rebuild in background (non-blocking)
@@ -3128,6 +3139,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){
           const netLabel = Array.isArray(checkResult.nets) ? checkResult.nets.map(n=>'Net '+n).join(', ') : '';
+          adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
           adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
           updateAdminReceipt();
           const count = adminBookings.length;
@@ -3138,10 +3150,12 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
           document.getElementById('aDate').value = '';
           refreshAdminAvailability();
         } else {
+          adminBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
           msg.textContent = '❌ Connection error. Please try again.';
           msg.className = 'admin-msg err';
         }
       } catch(checkErr){
+        adminBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
         msg.textContent = '❌ Connection error. Please try again.';
         msg.className = 'admin-msg err';
       }

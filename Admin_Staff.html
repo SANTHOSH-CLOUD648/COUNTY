@@ -1051,6 +1051,13 @@
   aDateEl.addEventListener('change', refreshPrimeTimeCheckStf);
   setInterval(refreshPrimeTimeCheckStf, 30000); // auto-unlocks the moment it turns 5pm
 
+  // Tracks whether the CURRENT booking attempt is a retry of an earlier
+  // one that already failed — set to true only when a connection error is
+  // shown, reset to false after any successful booking. A normal,
+  // first-time "Book Now" click always sends retry=false, so the server's
+  // extra duplicate-check only runs on a genuine re-click after a failure.
+  let staffBookIsRetry = false;
+
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
     const mobile  = document.getElementById('aMobile').value.trim();
@@ -1089,9 +1096,11 @@
     const qs = `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}`+
       `&mobile=${encodeURIComponent(mobile)}&date=${encodeURIComponent(date)}&session=${encodeURIComponent(session)}`+
       `&time=${encodeURIComponent(time)}&players=${encodeURIComponent(players)}&netsRequired=${nets}`+
-      `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`;
+      `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`+
+      `&retry=${staffBookIsRetry}`;
 
     function handleSuccess(result){
+      staffBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
       if(result.month){
         fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000).catch(()=>{});
       }
@@ -1217,10 +1226,12 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
         if(checkResult.status === 'ok'){
           handleSuccess({ nets: checkResult.nets, month: parseInt(date.split('-')[1],10) });
         } else {
+          staffBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
           msg.textContent = '❌ Connection error. Please try again.';
           msg.className = 'admin-msg err';
         }
       } catch(checkErr){
+        staffBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
         msg.textContent = '❌ Connection error. Please try again.';
         msg.className = 'admin-msg err';
       }
