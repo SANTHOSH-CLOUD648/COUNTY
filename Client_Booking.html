@@ -1007,6 +1007,7 @@
   let ALL_CLOSED   = false;
   let CLOSED_NETS  = [];
   let FROM_MINUTES = -1; // -1 = full day closure; >=0 = closure starts from this time
+  let TO_MINUTES   = -1; // -1 = closure continues for the rest of the day; >=0 = closure ends/reopens at this time
 
   // Helper: fetch with a timeout so requests never hang forever
   function fetchWithTimeout(url, options, timeoutMs){
@@ -1029,6 +1030,7 @@
       ALL_CLOSED   = !!(data && data.allClosed);
       CLOSED_NETS  = (data && Array.isArray(data.closedNets)) ? data.closedNets : [];
       FROM_MINUTES = (data && typeof data.fromMinutes === 'number') ? data.fromMinutes : -1;
+      TO_MINUTES   = (data && typeof data.toMinutes === 'number') ? data.toMinutes : -1;
       if(data && typeof data.priorBookingDays === 'number' && data.priorBookingDays > 0){
         applyPriorBookingDays(data.priorBookingDays);
       }
@@ -1094,18 +1096,20 @@
     const submitBtn = document.querySelector('button.submit');
 
     const closureIsFullDay = FROM_MINUTES === -1;
+    const closureHasEnd    = TO_MINUTES !== -1;
     if((MAX_NETS === 0 || ALL_CLOSED) && closureIsFullDay){
       closedNotice.innerHTML = '🚫 <strong>All nets are closed on this date.</strong> Please choose a different date or contact us directly.';
       closedNotice.classList.add('show');
       submitBtn.disabled = true;
     } else if(ALL_CLOSED && !closureIsFullDay){
       const fromLabel = minutesToTimeLabel(FROM_MINUTES);
-      closedNotice.innerHTML = `🚫 <strong>All nets are closed from ${fromLabel} on this date.</strong> Bookings before that time are still available.`;
+      const windowNote = closureHasEnd ? ` to ${minutesToTimeLabel(TO_MINUTES)}` : '';
+      closedNotice.innerHTML = `🚫 <strong>All nets are closed from ${fromLabel}${windowNote} on this date.</strong> Bookings ${closureHasEnd ? 'outside that window' : 'before that time'} are still available.`;
       closedNotice.classList.add('show');
       submitBtn.disabled = false;
     } else if(CLOSED_NETS.length > 0){
       const netLabels = CLOSED_NETS.map(n=>'Net '+n).join(', ');
-      const fromNote  = closureIsFullDay ? '' : ` from ${minutesToTimeLabel(FROM_MINUTES)}`;
+      const fromNote  = closureIsFullDay ? '' : ` from ${minutesToTimeLabel(FROM_MINUTES)}${closureHasEnd ? ` to ${minutesToTimeLabel(TO_MINUTES)}` : ''}`;
       closedNotice.innerHTML = `⚠️ <strong>${netLabels} ${CLOSED_NETS.length>1?'are':'is'} closed${fromNote} on this date</strong> — remaining nets are available for booking.`;
       closedNotice.classList.add('show');
       submitBtn.disabled = false;
@@ -1122,7 +1126,7 @@
 
   dateInput.addEventListener('change', ()=>{
     clearError('f-date');
-    ALL_CLOSED = false; CLOSED_NETS = []; FROM_MINUTES = -1;
+    ALL_CLOSED = false; CLOSED_NETS = []; FROM_MINUTES = -1; TO_MINUTES = -1;
     applyPastTimeFilter();
     refreshAvailability();
   });
@@ -1148,7 +1152,7 @@
     if(!prefDate || !prefTime) return;
 
     dateInput.value = prefDate;
-    ALL_CLOSED = false; CLOSED_NETS = []; FROM_MINUTES = -1;
+    ALL_CLOSED = false; CLOSED_NETS = []; FROM_MINUTES = -1; TO_MINUTES = -1;
 
     const isMorning = MORNING_TIMES.includes(prefTime);
     const isEvening = EVENING_TIMES.includes(prefTime);
@@ -1499,7 +1503,9 @@
 
     // Guard: check if closure applies to the chosen time
     const chosenMins = parseSlotMinutes(time);
-    const closureActiveNow = FROM_MINUTES === -1 || chosenMins >= FROM_MINUTES;
+    const chosenAfterFrom  = FROM_MINUTES === -1 || chosenMins >= FROM_MINUTES;
+    const chosenBeforeTo   = TO_MINUTES === -1 || chosenMins < TO_MINUTES;
+    const closureActiveNow = chosenAfterFrom && chosenBeforeTo;
     if((MAX_NETS === 0 || ALL_CLOSED) && closureActiveNow){
       document.getElementById('closedNotice').classList.add('show');
       return;
