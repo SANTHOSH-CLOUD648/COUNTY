@@ -413,6 +413,23 @@
         </select>
       </div>
       <button class="add-btn full" id="adminBookBtn" onclick="adminBookNow()">✅ Book Now</button>
+      <div id="staffBookingProgress" style="display:none;margin-top:10px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px;">
+          ⏳ Booking in Progress — Please Wait
+        </div>
+        <div style="height:6px;border-radius:4px;background:#e2ddd0;overflow:hidden;">
+          <div style="height:100%;width:30%;border-radius:4px;
+               background:linear-gradient(90deg,var(--gold),#e0c368);
+               animation:staffBookingProgressSlide 1.1s ease-in-out infinite;"></div>
+        </div>
+      </div>
+      <style>
+        @keyframes staffBookingProgressSlide {
+          0%   { margin-left: 0%;   width: 30%; }
+          50%  { margin-left: 60%;  width: 40%; }
+          100% { margin-left: 0%;   width: 30%; }
+        }
+      </style>
     </div>
     <div class="admin-amount-row" style="margin:10px 0 0;">
       <div>
@@ -1088,6 +1105,7 @@
 
     const btn = document.getElementById('adminBookBtn');
     btn.disabled = true; btn.textContent = 'Booking…';
+    document.getElementById('staffBookingProgress').style.display = 'block';
     document.getElementById('confirmPanel').classList.remove('show');
 
     const ref = 'STF'+Math.random().toString(36).slice(2,7).toUpperCase();
@@ -1203,6 +1221,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       let result = await res.json();
 
       if(result.status === 'possible_duplicate'){
+        document.getElementById('staffBookingProgress').style.display = 'none';
         const proceed = confirm(
           `${result.name || 'This mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nStill book this as a SEPARATE, additional booking?`
         );
@@ -1212,6 +1231,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
           btn.disabled = false; btn.textContent = 'Book Now';
           return;
         }
+        document.getElementById('staffBookingProgress').style.display = 'block';
         res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(true)}`, null, 30000);
         result = await res.json();
       }
@@ -1252,6 +1272,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
 
     btn.disabled = false; btn.textContent = '✅ Book Now';
+    document.getElementById('staffBookingProgress').style.display = 'none';
   }
   window.adminBookNow = adminBookNow;
 
