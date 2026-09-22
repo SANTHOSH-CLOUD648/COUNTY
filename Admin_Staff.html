@@ -1093,11 +1093,11 @@
     const ref = 'STF'+Math.random().toString(36).slice(2,7).toUpperCase();
     const rate = lookupRate(session, players, ball);
     const amount = rate ? rate * ADMIN_DUR_HRS[dur] * nets : '';
-    const qs = `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}`+
+    const buildQs = (confirmDup) => `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}`+
       `&mobile=${encodeURIComponent(mobile)}&date=${encodeURIComponent(date)}&session=${encodeURIComponent(session)}`+
       `&time=${encodeURIComponent(time)}&players=${encodeURIComponent(players)}&netsRequired=${nets}`+
       `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`+
-      `&retry=${staffBookIsRetry}`;
+      `&retry=${staffBookIsRetry}&confirmDuplicate=${confirmDup}`;
 
     function handleSuccess(result){
       staffBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
@@ -1199,8 +1199,22 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
 
     try {
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
-      const result = await res.json();
+      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(false)}`, null, 30000);
+      let result = await res.json();
+
+      if(result.status === 'possible_duplicate'){
+        const proceed = confirm(
+          `${result.name || 'This mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nStill book this as a SEPARATE, additional booking?`
+        );
+        if(!proceed){
+          msg.textContent = 'Booking not submitted — already has a confirmed booking for this exact slot.';
+          msg.className = 'admin-msg err';
+          btn.disabled = false; btn.textContent = 'Book Now';
+          return;
+        }
+        res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(true)}`, null, 30000);
+        result = await res.json();
+      }
 
       if(result.status === 'ok'){
         handleSuccess(result);

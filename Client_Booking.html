@@ -1597,7 +1597,7 @@ Thank you for your cooperation! See you at the nets!`;
     // This prevents fake confirmations when the server rejects (e.g. slot just filled up).
     submitBtn.textContent = 'Confirming…';
     try {
-      const qs = [
+      const buildQs = (confirmDup) => [
         `action=book`,
         `ref=${encodeURIComponent(ref)}`,
         `name=${encodeURIComponent(name)}`,
@@ -1610,11 +1610,30 @@ Thank you for your cooperation! See you at the nets!`;
         `duration=${encodeURIComponent(duration)}`,
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amountVal.textContent.replace(/[\u20B9,]/g,'').trim())}`,
-        `retry=${bookingIsRetry}`
+        `retry=${bookingIsRetry}`,
+        `confirmDuplicate=${confirmDup}`
       ].join('&');
 
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
-      const result = await res.json();
+      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(false)}`, null, 30000);
+      let result = await res.json();
+
+      if(result.status === 'possible_duplicate'){
+        submitBtn.textContent = 'Confirm Booking';
+        submitBtn.disabled = false;
+        const proceed = confirm(
+          `It looks like ${result.name || 'this mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nDo you still want to book this as a SEPARATE, additional booking?`
+        );
+        if(!proceed){
+          showBookingError('Booking not submitted. You already have a confirmed booking for this exact slot.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm Booking';
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Confirming…';
+        res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(true)}`, null, 30000);
+        result = await res.json();
+      }
 
       if(result.status === 'ok'){
         handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage);

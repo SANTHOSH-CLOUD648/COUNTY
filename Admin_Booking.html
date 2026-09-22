@@ -3060,7 +3060,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     try {
       // Use encodeURIComponent (not URLSearchParams) — Apps Script does not
       // decode '+' as space in GET params, only %20. URLSearchParams uses '+' for spaces.
-      const qs = [
+      const buildQs = (confirmDup) => [
         `action=adminBook`,
         `ref=${encodeURIComponent(ref)}`,
         `name=${encodeURIComponent(name)}`,
@@ -3074,10 +3074,24 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amount)}`,
         `groupCode=${encodeURIComponent(currentGroupRef)}`,
-        `retry=${adminBookIsRetry}`
+        `retry=${adminBookIsRetry}`,
+        `confirmDuplicate=${confirmDup}`
       ].join('&');
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 30000);
-      const result = await res.json();
+      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(false)}`, null, 30000);
+      let result = await res.json();
+
+      if(result.status === 'possible_duplicate'){
+        const proceed = confirm(
+          `${result.name || 'This mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nStill book this as a SEPARATE, additional booking?`
+        );
+        if(!proceed){
+          msg.textContent = 'Booking not submitted — already has a confirmed booking for this exact slot.';
+          msg.className = 'admin-msg err';
+          return;
+        }
+        res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(true)}`, null, 30000);
+        result = await res.json();
+      }
 
       // Nested function (not a separate top-level one) so it has automatic
       // closure access to every local variable already in scope here
