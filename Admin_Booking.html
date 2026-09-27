@@ -762,6 +762,23 @@
             </select>
           </div>
           <button class="add-btn full" id="adminBookBtn" onclick="adminBookNow()">✅ Book Now</button>
+          <div id="adminBookingProgress" style="display:none;margin-top:10px;text-align:center;">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px;">
+              ⏳ Booking in Progress — Please Wait
+            </div>
+            <div style="height:6px;border-radius:4px;background:#e2ddd0;overflow:hidden;">
+              <div style="height:100%;width:30%;border-radius:4px;
+                   background:linear-gradient(90deg,var(--gold),#e0c368);
+                   animation:adminBookingProgressSlide 1.1s ease-in-out infinite;"></div>
+            </div>
+          </div>
+          <style>
+            @keyframes adminBookingProgressSlide {
+              0%   { margin-left: 0%;   width: 30%; }
+              50%  { margin-left: 60%;  width: 40%; }
+              100% { margin-left: 0%;   width: 30%; }
+            }
+          </style>
         </div>
         <div class="admin-amount-row" style="margin:10px 0 0;border-radius:10px;">
           <div>
@@ -792,10 +809,6 @@
               </a>
             </div>
           </div>
-          <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
-            👉 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-          </div>
-
           <div class="receipt-box receipt-box-punctuality">
             <div class="box-title">🕐 Punctuality is Mandatory</div>
             <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
@@ -830,7 +843,7 @@
 
         <!-- Normal Bookings Search -->
         <div class="normal-search-box">
-          <div class="cancel-tab-title" style="margin-bottom:10px;">🔍 Search Normal Bookings</div>
+          <div class="cancel-tab-title" style="margin-bottom:10px;">🔍 Search Bookings</div>
           <div class="normal-search-row">
             <input type="date" id="searchDate" placeholder="Search by date">
             <span style="color:var(--muted);font-size:12px;align-self:center;">or</span>
@@ -864,6 +877,7 @@
           <button class="report-subtab"        id="repSubBtnCustom"  onclick="showReportSubTab('custom')">Custom Dates</button>
           <button class="report-subtab"        id="repSubBtnMonthly" onclick="showReportSubTab('monthly')">Monthly</button>
           <button class="report-subtab"        id="repSubBtnYearly"  onclick="showReportSubTab('yearly')">Yearly</button>
+          <button class="report-subtab"        id="repSubBtnLeaderboard" onclick="showReportSubTab('leaderboard')">Leaderboard</button>
         </div>
 
         <div id="repPanelDaily" class="report-panel">
@@ -900,7 +914,7 @@
             <option value="11">November</option><option value="12">December</option>
           </select>
           <label class="report-label" style="margin-top:8px;">Year</label>
-          <input type="number" id="repMonthlyYear" class="report-input" style="width:100px;">
+          <input type="number" id="repMonthlyYear" class="report-input" style="width:100px;" min="2026">
           <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('monthly')">Generate Report</button>
         </div>
 
@@ -917,6 +931,20 @@
           <div id="repYearlySelectedPersonArea"></div>
 
           <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('yearly')">Generate Report</button>
+        </div>
+
+        <div id="repPanelLeaderboard" class="report-panel" style="display:none;">
+          <label class="report-label">Year <span style="font-weight:400;color:var(--muted);">(optional — leave blank for the all-time lifetime leaderboard)</span></label>
+          <input type="number" id="repLeaderboardYear" class="report-input" style="width:100px;" min="2026" placeholder="e.g. 2026">
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">A year of 2026 shows the fiscal year Apr 2026 – Mar 2027, matching the Yearly report.</div>
+
+          <label class="report-label" style="margin-top:12px;display:block;">Sort by</label>
+          <select id="repLeaderboardSortMode" class="report-input" onchange="rerenderLeaderboard()">
+            <option value="hours-by-balltype">Total Hours, grouped by Ball Type</option>
+            <option value="amount-combined">Total Amount, combined (all ball types together)</option>
+          </select>
+
+          <button class="receipt-btn" style="margin-top:10px;" onclick="generateReport('leaderboard')">Generate Report</button>
         </div>
 
         <div id="reportMsg" class="admin-msg" style="margin-top:12px;"></div>
@@ -1003,10 +1031,6 @@
           </a>
         </div>
       </div>
-      <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
-        👉 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-      </div>
-
       <div class="receipt-box receipt-box-punctuality">
         <div class="box-title">🕐 Punctuality is Mandatory</div>
         <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
@@ -1448,7 +1472,7 @@
 
   // ── Reports tab ──────────────────────────────────────────
   function showReportSubTab(sub){
-    ['daily','custom','monthly','yearly'].forEach(function(s){
+    ['daily','custom','monthly','yearly','leaderboard'].forEach(function(s){
       document.getElementById('repPanel'+s.charAt(0).toUpperCase()+s.slice(1)).style.display = (s===sub) ? 'block' : 'none';
       var btn = document.getElementById('repSubBtn'+s.charAt(0).toUpperCase()+s.slice(1));
       if (btn) btn.classList.toggle('active', s===sub);
@@ -1497,7 +1521,7 @@
     }
     repCustomNameDebounce = setTimeout(async ()=>{
       try {
-        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 30000);
         const data = await res.json();
         const matches = data.matches || [];
         if(!matches.length){
@@ -1552,7 +1576,7 @@
     const resultArea = document.getElementById('reportResultArea');
     try {
       const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(repCustomSelectedMobile)}&name=${encodeURIComponent(repCustomSelectedName)}&fromDate=${fromDate}&toDate=${toDate}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       const rows = data.rows || [];
 
@@ -1605,7 +1629,7 @@
     }
     repYearlyNameDebounce = setTimeout(async ()=>{
       try {
-        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 30000);
         const data = await res.json();
         const matches = data.matches || [];
         if(!matches.length){
@@ -1664,7 +1688,7 @@
       const fromDate = `${year}-04-01`;
       const toDate   = `${parseInt(year,10)+1}-03-31`;
       const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(repYearlySelectedMobile)}&name=${encodeURIComponent(repYearlySelectedName)}&fromDate=${fromDate}&toDate=${toDate}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       const rows = data.rows || [];
 
@@ -1721,6 +1745,136 @@
     }
   }
 
+  // ── Leaderboard rendering (two sort modes, switchable without re-fetching) ──
+  function renderLeaderboardData(data){
+    const resultArea = document.getElementById('reportResultArea');
+    const titleHtml2 = data.title ? `<div style="font-weight:700;color:var(--navy);margin-bottom:6px;">${data.title}</div>` : '';
+    if (!data.rows || data.rows.length === 0) {
+      resultArea.innerHTML = `${titleHtml2}<div class="admin-msg">No bookings found for this period.</div>`;
+      return;
+    }
+    const mode = document.getElementById('repLeaderboardSortMode').value;
+    if (mode === 'amount-combined') {
+      renderLeaderboardByAmount(data, titleHtml2, resultArea);
+    } else {
+      renderLeaderboardByBallType(data, titleHtml2, resultArea);
+    }
+  }
+
+  function rerenderLeaderboard(){
+    if (window._lastLeaderboardData) renderLeaderboardData(window._lastLeaderboardData);
+  }
+
+  // Groups rows by Ball Type (Leather Ball block, then Tennis Ball block,
+  // etc.), sorted by Total Hours descending within each group, with a
+  // subtotal row closing out each group and a grand total at the very end.
+  function renderLeaderboardByBallType(data, titleHtml2, resultArea){
+    let lastBallType = null, lRank = 0;
+    let groupSub = { hours:0, amount:0, bookings:0 };
+    let lRowsHtml = '';
+
+    data.rows.forEach((r, idx) => {
+      const ballType = r.ballType || '(unspecified)';
+
+      if (ballType !== lastBallType) {
+        if (lastBallType !== null) {
+          lRowsHtml += `
+          <tr style="font-weight:700;background:#eef3f0;">
+            <td colspan="4">Subtotal — ${lastBallType}</td>
+            <td>${groupSub.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+            <td>₹${groupSub.amount.toLocaleString('en-IN')}</td>
+            <td>${groupSub.bookings}</td>
+          </tr>`;
+        }
+        lRowsHtml += `<tr style="background:var(--sand);"><td colspan="7" style="font-weight:700;color:var(--navy);">${ballType}</td></tr>`;
+        lastBallType = ballType;
+        lRank = 0;
+        groupSub = { hours:0, amount:0, bookings:0 };
+      }
+
+      lRank++;
+      groupSub.hours    += r.hours;
+      groupSub.amount   += r.amount;
+      groupSub.bookings += r.bookings;
+
+      lRowsHtml += `
+      <tr>
+        <td>${lRank}</td>
+        <td>${r.name || '(no name)'}</td>
+        <td>${r.mobile}</td>
+        <td>${ballType}</td>
+        <td>${r.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+        <td>₹${r.amount.toLocaleString('en-IN')}</td>
+        <td>${r.bookings}</td>
+      </tr>`;
+
+      if (idx === data.rows.length - 1) {
+        lRowsHtml += `
+        <tr style="font-weight:700;background:#eef3f0;">
+          <td colspan="4">Subtotal — ${ballType}</td>
+          <td>${groupSub.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+          <td>₹${groupSub.amount.toLocaleString('en-IN')}</td>
+          <td>${groupSub.bookings}</td>
+        </tr>`;
+      }
+    });
+
+    const lTotalHtml = data.total ? `
+      <tr style="font-weight:700;border-top:2px solid var(--navy);">
+        <td colspan="4">GRAND TOTAL</td>
+        <td>${data.total.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+        <td>₹${data.total.amount.toLocaleString('en-IN')}</td>
+        <td>${data.total.bookings}</td>
+      </tr>` : '';
+    resultArea.innerHTML = `
+      ${titleHtml2}
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table class="report-table">
+          <thead><tr>
+            <th>Rank</th><th>Name</th><th>Mobile</th><th>Ball Type</th><th>Total Hours</th><th>Total Amount</th><th>Total Bookings</th>
+          </tr></thead>
+          <tbody>${lRowsHtml}${lTotalHtml}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // Flat list, ALL ball types combined into one ranking, sorted by Total
+  // Amount descending — no ball-type grouping or subtotals, just a single
+  // grand total row at the bottom.
+  function renderLeaderboardByAmount(data, titleHtml2, resultArea){
+    const sortedRows = data.rows.slice().sort((a,b) => b.amount - a.amount);
+
+    const lRowsHtml = sortedRows.map((r, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${r.name || '(no name)'}</td>
+        <td>${r.mobile}</td>
+        <td>${r.ballType || '(unspecified)'}</td>
+        <td>${r.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+        <td>₹${r.amount.toLocaleString('en-IN')}</td>
+        <td>${r.bookings}</td>
+      </tr>`).join('');
+
+    const lTotalHtml = data.total ? `
+      <tr style="font-weight:700;border-top:2px solid var(--navy);">
+        <td colspan="4">GRAND TOTAL</td>
+        <td>${data.total.hours.toLocaleString('en-IN', {maximumFractionDigits:2})}</td>
+        <td>₹${data.total.amount.toLocaleString('en-IN')}</td>
+        <td>${data.total.bookings}</td>
+      </tr>` : '';
+
+    resultArea.innerHTML = `
+      ${titleHtml2}
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table class="report-table">
+          <thead><tr>
+            <th>Rank</th><th>Name</th><th>Mobile</th><th>Ball Type</th><th>Total Hours</th><th>Total Amount</th><th>Total Bookings</th>
+          </tr></thead>
+          <tbody>${lRowsHtml}${lTotalHtml}</tbody>
+        </table>
+      </div>`;
+  }
+
   async function generateReport(type){
     const msg = document.getElementById('reportMsg');
     const resultArea = document.getElementById('reportResultArea');
@@ -1764,15 +1918,19 @@
       const mo = document.getElementById('repMonthlyMonth').value;
       const yr = document.getElementById('repMonthlyYear').value;
       if (!yr){ msg.textContent = '⚠️ Please enter a year.'; msg.className='admin-msg err'; return; }
+      if (parseInt(yr,10) < 2026){ msg.textContent = '⚠️ Year must be 2026 or later.'; msg.className='admin-msg err'; return; }
       qs += `&month=${mo}&year=${yr}`;
     } else if (type === 'yearly'){
       const yr = document.getElementById('repYearlyYear').value;
       if (!yr){ msg.textContent = '⚠️ Please enter a year.'; msg.className='admin-msg err'; return; }
       qs += `&year=${yr}`;
+    } else if (type === 'leaderboard'){
+      const yr = document.getElementById('repLeaderboardYear').value;
+      if (yr){ qs += `&year=${yr}`; } // omitted entirely = all-time leaderboard
     }
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       if (data.status !== 'ok'){
         msg.textContent = '❌ ' + (data.message || 'Could not generate report.');
@@ -1800,6 +1958,12 @@
           <th>Tot No. Of<br>Active Bookings</th><th>Morning<br>Session</th><th>Evening<br>Session</th>
           <th>Leather<br>Ball</th><th>Tennis<br>Ball</th><th>Amount</th>
         </tr></thead>`;
+
+      if (data.mode === 'leaderboard') {
+        window._lastLeaderboardData = data; // cache so the sort-mode toggle can re-render without re-fetching
+        renderLeaderboardData(data);
+        return;
+      }
 
       let bodyHtml, titleHtml = '';
       if (data.mode === 'single') {
@@ -1886,7 +2050,7 @@
     area.innerHTML = '<div class="cancel-empty">⏳ Loading active bulk bookings…</div>';
     msg.textContent = '';
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 15000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 20000);
       const data = await res.json();
       if(data.status !== 'ok' || !data.groups.length){
         area.innerHTML = '<div class="cancel-empty">No active bulk bookings found.</div>';
@@ -1928,7 +2092,7 @@
               return `
               <div class="bulk-slot-row" id="slot_${gi}_${si}">
                 <div class="bulk-slot-info">
-                  📅 ${s.date} &nbsp; ⏰ ${s.time} &nbsp; ⏱ ${s.duration} &nbsp; 🎾 ${s.net}
+                  📅 ${s.date} &nbsp; ⏰ ${s.time} &nbsp; ⏱ ${s.duration} &nbsp; 👥 ${s.players} player${s.players=='1'?'':'s'} &nbsp; 🎾 ${s.net}
                   <div class="bulk-slot-ref">Ref: ${s.ref}</div>
                 </div>
                 <div class="bulk-slot-btns">
@@ -1966,7 +2130,7 @@
     // relying on already-loaded data here could show a stale/outdated
     // status. This targets just this one group, without disrupting the
     // rest of the (possibly expanded) list on screen.
-    fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 15000)
+    fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=bulkList`, null, 20000)
       .then(res => res.json())
       .then(data => {
         const fresh = (data.groups || []).find(x => x.groupRef === g.groupRef);
@@ -2026,7 +2190,7 @@ ${waLines}
 To cancel any or all active slots quote your individual Booking Ref No. and Group Ref *${g.groupRef}*
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://tinyurl.com/2hta9v6t?v=2
+https://countyindoornetz.com/Client_Booking.html
 
 🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 
@@ -2036,7 +2200,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
       const netsCount = (s.net.match(/Net/g)||[]).length || 1;
       return `${i+1}. ${s.date} ${s.time} ${s.duration} Nets:${netsCount} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`;
     }).join('\n');
-    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
     document.getElementById(`groupReceiptBtns${gi}`).innerHTML = `
       <a class="share-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(waMsg)}">
@@ -2077,7 +2241,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     btn.disabled = true; btn.textContent = 'Cancelling…';
     try {
       const res  = await fetchWithTimeout(
-        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(groupRef)}&mobile=${encodeURIComponent(mobile)}`,
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(groupRef)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
         null, 20000);
       const data = await res.json();
       if(data.status && data.status.startsWith('group_cancelled:')){
@@ -2113,8 +2277,8 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     btn.disabled = true; btn.textContent = '…';
     try {
       const res  = await fetchWithTimeout(
-        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`,
-        null, 15000);
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
+        null, 20000);
       const data = await res.json();
       if(data.status === 'cancelled'){
         rowEl.innerHTML = `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>
@@ -2154,8 +2318,8 @@ Time: ${time}
 This slot has been cancelled and the net is now free for others to book.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://tinyurl.com/2hta9v6t?v=2`;
-    const smsMsg = `County Indoor Netz - Booking Cancelled\nName: ${name} | Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? ` | Group Ref: ${groupRef}` : ''}\nDate: ${date} Time: ${time}\nThis slot has been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2`;
+https://countyindoornetz.com/Client_Booking.html`;
+    const smsMsg = `County Indoor Netz - Booking Cancelled\nName: ${name} | Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? ` | Group Ref: ${groupRef}` : ''}\nDate: ${date} Time: ${time}\nThis slot has been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html`;
     return { waMsg, smsMsg, mobile };
   }
 
@@ -2171,8 +2335,8 @@ Slots cancelled: ${count}
 All slots under this group have been cancelled and those nets are now free for others to book.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://tinyurl.com/2hta9v6t?v=2`;
-    const smsMsg = `County Indoor Netz - Group Booking Code ${groupRef} is Cancelled\nName: ${name} | Group Ref: ${groupRef}\nSlots cancelled: ${count}\nAll slots under this group have been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2`;
+https://countyindoornetz.com/Client_Booking.html`;
+    const smsMsg = `County Indoor Netz - Group Booking Code ${groupRef} is Cancelled\nName: ${name} | Group Ref: ${groupRef}\nSlots cancelled: ${count}\nAll slots under this group have been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html`;
     return { waMsg, smsMsg, mobile };
   }
 
@@ -2236,9 +2400,9 @@ https://tinyurl.com/2hta9v6t?v=2`;
 
     try {
       const qs = refVal
-        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}`
-        : `action=searchBookings&date=${encodeURIComponent(dateVal)}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}&includeBulk=true`
+        : `action=searchBookings&date=${encodeURIComponent(dateVal)}&includeBulk=true`;
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
       const data = await res.json();
 
       if(!data.results || !data.results.length){
@@ -2252,13 +2416,15 @@ https://tinyurl.com/2hta9v6t?v=2`;
       results.innerHTML = data.results.map((b,i)=>{
         const isCancelled = b.status === 'Cancelled';
         const isPast = isSlotPast(b.date, b.time);
+        const groupLine = b.groupCode ? `<div class="bulk-group-meta">👥 Group: <strong style="color:var(--leather);">${b.groupCode}</strong></div>` : '';
         return `
         <div class="bulk-group-card" id="nslot_${i}" style="${isCancelled?'opacity:.7;':''}">
           <div class="bulk-group-header" onclick="toggleNormalResult(${i})">
             <div class="bulk-group-info">
               <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
               <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
-              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 👥 ${b.players} player${b.players=='1'?'':'s'} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+              ${groupLine}
             </div>
             ${isCancelled ? '<span class="bulk-group-badge" style="background:var(--error);">🚫 Cancelled</span>'
               : isPast ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
@@ -2299,8 +2465,8 @@ https://tinyurl.com/2hta9v6t?v=2`;
     btn.disabled = true; btn.textContent = '…';
     try {
       const res  = await fetchWithTimeout(
-        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`,
-        null, 15000);
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
+        null, 20000);
       const data = await res.json();
       if(data.status === 'cancelled'){
         rowEl.innerHTML =
@@ -2732,7 +2898,7 @@ https://tinyurl.com/2hta9v6t?v=2`;
         players ? `players=${encodeURIComponent(players)}` : '',
         (amountVal && amountVal !== '—') ? `amount=${encodeURIComponent(amountVal)}` : ''
       ].filter(Boolean).join('&');
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const result = await res.json();
       if(result.status === 'ok'){
         const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
@@ -2780,8 +2946,6 @@ https://tinyurl.com/2hta9v6t?v=2`;
 🧍🧍🧍 Rate changes if player count exceeds booking.
 🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 
-👉 *Please note:* Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
@@ -2794,12 +2958,11 @@ Cancellation allowed up to 2 hours before the slot or inform us.
 In case of any network issues, please contact us directly.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://tinyurl.com/2hta9v6t?v=2
+https://countyindoornetz.com/Client_Booking.html
 
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-Punctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -2831,6 +2994,13 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
   let addingToExistingGroup = false;
 
   function newGroupRef(){
+    // If the group we're leaving actually had bookings added to it, fire
+    // off the one consolidated summary email for that group now — this is
+    // the natural "staff is done with this customer" signal. Fire-and-
+    // forget (not awaited) so switching to a new group feels instant.
+    if (currentGroupRef && adminBookings.length > 0) {
+      fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=sendGroupSummary&groupCode=${encodeURIComponent(currentGroupRef)}`, null, 25000).catch(()=>{});
+    }
     currentGroupRef = 'GRP-' + Math.random().toString(36).slice(2,7).toUpperCase();
     addingToExistingGroup = false; // this is a brand new group, not adding to an existing one
     document.getElementById('grpRefDisplay').textContent = currentGroupRef;
@@ -2854,6 +3024,15 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
   window.newGroupRef = newGroupRef;
   // Auto-generate on load
   newGroupRef();
+
+  // Tracks whether the CURRENT admin booking attempt is a retry of an
+  // earlier one (for the same slot) that already failed — set to true only
+  // when a connection error is shown, reset to false after any successful
+  // booking. A normal, first-time "Book Now" click always sends
+  // retry=false, so the server's extra duplicate-check only runs on a
+  // genuine re-click after a failure. Shared across both single admin
+  // bookings and each individual slot in a bulk group booking.
+  let adminBookIsRetry = false;
 
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
@@ -2885,6 +3064,7 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
     btn.disabled = true;
     btn.textContent = 'Booking…';
     msg.className = 'admin-msg';
+    document.getElementById('adminBookingProgress').style.display = 'block';
 
     // Note: unlike the customer-facing booking form, admin/staff bookings
     // are NOT restricted by the Prime Time 5pm cutoff rule — staff can book
@@ -2898,7 +3078,7 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
     try {
       // Use encodeURIComponent (not URLSearchParams) — Apps Script does not
       // decode '+' as space in GET params, only %20. URLSearchParams uses '+' for spaces.
-      const qs = [
+      const buildQs = (confirmDup) => [
         `action=adminBook`,
         `ref=${encodeURIComponent(ref)}`,
         `name=${encodeURIComponent(name)}`,
@@ -2911,10 +3091,29 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
         `duration=${encodeURIComponent(dur)}`,
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amount)}`,
-        `groupCode=${encodeURIComponent(currentGroupRef)}`
+        `groupCode=${encodeURIComponent(currentGroupRef)}`,
+        `retry=${adminBookIsRetry}`,
+        `confirmDuplicate=${confirmDup}`
       ].join('&');
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
-      const result = await res.json();
+      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(false)}`, null, 30000);
+      let result = await res.json();
+
+      if(result.status === 'possible_duplicate'){
+        document.getElementById('adminBookingProgress').style.display = 'none';
+        const proceed = confirm(
+          `${result.name || 'This mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nStill book this as a SEPARATE, additional booking?`
+        );
+        if(!proceed){
+          msg.textContent = 'Booking not submitted — already has a confirmed booking for this exact slot.';
+          msg.className = 'admin-msg err';
+          btn.disabled = false;
+          btn.textContent = '✅ Book Now';
+          return;
+        }
+        document.getElementById('adminBookingProgress').style.display = 'block';
+        res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(true)}`, null, 30000);
+        result = await res.json();
+      }
 
       // Nested function (not a separate top-level one) so it has automatic
       // closure access to every local variable already in scope here
@@ -2924,6 +3123,7 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
       // success, and from the catch block below if the auto-verify check
       // finds the booking actually went through despite a failed response.
       function handleAdminSuccess(successResult){
+        adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
         const netLabel = Array.isArray(successResult.nets) ? successResult.nets.map(n=>'Net '+n).join(', ') : '';
 
         // Trigger monthly tab rebuild in background (non-blocking)
@@ -2970,11 +3170,12 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
       // server whether this exact Ref actually went through.
       try {
         const checkRes = await fetchWithTimeout(
-          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000
+          `${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 20000
         );
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){
           const netLabel = Array.isArray(checkResult.nets) ? checkResult.nets.map(n=>'Net '+n).join(', ') : '';
+          adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
           adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
           updateAdminReceipt();
           const count = adminBookings.length;
@@ -2985,10 +3186,12 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
           document.getElementById('aDate').value = '';
           refreshAdminAvailability();
         } else {
+          adminBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
           msg.textContent = '❌ Connection error. Please try again.';
           msg.className = 'admin-msg err';
         }
       } catch(checkErr){
+        adminBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
         msg.textContent = '❌ Connection error. Please try again.';
         msg.className = 'admin-msg err';
       }
@@ -2996,6 +3199,7 @@ Punctuality is Mandatory: Late arrivals will affect other bookings, kindly repor
 
     btn.disabled = false;
     btn.textContent = '✅ Book Now';
+    document.getElementById('adminBookingProgress').style.display = 'none';
   }
   window.adminBookNow = adminBookNow;
 
@@ -3033,8 +3237,6 @@ ${waLines}
 🧍🧍🧍 Rate changes if player count exceeds booking.
 🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 
-👉 *Please note:* Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
@@ -3047,7 +3249,7 @@ Cancellation allowed up to 2 hours before the slot or inform us.
 In case of any network issues, please contact us directly.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://tinyurl.com/2hta9v6t?v=2
+https://countyindoornetz.com/Client_Booking.html
 
 To cancel any or all slots quote your individual Booking Ref No. and Group Ref *${b0.groupRef}*
 Thank you for your cooperation! See you at the nets! 🏏`;
@@ -3055,8 +3257,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-Punctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://tinyurl.com/2hta9v6t?v=2\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');

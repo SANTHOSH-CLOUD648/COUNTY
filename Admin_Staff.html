@@ -264,6 +264,8 @@
 
   <div class="admin-tabs">
     <button class="admin-tab" id="tabBtnFree" onclick="showStaffTab('free')">🕒 Free Slots</button>
+    <button class="admin-tab" id="tabBtnFreetime" onclick="showStaffTab('freetime')">🟢 Free Time</button>
+    <button class="admin-tab" id="tabBtnDayview" onclick="showStaffTab('dayview')">📅 Day View</button>
     <button class="admin-tab" id="tabBtnSearch" onclick="showStaffTab('search')">🔍 Search Bookings</button>
     <button class="admin-tab" id="tabBtnName" onclick="showStaffTab('name')">🧑 Name Search</button>
     <button class="admin-tab" id="tabBtnBooking" onclick="showStaffTab('booking')">➕ New Booking</button>
@@ -284,6 +286,36 @@
   </div>
   </div>
 
+  <!-- ── Free Time Search (today only, fully-free slots only) ── -->
+  <div class="admin-tab-content" id="staffTabFreetime" style="display:none;">
+  <div class="card">
+    <div class="lock-title">🟢 Free Time <span class="badge">STAFF</span></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Shows today's completely open time slots — where NO bookings exist on any net. Always today's date only.</div>
+    <div class="normal-search-row" style="margin-top:4px;">
+      <button onclick="loadFreeTime()">Search</button>
+      <button onclick="loadFreeTime()" title="Refresh results">🔄 Refresh</button>
+    </div>
+    <div class="admin-msg" id="freeTimeMsg"></div>
+    <div id="freeTimeResultArea" style="margin-top:14px;"></div>
+  </div>
+  </div>
+
+  <!-- ── Day View — bookings grouped by time slot, colour-coded like the Monthly Schedule sheet ── -->
+  <div class="admin-tab-content" id="staffTabDayview" style="display:none;">
+  <div class="card">
+    <div class="lock-title">📅 Day View <span class="badge">STAFF</span></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">See every booking for a chosen date, grouped by time slot and colour-coded by hour — same style as the Monthly Schedule sheet, without needing to open it.</div>
+    <label class="admin-lbl">Date</label>
+    <div class="normal-search-row" style="margin-top:4px;">
+      <input type="date" id="dayViewDate">
+      <button onclick="loadDayView()">Search</button>
+      <button onclick="loadDayView()" title="Refresh results">🔄 Refresh</button>
+    </div>
+    <div class="admin-msg" id="dayViewMsg"></div>
+    <div id="dayViewResultArea" style="margin-top:14px;"></div>
+  </div>
+  </div>
+
   <!-- ── Search Bookings ── -->
   <div class="admin-tab-content" id="staffTabSearch" style="display:none;">
   <div class="card">
@@ -292,7 +324,7 @@
       <div class="normal-search-row">
         <input type="date" id="searchDate">
         <span style="font-size:12px;color:var(--muted);">or</span>
-        <input type="text" id="searchRef" placeholder="Ref #">
+        <input type="text" id="searchRef" placeholder="Ref #" style="text-transform:uppercase;">
         <button onclick="searchNormalBookings()">Search</button>
         <button onclick="searchNormalBookings()" title="Refresh results">🔄 Refresh</button>
       </div>
@@ -381,6 +413,23 @@
         </select>
       </div>
       <button class="add-btn full" id="adminBookBtn" onclick="adminBookNow()">✅ Book Now</button>
+      <div id="staffBookingProgress" style="display:none;margin-top:10px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px;">
+          ⏳ Booking in Progress — Please Wait
+        </div>
+        <div style="height:6px;border-radius:4px;background:#e2ddd0;overflow:hidden;">
+          <div style="height:100%;width:30%;border-radius:4px;
+               background:linear-gradient(90deg,var(--gold),#e0c368);
+               animation:staffBookingProgressSlide 1.1s ease-in-out infinite;"></div>
+        </div>
+      </div>
+      <style>
+        @keyframes staffBookingProgressSlide {
+          0%   { margin-left: 0%;   width: 30%; }
+          50%  { margin-left: 60%;  width: 40%; }
+          100% { margin-left: 0%;   width: 30%; }
+        }
+      </style>
     </div>
     <div class="admin-amount-row" style="margin:10px 0 0;">
       <div>
@@ -406,10 +455,6 @@
           </a>
         </div>
       </div>
-      <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
-        👉 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-      </div>
-
       <div class="receipt-box receipt-box-punctuality">
         <div class="box-title">🕐 Punctuality is Mandatory</div>
         <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
@@ -445,7 +490,7 @@
 <script>
   const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
 
-  const STAFF_TABS = ['free','search','name','booking'];
+  const STAFF_TABS = ['free','freetime','dayview','search','name','booking'];
   function showStaffTab(tab){
     STAFF_TABS.forEach(function(t){
       const cap = t.charAt(0).toUpperCase()+t.slice(1);
@@ -453,6 +498,8 @@
       const btn = document.getElementById('tabBtn'+cap);
       if(btn) btn.classList.toggle('active', t===tab);
     });
+    if(tab === 'freetime' && typeof loadFreeTime === 'function') loadFreeTime();
+    if(tab === 'dayview' && typeof loadDayView === 'function') loadDayView();
   }
   window.showStaffTab = showStaffTab;
 
@@ -763,7 +810,7 @@
     msg.className = 'admin-msg ok';
 
     try {
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateVal}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateVal}`, null, 25000);
       const data = await res.json();
       const maxNets = data.maxNets || 0;
       const counts  = data.counts || {};
@@ -803,6 +850,159 @@
   }
   window.loadFreeSlots = loadFreeSlots;
 
+  // Adds 30 minutes to a "hh:mm am/pm" style time string, returning the
+  // same format — used to compute each free slot's END label.
+  function addHalfHour(timeStr){
+    const m = timeStr.trim().match(/^(\d{2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return timeStr;
+    let h = parseInt(m[1],10), mins = parseInt(m[2],10);
+    const ampm = m[3].toLowerCase();
+    let h24 = (ampm==='pm' && h!==12) ? h+12 : (ampm==='am' && h===12) ? 0 : h;
+    mins += 30;
+    if(mins >= 60){ mins -= 60; h24 = (h24+1) % 24; }
+    const outAmpm = h24 < 12 ? 'am' : 'pm';
+    let outH = h24 % 12; if(outH===0) outH = 12;
+    return `${String(outH).padStart(2,'0')}:${String(mins).padStart(2,'0')} ${outAmpm}`;
+  }
+
+  async function loadFreeTime(){
+    const msg  = document.getElementById('freeTimeMsg');
+    const area = document.getElementById('freeTimeResultArea');
+    area.innerHTML = '';
+    msg.textContent = '⏳ Checking today\'s availability…';
+    msg.className = 'admin-msg ok';
+
+    try {
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${todayStr}`, null, 25000);
+      const data = await res.json();
+      const counts = data.counts || {};
+
+      // Fully free = ZERO bookings on ANY net at this slot — not partial
+      // availability (that's what "Free Slots" already covers). Net count
+      // is deliberately not shown here, per how this search is meant to work.
+      // Consecutive free half-hour slots are merged into one continuous
+      // range (e.g. 08:00 pm–11:00 pm) rather than listed individually.
+      const freeFlags = ALL_TIMES_FS.map(t => (counts[t]||0)===0 && !isSlotPast(todayStr, t));
+      const ranges = [];
+      let i = 0;
+      while (i < ALL_TIMES_FS.length) {
+        if (!freeFlags[i]) { i++; continue; }
+        let j = i;
+        while (j+1 < ALL_TIMES_FS.length && freeFlags[j+1]) j++;
+        ranges.push({ start: ALL_TIMES_FS[i], end: addHalfHour(ALL_TIMES_FS[j]) });
+        i = j+1;
+      }
+
+      if(ranges.length === 0){
+        msg.textContent = 'No fully free slots remaining today.';
+        msg.className = 'admin-msg err';
+        return;
+      }
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+
+      area.innerHTML = ranges.map(r => `
+        <div class="free-slot-row">
+          <span class="free-slot-time">${r.start} to ${r.end}</span>
+        </div>
+      `).join('');
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.loadFreeTime = loadFreeTime;
+
+  // ── Day View — reuses the existing searchBookings endpoint (already
+  // returns everything needed: time, net, name, ball, status, etc.) and
+  // groups the results by time slot on the frontend, colour-coding each
+  // group by hour to match the Monthly Schedule sheet's own colour scheme
+  // exactly, so it reads as "the same thing", just without opening that
+  // separate sheet.
+  const DAY_VIEW_HOUR_COLORS = {
+     9:'#4a90d9', 10:'#e8923f', 11:'#57a85d', 12:'#d4a017', 13:'#8b6fc4',
+    14:'#e06060', 15:'#3d9a8a', 16:'#b87333', 17:'#6b8fbf', 18:'#c46e3a',
+    19:'#5b9a5b', 20:'#a06090', 21:'#7a7a3a', 22:'#4a7a9a', 23:'#8a5a5a'
+  };
+
+  function dayViewHourColor(timeStr){
+    const m = timeStr.trim().match(/^(\d{2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return '#888';
+    let h = parseInt(m[1],10);
+    const ampm = m[3].toLowerCase();
+    let h24 = (ampm==='pm' && h!==12) ? h+12 : (ampm==='am' && h===12) ? 0 : h;
+    return DAY_VIEW_HOUR_COLORS[h24] || '#888';
+  }
+
+  async function loadDayView(){
+    const dateVal = document.getElementById('dayViewDate').value || todayStr;
+    const msg  = document.getElementById('dayViewMsg');
+    const area = document.getElementById('dayViewResultArea');
+    area.innerHTML = '';
+    msg.textContent = '⏳ Loading…';
+    msg.className = 'admin-msg ok';
+
+    try {
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchBookings&date=${dateVal}&includeBulk=true`, null, 20000);
+      const data = await res.json();
+
+      if(!data.results || !data.results.length){
+        msg.textContent = 'No bookings found for this date.';
+        msg.className = 'admin-msg err';
+        return;
+      }
+
+      // Group by time slot, in chronological order (using ALL_TIMES_FS's
+      // order as the reference, so slots appear in real time order rather
+      // than however they happened to come back from the server).
+      const grouped = {};
+      data.results.forEach(b => {
+        if(!grouped[b.time]) grouped[b.time] = [];
+        grouped[b.time].push(b);
+      });
+      const orderedTimes = ALL_TIMES_FS.filter(t => grouped[t]);
+      // Catch any time value that somehow isn't in ALL_TIMES_FS (shouldn't
+      // normally happen) — append it at the end rather than silently
+      // dropping those bookings from the view.
+      Object.keys(grouped).forEach(t => { if(!orderedTimes.includes(t)) orderedTimes.push(t); });
+
+      msg.textContent = `${data.results.length} booking${data.results.length>1?'s':''} across ${orderedTimes.length} time slot${orderedTimes.length>1?'s':''}.`;
+      msg.className = 'admin-msg ok';
+
+      area.innerHTML = orderedTimes.map(t => {
+        const color = dayViewHourColor(t);
+        const rows = grouped[t].map(b => {
+          const cancelled = b.status === 'Cancelled';
+          const groupBadge = b.groupCode
+            ? ` · <span style="color:var(--leather);font-weight:700;">${b.groupCode}</span>`
+            : '';
+          return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #f0ece0;${cancelled ? 'opacity:.55;' : ''}">
+            <div style="flex:1;">
+              <strong style="color:var(--navy);">${b.name}</strong> · ${b.mobile}
+              <div style="font-size:12px;color:var(--muted);">
+                Net ${b.net} · ${b.players} player${b.players=='1'?'':'s'} · ${b.duration} · ${b.ball} · ₹${b.amount}${groupBadge}
+                ${cancelled ? ' · <span style="color:#b3261e;font-weight:700;">CANCELLED</span>' : ''}
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);">Ref: ${b.ref}</div>
+          </div>`;
+        }).join('');
+        return `
+        <div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1.5px solid ${color};">
+          <div style="background:${color};color:#fff;font-weight:700;padding:8px 12px;font-size:13.5px;">
+            ${t} — ${grouped[t].length} booking${grouped[t].length>1?'s':''}
+          </div>
+          <div style="background:#fff;">${rows}</div>
+        </div>`;
+      }).join('');
+    } catch(e){
+      msg.textContent = '❌ Connection error. Please try again.';
+      msg.className = 'admin-msg err';
+    }
+  }
+  window.loadDayView = loadDayView;
+
   function bookFreeSlot(dateVal, timeVal){
     // Pre-fills the New Booking form right here on the same page (rather
     // than navigating elsewhere) and scrolls it into view.
@@ -827,11 +1027,53 @@
   document.getElementById('freeSlotsDate').value = todayStr;
   loadFreeSlots();
 
+  // Default Day View date to today (auto-loads separately when its tab is opened)
+  document.getElementById('dayViewDate').value = todayStr;
+
   // Default Name Search's From/To dates to today, so the fields aren't
   // blank when the tab is first opened — matches the request to always
   // show a sensible starting point rather than empty pickers.
   document.getElementById('nameFromDate').value = todayStr;
   document.getElementById('nameToDate').value = todayStr;
+
+  // ---- "Prime Time" rule (same as the customer-facing page): Evening +
+  // fewer than 5 players can only be booked same-day, after 5pm. Applies
+  // here too so staff can't accidentally bypass it — enforced both live
+  // (as a warning while filling the form) and again at submit time.
+  const PRIME_TIME_MSG_STF = "As the number of players is less than 5, Prime Time slots can only be booked after 5:00 PM on the same day.";
+  const PRIME_TIME_PLAYER_VALUES_STF = ['1','2','3','4'];
+
+  function primeTimeRuleAppliesStf(){
+    return aSession.value.startsWith('Evening') && PRIME_TIME_PLAYER_VALUES_STF.includes(aPlayers.value);
+  }
+
+  function primeTimeAllowedNowStf(){
+    if(aDateEl.value !== todayStr) return false; // future date: never allowed under this rule
+    const nowMinutes = new Date().getHours()*60 + new Date().getMinutes();
+    return nowMinutes >= 17*60; // 5:00 pm
+  }
+
+  function refreshPrimeTimeCheckStf(){
+    const msg = document.getElementById('adminMsg');
+    if(primeTimeRuleAppliesStf() && !primeTimeAllowedNowStf()){
+      msg.textContent = '⚠️ ' + PRIME_TIME_MSG_STF;
+      msg.className = 'admin-msg err';
+    } else if(msg.textContent === '⚠️ ' + PRIME_TIME_MSG_STF){
+      msg.textContent = '';
+      msg.className = 'admin-msg';
+    }
+  }
+  aSession.addEventListener('change', refreshPrimeTimeCheckStf);
+  aPlayers.addEventListener('change', refreshPrimeTimeCheckStf);
+  aDateEl.addEventListener('change', refreshPrimeTimeCheckStf);
+  setInterval(refreshPrimeTimeCheckStf, 30000); // auto-unlocks the moment it turns 5pm
+
+  // Tracks whether the CURRENT booking attempt is a retry of an earlier
+  // one that already failed — set to true only when a connection error is
+  // shown, reset to false after any successful booking. A normal,
+  // first-time "Book Now" click always sends retry=false, so the server's
+  // extra duplicate-check only runs on a genuine re-click after a failure.
+  let staffBookIsRetry = false;
 
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
@@ -850,6 +1092,11 @@
       msg.className = 'admin-msg err';
       return;
     }
+    if(primeTimeRuleAppliesStf() && !primeTimeAllowedNowStf()){
+      msg.textContent = '⚠️ ' + PRIME_TIME_MSG_STF;
+      msg.className = 'admin-msg err';
+      return;
+    }
     if(!/^[6-9]\d{9}$/.test(mobile)){
       msg.textContent = '⚠️ Enter a valid 10-digit mobile number.';
       msg.className = 'admin-msg err';
@@ -858,17 +1105,20 @@
 
     const btn = document.getElementById('adminBookBtn');
     btn.disabled = true; btn.textContent = 'Booking…';
+    document.getElementById('staffBookingProgress').style.display = 'block';
     document.getElementById('confirmPanel').classList.remove('show');
 
     const ref = 'STF'+Math.random().toString(36).slice(2,7).toUpperCase();
     const rate = lookupRate(session, players, ball);
     const amount = rate ? rate * ADMIN_DUR_HRS[dur] * nets : '';
-    const qs = `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}`+
+    const buildQs = (confirmDup) => `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}`+
       `&mobile=${encodeURIComponent(mobile)}&date=${encodeURIComponent(date)}&session=${encodeURIComponent(session)}`+
       `&time=${encodeURIComponent(time)}&players=${encodeURIComponent(players)}&netsRequired=${nets}`+
-      `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`;
+      `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`+
+      `&retry=${staffBookIsRetry}&confirmDuplicate=${confirmDup}`;
 
     function handleSuccess(result){
+      staffBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
       if(result.month){
         fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=rebuild&month=${result.month}`, null, 30000).catch(()=>{});
       }
@@ -913,8 +1163,6 @@ Amount: ₹${amount}
 🧍🧍🧍 Rate changes if player count exceeds booking.
 🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 
-👉 *Please note:* Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
-
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
@@ -927,7 +1175,7 @@ Cancellation allowed up to 2 hours before the slot or inform us.
 In case of any network issues, please contact us directly.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
-https://tinyurl.com/2hta9v6t?v=2
+https://countyindoornetz.com/Client_Booking.html
 
 Thank you for your cooperation! See you at the nets! 🏏`;
 
@@ -947,7 +1195,6 @@ Amount: Rs.${amount}
 
 Helmet compulsory for leather balls. Rate changes if player count exceeds booking.
 
-Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
 Punctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
 Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.
@@ -970,8 +1217,24 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
 
     try {
-      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
-      const result = await res.json();
+      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(false)}`, null, 30000);
+      let result = await res.json();
+
+      if(result.status === 'possible_duplicate'){
+        document.getElementById('staffBookingProgress').style.display = 'none';
+        const proceed = confirm(
+          `${result.name || 'This mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nStill book this as a SEPARATE, additional booking?`
+        );
+        if(!proceed){
+          msg.textContent = 'Booking not submitted — already has a confirmed booking for this exact slot.';
+          msg.className = 'admin-msg err';
+          btn.disabled = false; btn.textContent = 'Book Now';
+          return;
+        }
+        document.getElementById('staffBookingProgress').style.display = 'block';
+        res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(true)}`, null, 30000);
+        result = await res.json();
+      }
 
       if(result.status === 'ok'){
         handleSuccess(result);
@@ -992,21 +1255,24 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       // actually saved — check before showing an error (see Client page
       // for the same protection and reasoning).
       try {
-        const checkRes = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 15000);
+        const checkRes = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=checkRef&ref=${encodeURIComponent(ref)}`, null, 20000);
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){
           handleSuccess({ nets: checkResult.nets, month: parseInt(date.split('-')[1],10) });
         } else {
+          staffBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
           msg.textContent = '❌ Connection error. Please try again.';
           msg.className = 'admin-msg err';
         }
       } catch(checkErr){
+        staffBookIsRetry = true; // a re-click now should ask the server to check for a duplicate
         msg.textContent = '❌ Connection error. Please try again.';
         msg.className = 'admin-msg err';
       }
     }
 
     btn.disabled = false; btn.textContent = '✅ Book Now';
+    document.getElementById('staffBookingProgress').style.display = 'none';
   }
   window.adminBookNow = adminBookNow;
 
@@ -1038,9 +1304,9 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
     try {
       const qs = refVal
-        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}`
-        : `action=searchBookings&date=${encodeURIComponent(dateVal)}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 15000);
+        ? `action=searchBookings&ref=${encodeURIComponent(refVal)}&includeBulk=true`
+        : `action=searchBookings&date=${encodeURIComponent(dateVal)}&includeBulk=true`;
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
       const data = await res.json();
 
       if(!data.results || !data.results.length){
@@ -1056,13 +1322,15 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
         const isCancelled = b.status === 'Cancelled';
         const isPast = isSlotPast(b.dateISO || b.date, b.time);
         if(!isCancelled) totalAmount += parseFloat(String(b.amount).replace(/[₹,]/g,'')) || 0;
+        const groupLine = b.groupCode ? `<div class="bulk-group-meta">👥 Group: <strong style="color:var(--leather);">${b.groupCode}</strong></div>` : '';
         return `
         <div class="bulk-group-card" id="nslot_${i}">
           <div class="bulk-group-header" onclick="toggleNormalResult(${i})">
             <div class="bulk-group-info">
               <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
               <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
-              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+              <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 👥 ${b.players} player${b.players=='1'?'':'s'} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+              ${groupLine}
             </div>
             ${isCancelled ? '<span class="bulk-group-badge" style="background:#b3261e;">🚫 Cancelled</span>'
               : isPast ? '<span class="bulk-group-badge" style="background:var(--muted);">Past</span>' : ''}
@@ -1113,7 +1381,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
     nameSearchDebounce = setTimeout(async ()=>{
       try {
-        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 25000);
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=searchNamePrefix&prefix=${encodeURIComponent(q)}`, null, 30000);
         const data = await res.json();
         const matches = data.matches || [];
         if(!matches.length){
@@ -1193,7 +1461,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
     try {
       const qs = `action=bookingsByMobileRange&mobile=${encodeURIComponent(selectedPersonMobile)}&name=${encodeURIComponent(selectedPersonName)}&fromDate=${fromDate}&toDate=${toDate}`;
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 20000);
+      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
       const data = await res.json();
       const rows = data.rows || [];
 
