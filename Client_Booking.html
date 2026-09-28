@@ -793,6 +793,27 @@
 </div>
 
 <script>
+  // Builds the "already has a booking" question from the server's reply.
+  // whoPrefix: 'You already have'  or  'Name (mobile) already has'
+  function dupMessage(result, whoPrefix){
+    const list = (Array.isArray(result.bookings) && result.bookings.length)
+      ? result.bookings
+      : ((Array.isArray(result.refs) && result.refs.length) ? result.refs : [result.ref]).map(r => ({ ref:r }));
+    const d = result.dateDisplay || '';
+    const fmt = b => {
+      const parts = [];
+      if(b.time) parts.push(String(b.time).toUpperCase());
+      if(b.duration) parts.push(b.duration);
+      return (parts.length ? parts.join(', ') + ' ' : '') + `(Ref: ${b.ref}${b.groupCode ? ', Group ' + b.groupCode : ''})`;
+    };
+    const head = list.length === 1
+      ? `${whoPrefix} a booking on ${d} - ${fmt(list[0])}.`
+      : `${whoPrefix} ${list.length} bookings on ${d}:\n` + list.map(b => '• ' + fmt(b)).join('\n');
+    return head +
+      `\n\nTo change the time, please cancel the old booking before making a new one.` +
+      `\n\nPress OK to book this as an ADDITIONAL slot, or Cancel to go back.`;
+  }
+
 (function(){
   // ---- Remember returning customer's Name & Mobile on this device ----
   const STORAGE_KEY = 'countyIndoorNetz_customer';
@@ -1529,21 +1550,9 @@
       }
     }
 
-    // Duplicate guard (this phone): if this mobile already booked this exact
-    // date + session + time from this device, ask before sending again.
-    // Survives page reloads, so a refresh-and-rebook is still caught.
+    // Duplicate check is done by the server (it sees every booking from
+    // every device, and knows about cancellations).
     let localDupConfirmed = false;
-    const prevSame = findRecentBooking(mobile, date, session, time);
-    if(prevSame){
-      const goOn = confirm(
-        `You already booked this exact date, time and session (Ref ${prevSame.ref}).\n\nDo you still want to book this as a SEPARATE, additional booking?`
-      );
-      if(!goOn){
-        // Customer chose Cancel on the question — no second message needed.
-        return;
-      }
-      localDupConfirmed = true;
-    }
 
     // Final check: make sure this slot+duration hasn't filled up since the page loaded
     const submitBtn = form.querySelector('button.submit');
@@ -1671,9 +1680,7 @@ Thank you for your cooperation! See you at the nets!`;
         submitBtn.textContent = 'Confirm Booking';
         submitBtn.disabled = false;
         document.getElementById('bookingProgress').style.display = 'none';
-        const proceed = confirm(
-          `It looks like ${result.name || 'this mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nDo you still want to book this as a SEPARATE, additional booking?`
-        );
+        const proceed = confirm(dupMessage(result, 'You already have'));
         if(!proceed){
           // Customer chose Cancel on the question — no second message needed.
           submitBtn.disabled = false;
@@ -1698,7 +1705,6 @@ Thank you for your cooperation! See you at the nets!`;
           waMessage  = waMessage.split(ref).join(finalRef);
           smsMessage = smsMessage.split(ref).join(finalRef);
         }
-        rememberRecentBooking(mobile, date, session, time, finalRef);
         handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage);
       } else if(result.status === 'full'){
         showBookingError('Sorry, this time slot just filled up. Please select a different time or reduce the number of nets.');
@@ -1718,7 +1724,6 @@ Thank you for your cooperation! See you at the nets!`;
         );
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){
-          rememberRecentBooking(mobile, date, session, time, ref);
           // It DID go through — show the normal success confirmation,
           // exactly as if the first request had succeeded cleanly.
           handleBookingSuccess(
@@ -1747,28 +1752,6 @@ Thank you for your cooperation! See you at the nets!`;
   // Takes name/mobile/ball/waMessage/smsMessage as explicit parameters
   // (rather than relying on closure) since those are local to each
   // individual submit attempt, not available outside that handler.
-  // ---- Recent bookings on this device (for the duplicate guard) ----
-  const RECENT_KEY = 'cin_recent_bookings';
-  function readRecentBookings(){
-    try{
-      const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-      return Array.isArray(list) ? list : [];
-    }catch(err){ return []; }
-  }
-  function findRecentBooking(mobile, date, session, time){
-    return readRecentBookings().find(b =>
-      b.mobile === mobile && b.date === date && b.session === session && b.time === time
-    ) || null;
-  }
-  function rememberRecentBooking(mobile, date, session, time, ref){
-    try{
-      const today = new Date().toISOString().slice(0,10);
-      const list = readRecentBookings().filter(b => b.date >= today); // drop past dates
-      list.push({ mobile, date, session, time, ref });
-      localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(-20)));
-    }catch(err){}
-  }
-
   function handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage){
     bookingIsRetry = false; // this attempt succeeded — the next "Confirm Booking" click is a brand new booking, not a retry
     // Trigger monthly tab rebuild in background (non-blocking)

@@ -1066,6 +1066,27 @@
 </div>
 
 <script>
+  // Builds the "already has a booking" question from the server's reply.
+  // whoPrefix: 'You already have'  or  'Name (mobile) already has'
+  function dupMessage(result, whoPrefix){
+    const list = (Array.isArray(result.bookings) && result.bookings.length)
+      ? result.bookings
+      : ((Array.isArray(result.refs) && result.refs.length) ? result.refs : [result.ref]).map(r => ({ ref:r }));
+    const d = result.dateDisplay || '';
+    const fmt = b => {
+      const parts = [];
+      if(b.time) parts.push(String(b.time).toUpperCase());
+      if(b.duration) parts.push(b.duration);
+      return (parts.length ? parts.join(', ') + ' ' : '') + `(Ref: ${b.ref}${b.groupCode ? ', Group ' + b.groupCode : ''})`;
+    };
+    const head = list.length === 1
+      ? `${whoPrefix} a booking on ${d} - ${fmt(list[0])}.`
+      : `${whoPrefix} ${list.length} bookings on ${d}:\n` + list.map(b => '• ' + fmt(b)).join('\n');
+    return head +
+      `\n\nTo change the time, please cancel the old booking before making a new one.` +
+      `\n\nPress OK to book this as an ADDITIONAL slot, or Cancel to go back.`;
+  }
+
 (function(){
 
   // ── Shared helpers (duplicated from the client page, since this is now
@@ -3034,29 +3055,6 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   // bookings and each individual slot in a bulk group booking.
   let adminBookIsRetry = false;
 
-  // ---- Recent bookings made on this device (for the duplicate guard) ----
-  // Survives page reloads, so refreshing and re-booking the same slot is caught.
-  const RECENT_KEY = 'cin_admin_recent_bookings';
-  function readRecentBookings(){
-    try{
-      const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-      return Array.isArray(list) ? list : [];
-    }catch(err){ return []; }
-  }
-  function findRecentBooking(mobile, date, session, time){
-    return readRecentBookings().find(b =>
-      b.mobile === mobile && b.date === date && b.session === session && b.time === time
-    ) || null;
-  }
-  function rememberRecentBooking(mobile, date, session, time, ref){
-    try{
-      const today = new Date().toISOString().slice(0,10);
-      const list = readRecentBookings().filter(b => b.date >= today); // drop past dates
-      list.push({ mobile, date, session, time, ref });
-      localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(-50)));
-    }catch(err){}
-  }
-
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
     const mobile  = document.getElementById('aMobile').value.trim();
@@ -3084,20 +3082,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       return;
     }
 
-    // Duplicate guard (this device): same mobile + date + session + time
-    // already booked from here? Ask before sending again.
+    // Duplicate check is done by the server (it sees every booking from
+    // every device, and knows about cancellations).
     let localDupConfirmed = false;
-    const prevSame = findRecentBooking(mobile, date, session, time);
-    if(prevSame){
-      const goOn = confirm(
-        `${name} (${mobile}) already has a booking for this exact date, time and session (Ref ${prevSame.ref}).\n\nStill book this as a SEPARATE, additional booking?`
-      );
-      if(!goOn){
-        msg.textContent = ''; msg.className = 'admin-msg'; // chose Cancel — no second message
-        return;
-      }
-      localDupConfirmed = true;
-    }
 
     btn.disabled = true;
     btn.textContent = 'Booking…';
@@ -3138,9 +3125,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
       if(result.status === 'possible_duplicate'){
         document.getElementById('adminBookingProgress').style.display = 'none';
-        const proceed = confirm(
-          `${result.name || 'This mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nStill book this as a SEPARATE, additional booking?`
-        );
+        const proceed = confirm(dupMessage(result, `${name} (${mobile}) already has`));
         if(!proceed){
           msg.textContent = ''; msg.className = 'admin-msg'; // chose Cancel — no second message
           btn.disabled = false;
@@ -3161,7 +3146,6 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       // finds the booking actually went through despite a failed response.
       function handleAdminSuccess(successResult){
         adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
-        rememberRecentBooking(mobile, date, session, time, ref);
         const netLabel = Array.isArray(successResult.nets) ? successResult.nets.map(n=>'Net '+n).join(', ') : '';
 
         // Trigger monthly tab rebuild in background (non-blocking)
@@ -3214,7 +3198,6 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         if(checkResult.status === 'ok'){
           const netLabel = Array.isArray(checkResult.nets) ? checkResult.nets.map(n=>'Net '+n).join(', ') : '';
           adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
-          rememberRecentBooking(mobile, date, session, time, ref);
           adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
           updateAdminReceipt();
           const count = adminBookings.length;
