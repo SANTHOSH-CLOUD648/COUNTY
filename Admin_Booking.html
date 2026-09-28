@@ -3034,6 +3034,29 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   // bookings and each individual slot in a bulk group booking.
   let adminBookIsRetry = false;
 
+  // ---- Recent bookings made on this device (for the duplicate guard) ----
+  // Survives page reloads, so refreshing and re-booking the same slot is caught.
+  const RECENT_KEY = 'cin_admin_recent_bookings';
+  function readRecentBookings(){
+    try{
+      const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    }catch(err){ return []; }
+  }
+  function findRecentBooking(mobile, date, session, time){
+    return readRecentBookings().find(b =>
+      b.mobile === mobile && b.date === date && b.session === session && b.time === time
+    ) || null;
+  }
+  function rememberRecentBooking(mobile, date, session, time, ref){
+    try{
+      const today = new Date().toISOString().slice(0,10);
+      const list = readRecentBookings().filter(b => b.date >= today); // drop past dates
+      list.push({ mobile, date, session, time, ref });
+      localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(-50)));
+    }catch(err){}
+  }
+
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
     const mobile  = document.getElementById('aMobile').value.trim();
@@ -3059,6 +3082,22 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       msg.className = 'admin-msg err';
       msg.scrollIntoView({behavior:'smooth', block:'nearest'});
       return;
+    }
+
+    // Duplicate guard (this device): same mobile + date + session + time
+    // already booked from here? Ask before sending again.
+    let localDupConfirmed = false;
+    const prevSame = findRecentBooking(mobile, date, session, time);
+    if(prevSame){
+      const goOn = confirm(
+        `${name} (${mobile}) already has a booking for this exact date, time and session (Ref ${prevSame.ref}).\n\nStill book this as a SEPARATE, additional booking?`
+      );
+      if(!goOn){
+        msg.textContent = 'Booking not submitted — already has a booking for this exact slot (Ref ' + prevSame.ref + ').';
+        msg.className = 'admin-msg err';
+        return;
+      }
+      localDupConfirmed = true;
     }
 
     btn.disabled = true;
@@ -3092,10 +3131,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amount)}`,
         `groupCode=${encodeURIComponent(currentGroupRef)}`,
-        `retry=${adminBookIsRetry}`,
+        `retry=true`, // always ask the server to check for an existing booking of this exact slot
         `confirmDuplicate=${confirmDup}`
       ].join('&');
-      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(false)}`, null, 30000);
+      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(localDupConfirmed)}`, null, 30000);
       let result = await res.json();
 
       if(result.status === 'possible_duplicate'){
@@ -3124,6 +3163,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       // finds the booking actually went through despite a failed response.
       function handleAdminSuccess(successResult){
         adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
+        rememberRecentBooking(mobile, date, session, time, ref);
         const netLabel = Array.isArray(successResult.nets) ? successResult.nets.map(n=>'Net '+n).join(', ') : '';
 
         // Trigger monthly tab rebuild in background (non-blocking)
@@ -3176,6 +3216,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         if(checkResult.status === 'ok'){
           const netLabel = Array.isArray(checkResult.nets) ? checkResult.nets.map(n=>'Net '+n).join(', ') : '';
           adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
+          rememberRecentBooking(mobile, date, session, time, ref);
           adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
           updateAdminReceipt();
           const count = adminBookings.length;

@@ -663,6 +663,10 @@
         </div>
       </div>
 
+      <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
+        👉 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
+      </div>
+
       <div class="receipt-box receipt-box-punctuality">
         <div class="box-title">🕐 Punctuality is Mandatory</div>
         <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
@@ -1525,6 +1529,22 @@
       }
     }
 
+    // Duplicate guard (this phone): if this mobile already booked this exact
+    // date + session + time from this device, ask before sending again.
+    // Survives page reloads, so a refresh-and-rebook is still caught.
+    let localDupConfirmed = false;
+    const prevSame = findRecentBooking(mobile, date, session, time);
+    if(prevSame){
+      const goOn = confirm(
+        `You already booked this exact date, time and session (Ref ${prevSame.ref}).\n\nDo you still want to book this as a SEPARATE, additional booking?`
+      );
+      if(!goOn){
+        showBookingError('Booking not submitted. You already have a booking for this exact slot (Ref ' + prevSame.ref + ').');
+        return;
+      }
+      localDupConfirmed = true;
+    }
+
     // Final check: make sure this slot+duration hasn't filled up since the page loaded
     const submitBtn = form.querySelector('button.submit');
     submitBtn.disabled = true;
@@ -1578,6 +1598,8 @@ Amount: ${amountVal.textContent}
 🧍🧍🧍 Rate changes if player count exceeds booking.
 🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 
+👉 *Please note:* Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
+
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
@@ -1611,7 +1633,7 @@ Amount: ${amountVal.textContent.replace('₹','Rs.')}
 
 Helmet compulsory for leather balls. Rate changes if player count exceeds booking.
 
-Punctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
+Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
 Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.
 
@@ -1638,11 +1660,11 @@ Thank you for your cooperation! See you at the nets!`;
         `duration=${encodeURIComponent(duration)}`,
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amountVal.textContent.replace(/[\u20B9,]/g,'').trim())}`,
-        `retry=${bookingIsRetry}`,
+        `retry=true`, // always ask the server to check for an existing booking of this exact slot
         `confirmDuplicate=${confirmDup}`
       ].join('&');
 
-      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(false)}`, null, 30000);
+      let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(localDupConfirmed)}`, null, 30000);
       let result = await res.json();
 
       if(result.status === 'possible_duplicate'){
@@ -1666,6 +1688,7 @@ Thank you for your cooperation! See you at the nets!`;
       }
 
       if(result.status === 'ok'){
+        rememberRecentBooking(mobile, date, session, time, ref);
         handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage);
       } else if(result.status === 'full'){
         showBookingError('Sorry, this time slot just filled up. Please select a different time or reduce the number of nets.');
@@ -1685,6 +1708,7 @@ Thank you for your cooperation! See you at the nets!`;
         );
         const checkResult = await checkRes.json();
         if(checkResult.status === 'ok'){
+          rememberRecentBooking(mobile, date, session, time, ref);
           // It DID go through — show the normal success confirmation,
           // exactly as if the first request had succeeded cleanly.
           handleBookingSuccess(
@@ -1713,6 +1737,28 @@ Thank you for your cooperation! See you at the nets!`;
   // Takes name/mobile/ball/waMessage/smsMessage as explicit parameters
   // (rather than relying on closure) since those are local to each
   // individual submit attempt, not available outside that handler.
+  // ---- Recent bookings on this device (for the duplicate guard) ----
+  const RECENT_KEY = 'cin_recent_bookings';
+  function readRecentBookings(){
+    try{
+      const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    }catch(err){ return []; }
+  }
+  function findRecentBooking(mobile, date, session, time){
+    return readRecentBookings().find(b =>
+      b.mobile === mobile && b.date === date && b.session === session && b.time === time
+    ) || null;
+  }
+  function rememberRecentBooking(mobile, date, session, time, ref){
+    try{
+      const today = new Date().toISOString().slice(0,10);
+      const list = readRecentBookings().filter(b => b.date >= today); // drop past dates
+      list.push({ mobile, date, session, time, ref });
+      localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(-20)));
+    }catch(err){}
+  }
+
   function handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage){
     bookingIsRetry = false; // this attempt succeeded — the next "Confirm Booking" click is a brand new booking, not a retry
     // Trigger monthly tab rebuild in background (non-blocking)
