@@ -1135,8 +1135,7 @@
         `${name} (${mobile}) already has a booking for this exact date, time and session (Ref ${prevSame.ref}).\n\nStill book this as a SEPARATE, additional booking?`
       );
       if(!goOn){
-        msg.textContent = 'Booking not submitted — already has a booking for this exact slot (Ref ' + prevSame.ref + ').';
-        msg.className = 'admin-msg err';
+        msg.textContent = ''; msg.className = 'admin-msg'; // chose Cancel — no second message
         return;
       }
       localDupConfirmed = true;
@@ -1266,8 +1265,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
           `${result.name || 'This mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nStill book this as a SEPARATE, additional booking?`
         );
         if(!proceed){
-          msg.textContent = 'Booking not submitted — already has a confirmed booking for this exact slot.';
-          msg.className = 'admin-msg err';
+          msg.textContent = ''; msg.className = 'admin-msg'; // chose Cancel — no second message
           btn.disabled = false; btn.textContent = 'Book Now';
           return;
         }

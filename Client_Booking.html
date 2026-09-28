@@ -1539,7 +1539,7 @@
         `You already booked this exact date, time and session (Ref ${prevSame.ref}).\n\nDo you still want to book this as a SEPARATE, additional booking?`
       );
       if(!goOn){
-        showBookingError('Booking not submitted. You already have a booking for this exact slot (Ref ' + prevSame.ref + ').');
+        // Customer chose Cancel on the question — no second message needed.
         return;
       }
       localDupConfirmed = true;
@@ -1675,7 +1675,7 @@ Thank you for your cooperation! See you at the nets!`;
           `It looks like ${result.name || 'this mobile number'} already has a confirmed booking for this exact date, time and session (Ref ${result.ref}).\n\nDo you still want to book this as a SEPARATE, additional booking?`
         );
         if(!proceed){
-          showBookingError('Booking not submitted. You already have a confirmed booking for this exact slot.');
+          // Customer chose Cancel on the question — no second message needed.
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirm Booking';
           return;
