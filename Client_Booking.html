@@ -1579,7 +1579,7 @@
       : '';
 
     // WhatsApp message — supports bold (*text*) and emoji
-    const waMessage =
+    let waMessage =
 `*County Indoor Netz — Booking Confirmed*
 Ref #${ref}
 ${bannerLine}
@@ -1617,7 +1617,7 @@ https://countyindoornetz.com/Client_Booking.html
 Thank you for your cooperation! See you at the nets! 🏏`;
 
     // SMS message — plain text only, no special chars, no emoji (for max compatibility)
-    const smsMessage =
+    let smsMessage =
 `County Indoor Netz - Booking Confirmed
 Ref #${ref}
 ${bannerLine}Name: ${name}
@@ -1660,7 +1660,7 @@ Thank you for your cooperation! See you at the nets!`;
         `duration=${encodeURIComponent(duration)}`,
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amountVal.textContent.replace(/[\u20B9,]/g,'').trim())}`,
-        `retry=true`, // always ask the server to check for an existing booking of this exact slot
+        `retry=${bookingIsRetry}`,
         `confirmDuplicate=${confirmDup}`
       ].join('&');
 
@@ -1688,7 +1688,17 @@ Thank you for your cooperation! See you at the nets!`;
       }
 
       if(result.status === 'ok'){
-        rememberRecentBooking(mobile, date, session, time, ref);
+        // If the server matched this to an ALREADY-SAVED booking (a repeat
+        // after a connection error), show that booking's real Ref instead.
+        let finalRef = ref;
+        if(result.ref && result.ref !== ref){
+          finalRef = result.ref;
+          refNo.textContent = finalRef;
+          confirmDetails.innerHTML = confirmDetails.innerHTML.split(ref).join(finalRef);
+          waMessage  = waMessage.split(ref).join(finalRef);
+          smsMessage = smsMessage.split(ref).join(finalRef);
+        }
+        rememberRecentBooking(mobile, date, session, time, finalRef);
         handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage);
       } else if(result.status === 'full'){
         showBookingError('Sorry, this time slot just filled up. Please select a different time or reduce the number of nets.');

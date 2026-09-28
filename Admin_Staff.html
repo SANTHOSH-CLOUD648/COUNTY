@@ -1154,7 +1154,7 @@
       `&mobile=${encodeURIComponent(mobile)}&date=${encodeURIComponent(date)}&session=${encodeURIComponent(session)}`+
       `&time=${encodeURIComponent(time)}&players=${encodeURIComponent(players)}&netsRequired=${nets}`+
       `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`+
-      `&retry=true&confirmDuplicate=${confirmDup}`; // always ask the server to check for an existing booking of this exact slot
+      `&retry=${staffBookIsRetry}&confirmDuplicate=${confirmDup}`;
 
     function handleSuccess(result){
       staffBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry

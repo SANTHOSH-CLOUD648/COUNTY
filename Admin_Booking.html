@@ -3131,7 +3131,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         `ball=${encodeURIComponent(ball)}`,
         `amount=${encodeURIComponent(amount)}`,
         `groupCode=${encodeURIComponent(currentGroupRef)}`,
-        `retry=true`, // always ask the server to check for an existing booking of this exact slot
+        `retry=${adminBookIsRetry}`,
         `confirmDuplicate=${confirmDup}`
       ].join('&');
       let res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${buildQs(localDupConfirmed)}`, null, 30000);
