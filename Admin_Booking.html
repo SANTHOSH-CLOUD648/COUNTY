@@ -810,6 +810,9 @@
               </a>
             </div>
           </div>
+          <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
+            👉 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
+          </div>
           <div class="receipt-box receipt-box-punctuality">
             <div class="box-title">🕐 Punctuality is Mandatory</div>
             <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
@@ -1031,6 +1034,9 @@
             🚗 Get directions on Google Maps
           </a>
         </div>
+      </div>
+      <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
+        👉 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
       </div>
       <div class="receipt-box receipt-box-punctuality">
         <div class="box-title">🕐 Punctuality is Mandatory</div>
@@ -2970,6 +2976,8 @@ https://countyindoornetz.com/Client_Booking.html`;
 🧍🧍🧍 Rate changes if player count exceeds booking.
 🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 
+👉 *Please note:* Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
+
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
@@ -2986,7 +2994,7 @@ https://countyindoornetz.com/Client_Booking.html
 
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -3290,6 +3298,8 @@ ${waLines}
 🧍🧍🧍 Rate changes if player count exceeds booking.
 🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 
+👉 *Please note:* Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
+
 *🕐 Punctuality is Mandatory*
 Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
@@ -3310,7 +3320,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name}${b0.teamName ? ` | Team: ${b0.teamName}` : ''} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name}${b0.teamName ? ` | Team: ${b0.teamName}` : ''} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');
