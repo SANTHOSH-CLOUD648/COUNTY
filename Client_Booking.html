@@ -530,6 +530,11 @@
         <div class="errmsg"></div>
       </div>
 
+      <div class="field full" id="f-teamName">
+        <label for="teamName">Team Name <span style="font-weight:400;opacity:.7;">(optional)</span></label>
+        <input type="text" id="teamName" placeholder="e.g. County Strikers" maxlength="40" autocomplete="off">
+      </div>
+
       <div class="field" id="f-mobile">
         <label for="mobile">Mobile No. <span class="req">*</span></label>
         <input type="tel" id="mobile" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
@@ -550,7 +555,7 @@
         <select id="session">
           <option value="" disabled selected>Select session</option>
           <option value="Morning (09:00 am to 05:00 pm)">Morning (09:00 am – 05:00 pm)</option>
-          <option value="Evening (06:00 pm to 11:30 pm)">Evening (06:00 pm – 11:30 pm)</option>
+          <option value="Evening (05:30 pm to 11:30 pm)">Evening (05:30 pm – 11:30 pm)</option>
         </select>
         <div class="errmsg"></div>
       </div>
@@ -676,7 +681,7 @@
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
         <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-        <div class="line">⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
       </div>
 
       <div class="receipt-box receipt-box-network">
@@ -716,7 +721,7 @@
       <div style="margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px solid #f0dcc0;border-radius:10px;font-size:13px;color:var(--ink);line-height:1.6;">
         <strong style="color:var(--navy);">Cancellation Policy</strong><br>
         Cancellation allowed up to 2 hours before the slot or inform us.<br>
-        For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+        For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
       </div>
     </div>
   </div>
@@ -819,6 +824,7 @@
   const STORAGE_KEY = 'countyIndoorNetz_customer';
   const nameInput = document.getElementById('name');
   const mobileInput = document.getElementById('mobile');
+  const teamInput = document.getElementById('teamName');
   const welcomeBack = document.getElementById('welcomeBack');
   const welcomeBackName = document.getElementById('welcomeBackName');
   const notYouBtn = document.getElementById('notYouBtn');
@@ -831,6 +837,7 @@
       if(saved && saved.name && saved.mobile){
         nameInput.value = saved.name;
         mobileInput.value = saved.mobile;
+        if(saved.teamName && teamInput) teamInput.value = saved.teamName; // last team used on this phone
         welcomeBackName.textContent = saved.name;
         welcomeBack.classList.add('show');
         // Restore last ball type if saved
@@ -843,14 +850,15 @@
     }catch(err){}
   }
 
-  function rememberCustomer(name, mobile, ball){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, mobile, ball })); }catch(err){}
+  function rememberCustomer(name, mobile, ball, teamName){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, mobile, ball, teamName: teamName || '' })); }catch(err){}
   }
 
   notYouBtn.addEventListener('click', ()=>{
     try{ localStorage.removeItem(STORAGE_KEY); }catch(err){}
     nameInput.value = '';
     mobileInput.value = '';
+    if(teamInput) teamInput.value = '';
     welcomeBack.classList.remove('show');
     nameInput.focus();
   });
@@ -976,9 +984,9 @@
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
 
-  // Morning = 09:00am..05:00pm ; Evening = 06:00pm..11:00pm ; 05:30pm is a changeover buffer, included in neither.
+  // Morning = 09:00am..05:00pm ; Evening = 05:30pm..10:30pm (start times).
   const MORNING_TIMES = ALL_TIMES.slice(0, ALL_TIMES.indexOf("05:00 pm")+1);
-  const EVENING_TIMES = ALL_TIMES.slice(ALL_TIMES.indexOf("06:00 pm"));
+  const EVENING_TIMES = ALL_TIMES.slice(ALL_TIMES.indexOf("05:30 pm"));
 
   const sessionSel = document.getElementById('session');
   const timeSel = document.getElementById('time');
@@ -1189,7 +1197,7 @@
 
     sessionSel.value = isMorning
       ? 'Morning (09:00 am to 05:00 pm)'
-      : 'Evening (06:00 pm to 11:30 pm)';
+      : 'Evening (05:30 pm to 11:30 pm)';
 
     populateTimes(isMorning ? MORNING_TIMES : EVENING_TIMES);
     timeSel.value = prefTime;
@@ -1392,7 +1400,7 @@
     if(!sk || !players) return null;
     const sessionLabel = sk === 'Morning'
       ? 'Morning (09:00 am to 05:00 pm)'
-      : 'Evening (06:00 pm to 11:30 pm)';
+      : 'Evening (05:30 pm to 11:30 pm)';
     return lookupRate(sessionLabel, players, ballSel.value);
   }
 
@@ -1483,6 +1491,9 @@
 
     let valid = true;
     const name = toTitleCase(document.getElementById('name').value.trim());
+    // Optional team name — trimmed, max 40 chars, < > removed for safe display
+    const teamName = document.getElementById('teamName').value.replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40);
+    const teamLine = teamName ? `Team: ${teamName}\n` : '';
     const mobile = document.getElementById('mobile').value.trim();
     const date = dateInput.value;
     const session = sessionSel.value;
@@ -1569,6 +1580,7 @@
     refNo.textContent = ref;
     confirmDetails.innerHTML = `
       <dt>Name</dt><dd>${name}</dd>
+      ${teamName ? `<dt>Team</dt><dd>${teamName}</dd>` : ''}
       <dt>Mobile</dt><dd>${mobile}</dd>
       <dt>Date</dt><dd>${dateDisplay}</dd>
       <dt>Session</dt><dd>${session}</dd>
@@ -1593,7 +1605,7 @@
 Ref #${ref}
 ${bannerLine}
 Name: ${name}
-Mobile: ${mobile}
+${teamLine}Mobile: ${mobile}
 Date: ${dateDisplay}
 Session: ${session}
 Time: ${time}
@@ -1615,7 +1627,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -1630,7 +1642,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
 `County Indoor Netz - Booking Confirmed
 Ref #${ref}
 ${bannerLine}Name: ${name}
-Mobile: ${mobile}
+${teamLine}Mobile: ${mobile}
 Date: ${dateDisplay}
 Session: ${session}
 Time: ${time}
@@ -1644,7 +1656,7 @@ Helmet compulsory for leather balls. Rate changes if player count exceeds bookin
 
 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
-Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.
 
 Network/Technical Issues: please contact us directly.
 Tip: Click the link below and use "Add to Home screen" for quick access anytime.
@@ -1660,6 +1672,7 @@ Thank you for your cooperation! See you at the nets!`;
         `action=book`,
         `ref=${encodeURIComponent(ref)}`,
         `name=${encodeURIComponent(name)}`,
+        `teamName=${encodeURIComponent(teamName)}`,
         `mobile=${encodeURIComponent(mobile)}`,
         `date=${encodeURIComponent(date)}`,
         `session=${encodeURIComponent(session)}`,
@@ -1768,7 +1781,10 @@ Thank you for your cooperation! See you at the nets!`;
     confirmPanel.classList.add('show');
     confirmPanel.scrollIntoView({behavior:'smooth', block:'nearest'});
 
-    rememberCustomer(name, mobile, ball);
+    // Team name used for THIS booking (blank if they cleared it) — remembered
+    // on this phone and filled in again next time; they can change or clear it.
+    const keptTeam = teamInput ? teamInput.value.replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40) : '';
+    rememberCustomer(name, mobile, ball, keptTeam);
     welcomeBackName.textContent = name;
     welcomeBack.classList.add('show');
 
@@ -1776,6 +1792,7 @@ Thank you for your cooperation! See you at the nets!`;
     dateInput.value = todayStr;
     nameInput.value = name;
     mobileInput.value = mobile;
+    if(teamInput) teamInput.value = keptTeam;
     document.getElementById('ball').value = ball;
     document.getElementById('ball').dispatchEvent(new Event('change'));
     populateTimes(null);

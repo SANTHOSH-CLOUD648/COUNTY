@@ -372,13 +372,14 @@
     <div class="lock-title">➕ New Booking <span class="badge">STAFF</span></div>
     <div class="admin-grid">
       <div><label class="admin-lbl">Name</label><input type="text" id="aName" placeholder="Customer name"></div>
+      <div><label class="admin-lbl">Team Name (optional)</label><input type="text" id="aTeamName" placeholder="Team name" maxlength="40" autocomplete="off"></div>
       <div><label class="admin-lbl">Mobile</label><input type="tel" id="aMobile" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
       <div><label class="admin-lbl">Date</label><input type="date" id="aDate"></div>
       <div><label class="admin-lbl">Session</label>
         <select id="aSession">
           <option value="" disabled selected>Select</option>
           <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
-          <option value="Evening (06:00 pm to 11:30 pm)">Evening</option>
+          <option value="Evening (05:30 pm to 11:30 pm)">Evening</option>
         </select>
       </div>
       <div><label class="admin-lbl">Time</label>
@@ -463,7 +464,7 @@
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
         <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-        <div class="line">⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
       </div>
       <div class="receipt-box receipt-box-network">
         <div class="box-title">📶 Network / Technical Issues</div>
@@ -576,7 +577,7 @@
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
   const MORNING_A = ALL_TIMES_ADMIN.slice(0, ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
-  const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("06:00 pm"));
+  const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("05:30 pm"));
   const DURATION_SLOTS = {'1 hr':2, '1.5 hrs':3, '2 hrs':4, '2.5 hrs':5, '3 hrs':6};
 
   function getSpanSlots(startTime, durationLabel){
@@ -1031,7 +1032,7 @@
     const isMorning = MORNING_A.includes(timeVal);
     const isEvening = EVENING_A.includes(timeVal);
     if(isMorning || isEvening){
-      aSession.value = isMorning ? 'Morning (09:00 am to 05:00 pm)' : 'Evening (06:00 pm to 11:30 pm)';
+      aSession.value = isMorning ? 'Morning (09:00 am to 05:00 pm)' : 'Evening (05:30 pm to 11:30 pm)';
       populateAdminTimes(isMorning ? MORNING_A : EVENING_A);
       aTime.value = timeVal;
       applyAdminPastTimeFilter();
@@ -1098,6 +1099,9 @@
 
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
+    // Optional team name — trimmed, max 40 chars, < > removed for safe display
+    const teamName = (document.getElementById('aTeamName') ? document.getElementById('aTeamName').value : '').replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40);
+    const teamLine = teamName ? `Team: ${teamName}\n` : '';
     const mobile  = document.getElementById('aMobile').value.trim();
     const date    = aDateEl.value;
     const session = aSession.value;
@@ -1136,7 +1140,7 @@
     const ref = 'STF'+Math.random().toString(36).slice(2,7).toUpperCase();
     const rate = lookupRate(session, players, ball);
     const amount = rate ? rate * ADMIN_DUR_HRS[dur] * nets : '';
-    const buildQs = (confirmDup) => `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}`+
+    const buildQs = (confirmDup) => `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}&teamName=${encodeURIComponent(teamName)}`+
       `&mobile=${encodeURIComponent(mobile)}&date=${encodeURIComponent(date)}&session=${encodeURIComponent(session)}`+
       `&time=${encodeURIComponent(time)}&players=${encodeURIComponent(players)}&netsRequired=${nets}`+
       `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`+
@@ -1158,6 +1162,7 @@
       document.getElementById('refNo').textContent = ref;
       document.getElementById('confirmDetails').innerHTML = `
         <dt>Name</dt><dd>${name}</dd>
+        ${teamName ? `<dt>Team</dt><dd>${teamName}</dd>` : ''}
         <dt>Mobile</dt><dd>${mobile}</dd>
         <dt>Date</dt><dd>${dateDisplay}</dd>
         <dt>Session</dt><dd>${session}</dd>
@@ -1174,7 +1179,7 @@
 Ref #${ref}
 
 Name: ${name}
-Mobile: ${mobile}
+${teamLine}Mobile: ${mobile}
 Date: ${dateDisplay}
 Session: ${session}
 Time: ${time}
@@ -1194,7 +1199,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -1208,7 +1213,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
 `County Indoor Netz - Booking Confirmed
 Ref #${ref}
 Name: ${name}
-Mobile: ${mobile}
+${teamLine}Mobile: ${mobile}
 Date: ${dateDisplay}
 Session: ${session}
 Time: ${time}
@@ -1222,7 +1227,7 @@ Helmet compulsory for leather balls. Rate changes if player count exceeds bookin
 
 Punctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
-Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.
 
 Network/Technical Issues: please contact us directly.
 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
@@ -1235,6 +1240,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       confirmPanel.scrollIntoView({behavior:'smooth', block:'nearest'});
 
       document.getElementById('aName').value = '';
+      document.getElementById('aTeamName').value = '';
       document.getElementById('aMobile').value = '';
       aSession.value = ''; populateAdminTimes(null);
       aDuration.value = ''; aBall.value = ''; aPlayers.value = '';
@@ -1297,6 +1303,30 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     document.getElementById('staffBookingProgress').style.display = 'none';
   }
   window.adminBookNow = adminBookNow;
+
+  // ---- Team Name helper (staff pages only) ----
+  // After a full 10-digit mobile is typed, fill in the last Team Name used
+  // with that mobile — only if the Team Name box is still empty. Runs while
+  // staff fill the rest of the form, so it never slows down the booking.
+  (function(){
+    const mob  = document.getElementById('aMobile');
+    const team = document.getElementById('aTeamName');
+    if(!mob || !team) return;
+    let lastLooked = '';
+    mob.addEventListener('input', async ()=>{
+      const m = mob.value.trim();
+      if(!/^\d{10}$/.test(m) || m === lastLooked) return;
+      lastLooked = m;
+      if(team.value.trim()) return;
+      try{
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=lastTeamName&mobile=${encodeURIComponent(m)}`, null, 15000);
+        const data = await res.json();
+        if(data && data.teamName && !team.value.trim() && mob.value.trim() === m){
+          team.value = data.teamName;
+        }
+      }catch(err){ /* lookup is only a convenience — ignore failures */ }
+    });
+  })();
 
   // ── Search Bookings (view + cancel only, no edit) ──────────────
   let lastSearchDate = '', lastSearchRef = '';

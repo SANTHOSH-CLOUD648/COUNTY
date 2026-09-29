@@ -722,13 +722,14 @@
         </div>
         <div class="admin-grid">
           <div><label class="admin-lbl">Name</label><input type="text" id="aName" placeholder="Customer name"></div>
+          <div><label class="admin-lbl">Team Name (optional)</label><input type="text" id="aTeamName" placeholder="Team name" maxlength="40" autocomplete="off"></div>
           <div><label class="admin-lbl">Mobile</label><input type="tel" id="aMobile" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
           <div><label class="admin-lbl">Date</label><input type="date" id="aDate"></div>
           <div><label class="admin-lbl">Session</label>
             <select id="aSession">
               <option value="" disabled selected>Select</option>
               <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
-              <option value="Evening (06:00 pm to 11:30 pm)">Evening</option>
+              <option value="Evening (05:30 pm to 11:30 pm)">Evening</option>
             </select>
           </div>
           <div><label class="admin-lbl">Time</label>
@@ -817,7 +818,7 @@
           <div class="receipt-box receipt-box-cancellation">
             <div class="box-title">📋 Cancellation Policy</div>
             <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-            <div class="line">⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+            <div class="line">⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
           </div>
           <div class="receipt-box receipt-box-network">
             <div class="box-title">📶 Network / Technical Issues</div>
@@ -969,7 +970,7 @@
         <select id="editSession">
           <option value="" disabled selected>Select</option>
           <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
-          <option value="Evening (06:00 pm to 11:30 pm)">Evening</option>
+          <option value="Evening (05:30 pm to 11:30 pm)">Evening</option>
         </select>
       </div>
       <div><label class="admin-lbl">Time</label>
@@ -1039,7 +1040,7 @@
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
         <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-        <div class="line">⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
       </div>
       <div class="receipt-box receipt-box-network">
         <div class="box-title">📶 Network / Technical Issues</div>
@@ -1214,7 +1215,7 @@
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
   const MORNING_A = ALL_TIMES_ADMIN.slice(0, ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
-  const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("06:00 pm"));
+  const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("05:30 pm"));
 
   const aSession  = document.getElementById('aSession');
   const aTime     = document.getElementById('aTime');
@@ -1386,7 +1387,7 @@
 
     aSession.value = isMorning
       ? 'Morning (09:00 am to 05:00 pm)'
-      : 'Evening (06:00 pm to 11:30 pm)';
+      : 'Evening (05:30 pm to 11:30 pm)';
 
     // Mirrors aSession's own change handler: populate the time list for
     // this session, then apply the specific pre-filled time on top of it.
@@ -2533,7 +2534,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
   const MORNING_E = ALL_TIMES_EDIT.slice(0, ALL_TIMES_EDIT.indexOf('05:00 pm')+1);
-  const EVENING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('06:00 pm'));
+  const EVENING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('05:30 pm'));
 
   let editCurrentRef = '', editCurrentMobile = '', editCurrentName = '', editCurrentGroupRef = '';
 
@@ -2568,9 +2569,11 @@ https://countyindoornetz.com/Client_Booking.html`;
     const hour = parseInt(time.split(':')[0],10);
     const isPM = time.includes('pm');
     const hour24 = isPM && hour!==12 ? hour+12 : (!isPM && hour===12 ? 0 : hour);
-    const session = hour24 < 18 ? 'Morning (09:00 am to 05:00 pm)' : 'Evening (06:00 pm to 11:30 pm)';
+    const minsOfDay = hour24*60 + (parseInt((time.split(':')[1]||'0'),10) || 0);
+    const isEveningEdit = minsOfDay >= 17*60+30; // Evening starts at 5:30 pm
+    const session = isEveningEdit ? 'Evening (05:30 pm to 11:30 pm)' : 'Morning (09:00 am to 05:00 pm)';
     document.getElementById('editSession').value = session;
-    populateEditTimes(hour24 < 18 ? MORNING_E : EVENING_E);
+    populateEditTimes(isEveningEdit ? EVENING_E : MORNING_E);
     applyEditPastTimeFilter(); // hide past times if today
     // Normalize to zero-padded form ("2:00 pm" → "02:00 pm") before
     // pre-selecting — the dropdown's option values are always zero-padded,
@@ -2973,7 +2976,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -2983,7 +2986,7 @@ https://countyindoornetz.com/Client_Booking.html
 
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -3027,6 +3030,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     document.getElementById('grpRefDisplay').textContent = currentGroupRef;
     // Clear all form fields for the new group/customer
     document.getElementById('aName').value    = '';
+    document.getElementById('aTeamName').value = '';
     document.getElementById('aMobile').value  = '';
     document.getElementById('aDate').value    = todayStr;
     aSession.value = '';
@@ -3057,6 +3061,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
   async function adminBookNow(){
     const name    = toTitleCase(document.getElementById('aName').value.trim());
+    // Optional team name — trimmed, max 40 chars, < > removed for safe display
+    const teamName = (document.getElementById('aTeamName') ? document.getElementById('aTeamName').value : '').replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40);
     const mobile  = document.getElementById('aMobile').value.trim();
     const date    = document.getElementById('aDate').value;
     const session = aSession.value;
@@ -3107,6 +3113,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         `action=adminBook`,
         `ref=${encodeURIComponent(ref)}`,
         `name=${encodeURIComponent(name)}`,
+        `teamName=${encodeURIComponent(teamName)}`,
         `mobile=${encodeURIComponent(mobile)}`,
         `date=${encodeURIComponent(date)}`,
         `session=${encodeURIComponent(session)}`,
@@ -3155,7 +3162,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         }
 
         // Store this booking
-        adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
+        adminBookings.push({ ref, name, teamName, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
         updateAdminReceipt();
 
         const count = adminBookings.length;
@@ -3198,7 +3205,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         if(checkResult.status === 'ok'){
           const netLabel = Array.isArray(checkResult.nets) ? checkResult.nets.map(n=>'Net '+n).join(', ') : '';
           adminBookIsRetry = false; // this attempt succeeded — next click is a fresh booking, not a retry
-          adminBookings.push({ ref, name, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
+          adminBookings.push({ ref, name, teamName, mobile, dateDisplay, session, time, dur, netLabel, nets, players, ball, groupRef:currentGroupRef });
           updateAdminReceipt();
           const count = adminBookings.length;
           msg.textContent = addingToExistingGroup
@@ -3225,11 +3232,35 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   }
   window.adminBookNow = adminBookNow;
 
+  // ---- Team Name helper (staff pages only) ----
+  // After a full 10-digit mobile is typed, fill in the last Team Name used
+  // with that mobile — only if the Team Name box is still empty. Runs while
+  // staff fill the rest of the form, so it never slows down the booking.
+  (function(){
+    const mob  = document.getElementById('aMobile');
+    const team = document.getElementById('aTeamName');
+    if(!mob || !team) return;
+    let lastLooked = '';
+    mob.addEventListener('input', async ()=>{
+      const m = mob.value.trim();
+      if(!/^\d{10}$/.test(m) || m === lastLooked) return;
+      lastLooked = m;
+      if(team.value.trim()) return;
+      try{
+        const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=lastTeamName&mobile=${encodeURIComponent(m)}`, null, 15000);
+        const data = await res.json();
+        if(data && data.teamName && !team.value.trim() && mob.value.trim() === m){
+          team.value = data.teamName;
+        }
+      }catch(err){ /* lookup is only a convenience — ignore failures */ }
+    });
+  })();
+
   function updateAdminReceipt(){
     if(!adminBookings.length) return;
     const b0 = adminBookings[0];
     document.getElementById('adminReceiptMeta').innerHTML =
-      `<strong>${b0.name}</strong> &nbsp;|&nbsp; ${b0.mobile} &nbsp;|&nbsp; ${adminBookings.length} slot${adminBookings.length>1?'s':''}<br>
+      `<strong>${b0.name}</strong>${b0.teamName ? ` &nbsp;|&nbsp; Team: <strong>${b0.teamName}</strong>` : ''} &nbsp;|&nbsp; ${b0.mobile} &nbsp;|&nbsp; ${adminBookings.length} slot${adminBookings.length>1?'s':''}<br>
        <span style="font-size:12px;color:var(--muted);">To cancel any or all slots quote your individual Booking Ref No. and Group Ref <strong style="color:var(--leather);letter-spacing:1px;">${b0.groupRef}</strong></span>`;
     document.getElementById('adminReceiptBody').innerHTML = adminBookings.map(b=>`
       <tr>
@@ -3249,7 +3280,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const waMsg = `*County Indoor Netz — Bulk Booking ${addingToExistingGroup ? 'Updated' : 'Confirmed'}* 🏏
 
 *Customer:* ${b0.name}
-*Mobile:* ${b0.mobile}
+${b0.teamName ? `*Team:* ${b0.teamName}\n` : ''}*Mobile:* ${b0.mobile}
 *Group Ref:* ${b0.groupRef}
 
 *Booking Details:*
@@ -3265,7 +3296,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (6 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -3279,7 +3310,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (6 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name}${b0.teamName ? ` | Team: ${b0.teamName}` : ''} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');
