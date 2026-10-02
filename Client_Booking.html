@@ -681,7 +681,7 @@
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
         <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-        <div class="line">⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
       </div>
 
       <div class="receipt-box receipt-box-network">
@@ -721,7 +721,7 @@
       <div style="margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px solid #f0dcc0;border-radius:10px;font-size:13px;color:var(--ink);line-height:1.6;">
         <strong style="color:var(--navy);">Cancellation Policy</strong><br>
         Cancellation allowed up to 2 hours before the slot or inform us.<br>
-        For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+        For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
       </div>
     </div>
   </div>
@@ -1239,6 +1239,40 @@
     return null;
   }
 
+  // ---- Small groups (1–4 players) in the Evening session ----
+  // Prime Time = 7:00 PM onwards. Before 5:00 PM on the day (or for any
+  // future date), small groups may only book Evening slots that END by
+  // 7:00 PM:  5:30 PM (up to 1.5 hrs)  or  6:00 PM (1 hr).
+  // From 5:00 PM on the same day, all Evening slots open to them, for any
+  // duration.
+  const EARLY_EVENING_SLOT = '05:30 pm';
+  const SMALL_GROUP_VALUES = ['1','2','3','4'];
+  const PRIME_START_MINS = 19*60; // 7:00 PM
+  const DUR_OPTION_MINS = [60, 90, 120, 150, 180]; // 1, 1.5, 2, 2.5, 3 hrs
+
+  function slotToMins(label){
+    const m = String(label).trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return -1;
+    let h = parseInt(m[1],10) % 12;
+    if(m[3].toLowerCase() === 'pm') h += 12;
+    return h*60 + parseInt(m[2],10);
+  }
+  function isSmallGroupEvening(){
+    return sessionSel.value.startsWith('Evening') &&
+           SMALL_GROUP_VALUES.includes(document.getElementById('players').value);
+  }
+  // Max number of duration options a small group may pick at the chosen
+  // time, or null when no extra limit applies.
+  function smallGroupDurationCap(){
+    if(!isSmallGroupEvening() || !timeSel.value) return null;
+    if(!primeTimeAllowedNow()){
+      // Before 5:00 PM on the day: must end by 7:00 PM
+      const room = PRIME_START_MINS - slotToMins(timeSel.value);  // minutes until 7:00 PM
+      if(room >= 60) return DUR_OPTION_MINS.filter(d => d <= room).length; // 5:30 PM → 1.5 hrs, 6:00 PM → 1 hr
+    }
+    return null; // from 5:00 PM on the same day: any duration
+  }
+
   function refreshDurationLimit(){
     const list = currentSessionTimes();
     const idx = list ? list.indexOf(timeSel.value) : -1;
@@ -1251,7 +1285,9 @@
     }
 
     const slotsLeft = list.length - idx;              // slots from chosen time to end of session, inclusive
-    const allowedCount = Math.min(durationOptionEls.length, slotsLeft);
+    let allowedCount = Math.min(durationOptionEls.length, slotsLeft);
+    const smallCap = smallGroupDurationCap();
+    if(smallCap !== null) allowedCount = Math.min(allowedCount, smallCap);
 
     durationOptionEls.forEach((o,i)=>{ o.disabled = i >= allowedCount; });
 
@@ -1262,9 +1298,11 @@
       clearError('f-duration');
     }
 
-    durationNote.textContent = allowedCount < durationOptionEls.length
-      ? `Only sessions up to ${durationOptionEls[allowedCount-1].textContent} fit before this session ends.`
-      : '';
+    durationNote.textContent = smallCap !== null
+      ? `For less than 5 players, this slot can be booked for up to ${durationOptionEls[allowedCount-1].textContent} (must end by 7:00 PM).`
+      : (allowedCount < durationOptionEls.length
+          ? `Only sessions up to ${durationOptionEls[allowedCount-1].textContent} fit before this session ends.`
+          : '');
   }
 
   timeSel.addEventListener('change', ()=>{
@@ -1433,11 +1471,15 @@
 
   // ---- "Prime Time" rule: Evening + fewer than 5 players can only be booked
   // same-day, after 5pm. (Keeps evening slots reserved for bigger groups in advance.)
-  const PRIME_TIME_MSG = "As the number of players is less than 5, Prime Time slots can only be booked after 5:00 PM on the same day.";
+  const PRIME_TIME_MSG = "As the number of players is less than 5, Prime Time slots (7:00 PM onwards) can only be booked after 5:00 PM on the same day. Before that, you can book the 5:30 PM slot (up to 1.5 hrs) or the 6:00 PM slot (1 hr).";
   const PRIME_TIME_PLAYER_VALUES = ['1','2','3','4'];
 
+  // Applies to a small group choosing an Evening slot that can't end by
+  // 7:00 PM (i.e. starting 6:30 PM or later).
   function primeTimeRuleApplies(){
-    return sessionKey() === 'Evening' && PRIME_TIME_PLAYER_VALUES.includes(playersSel.value);
+    if(!(sessionKey() === 'Evening' && PRIME_TIME_PLAYER_VALUES.includes(playersSel.value))) return false;
+    if(!timeSel.value) return false;
+    return slotToMins(timeSel.value) + 60 > PRIME_START_MINS;
   }
 
   function primeTimeAllowedNow(){
@@ -1459,7 +1501,9 @@
   sessionSel.addEventListener('change', refreshPrimeTimeCheck);
   playersSel.addEventListener('change', refreshPrimeTimeCheck);
   dateInput.addEventListener('change', refreshPrimeTimeCheck);
-  setInterval(refreshPrimeTimeCheck, 30000); // auto-unlocks the moment it turns 5pm, no refresh needed
+  timeSel.addEventListener('change', refreshPrimeTimeCheck);
+  playersSel.addEventListener('change', refreshDurationLimit); // 1.5 hr cap at 5:30 PM depends on players
+  setInterval(()=>{ refreshPrimeTimeCheck(); refreshDurationLimit(); }, 30000); // auto-unlocks the moment it turns 5pm, no refresh needed
 
   function setError(fieldId, msg){
     const f = document.getElementById(fieldId);
@@ -1517,7 +1561,13 @@
     else if(primeTimeRuleApplies() && !primeTimeAllowedNow()){ setError('f-players', PRIME_TIME_MSG); valid=false; }
     else clearError('f-players');
 
-    if(!duration){ setError('f-duration','Please select a duration.'); valid=false; } else clearError('f-duration');
+    if(!duration){ setError('f-duration','Please select a duration.'); valid=false; }
+    else if((()=>{ const cap = smallGroupDurationCap();
+                   const idx = durationOptionEls.findIndex(o=>o.value === duration);
+                   return cap !== null && idx >= cap; })()){
+      setError('f-duration','For less than 5 players, this slot must end by 7:00 PM (5:30 PM: up to 1.5 hrs, 6:00 PM: 1 hr).'); valid=false;
+    }
+    else clearError('f-duration');
 
     // Validate nets availability if more than 1 net requested
     if(netsRequired > 1){
@@ -1627,7 +1677,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -1656,7 +1706,7 @@ Helmet compulsory for leather balls. Rate changes if player count exceeds bookin
 
 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
-Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (7 PM-10 PM) cancel or inform us at least 5 hours prior.
 
 Network/Technical Issues: please contact us directly.
 Tip: Click the link below and use "Add to Home screen" for quick access anytime.

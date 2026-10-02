@@ -467,7 +467,7 @@
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
         <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-        <div class="line">⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
       </div>
       <div class="receipt-box receipt-box-network">
         <div class="box-title">📶 Network / Technical Issues</div>
@@ -691,6 +691,7 @@
     calcAdminAmount();
   });
   [aDuration, aBall].forEach(el => el.addEventListener('change', calcAdminAmount));
+  aPlayers.addEventListener('change', ()=>{ filterAdminDurations(); calcAdminAmount(); }); // 1.5 hr cap at 5:30 PM
   aNetsEl.addEventListener('change', calcAdminAmount);
 
   function populateAdminTimes(list){
@@ -760,10 +761,16 @@
     if(!sessionVal || !timeVal) return;
     const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 23*60+30;
     const timeMins       = parseSlotMinutes(timeVal);
+    // Small groups (1–4 players), Evening: before 5:00 PM on the day (or any
+    // future date) the booking must END by 7:00 PM (Prime Time starts at
+    // 7:00 PM) — so 5:30 PM → up to 1.5 hrs, 6:00 PM → 1 hr. From 5:00 PM on
+    // the same day: any duration.
+    const smallEvening = sessionVal.startsWith('Evening') && ['1','2','3','4'].includes(aPlayers.value);
+    const primeLock = smallEvening && !primeTimeAllowedNowStf();
     Array.from(aDuration.options).forEach(o=>{
       if(!o.value) return;
       const endMins = timeMins + (ADMIN_DUR_MINS[o.value]||60);
-      if(endMins > sessionEndMins){
+      if(endMins > sessionEndMins || (primeLock && endMins > 19*60)){
         o.disabled = true;
         if(aDuration.value === o.value){ aDuration.value = ''; }
       } else {
@@ -1065,11 +1072,15 @@
   // fewer than 5 players can only be booked same-day, after 5pm. Applies
   // here too so staff can't accidentally bypass it — enforced both live
   // (as a warning while filling the form) and again at submit time.
-  const PRIME_TIME_MSG_STF = "As the number of players is less than 5, Prime Time slots can only be booked after 5:00 PM on the same day.";
+  const PRIME_TIME_MSG_STF = "As the number of players is less than 5, Prime Time slots (7:00 PM onwards) can only be booked after 5:00 PM on the same day. Before that, you can book the 5:30 PM slot (up to 1.5 hrs) or the 6:00 PM slot (1 hr).";
   const PRIME_TIME_PLAYER_VALUES_STF = ['1','2','3','4'];
 
   function primeTimeRuleAppliesStf(){
-    return aSession.value.startsWith('Evening') && PRIME_TIME_PLAYER_VALUES_STF.includes(aPlayers.value);
+    // Small group choosing an Evening slot that can't end by 7:00 PM
+    // (i.e. starting 6:30 PM or later).
+    if(!(aSession.value.startsWith('Evening') && PRIME_TIME_PLAYER_VALUES_STF.includes(aPlayers.value))) return false;
+    if(!aTime.value) return false;
+    return parseSlotMinutes(aTime.value) + 60 > 19*60;
   }
 
   function primeTimeAllowedNowStf(){
@@ -1091,7 +1102,8 @@
   aSession.addEventListener('change', refreshPrimeTimeCheckStf);
   aPlayers.addEventListener('change', refreshPrimeTimeCheckStf);
   aDateEl.addEventListener('change', refreshPrimeTimeCheckStf);
-  setInterval(refreshPrimeTimeCheckStf, 30000); // auto-unlocks the moment it turns 5pm
+  aTime.addEventListener('change', refreshPrimeTimeCheckStf);
+  setInterval(()=>{ refreshPrimeTimeCheckStf(); filterAdminDurations(); }, 30000); // auto-unlocks the moment it turns 5pm
 
   // Tracks whether the CURRENT booking attempt is a retry of an earlier
   // one that already failed — set to true only when a connection error is
@@ -1204,7 +1216,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (5:30 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -1232,7 +1244,7 @@ Helmet compulsory for leather balls. Rate changes if player count exceeds bookin
 
 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
-Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (5:30 PM-10 PM) cancel or inform us at least 5 hours prior.
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (7 PM-10 PM) cancel or inform us at least 5 hours prior.
 
 Network/Technical Issues: please contact us directly.
 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
