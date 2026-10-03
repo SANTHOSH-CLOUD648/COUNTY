@@ -821,7 +821,7 @@
           <div class="receipt-box receipt-box-cancellation">
             <div class="box-title">📋 Cancellation Policy</div>
             <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-            <div class="line">⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+            <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
           </div>
           <div class="receipt-box receipt-box-network">
             <div class="box-title">📶 Network / Technical Issues</div>
@@ -1046,7 +1046,7 @@
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
         <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-        <div class="line">⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
       </div>
       <div class="receipt-box receipt-box-network">
         <div class="box-title">📶 Network / Technical Issues</div>
@@ -1073,6 +1073,62 @@
 </div>
 
 <script>
+  // ---- Session times (from the Settings tab in Google Sheets) ----
+  // These are the defaults; the real values arrive with ?action=settings
+  // when the page opens (Evening Start Time, Prime Time Start, Small Group
+  // Unlock Time) and are applied by applySessionTimes() further below.
+  const SESSION_CFG = { eveningStart:'05:30 pm', primeStart:'07:00 pm', unlockTime:'05:00 pm' };
+  function cfgMins(label){
+    const m = String(label||'').trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return -1;
+    let h = parseInt(m[1],10) % 12;
+    if(m[3].toLowerCase() === 'pm') h += 12;
+    return h*60 + parseInt(m[2],10);
+  }
+  function cfgLabel(mins){ // 1050 -> '05:30 pm'
+    const h = Math.floor(mins/60), m = mins % 60, ap = h >= 12 ? 'pm' : 'am';
+    let h12 = h % 12; if(h12 === 0) h12 = 12;
+    return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+  function cfgNice(label){ // '07:00 pm' -> '7:00 PM'
+    const m = String(label).match(/^0?(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    return m ? `${m[1]}:${m[2]} ${m[3].toUpperCase()}` : label;
+  }
+  function cfgShort(label){ // '07:00 pm' -> '7 PM', '07:30 pm' -> '7:30 PM'
+    const m = String(label).match(/^0?(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return label;
+    return (m[2] === '00' ? m[1] : `${m[1]}:${m[2]}`) + ' ' + m[3].toUpperCase();
+  }
+  function eveningStartMins(){ return cfgMins(SESSION_CFG.eveningStart); }
+  function primeStartMins(){ return cfgMins(SESSION_CFG.primeStart); }
+  function unlockMins(){ return cfgMins(SESSION_CFG.unlockTime); }
+  function morningLabel(){ return `Morning (09:00 am to ${cfgLabel(eveningStartMins()-30)})`; }
+  function eveningLabel(){ return `Evening (${SESSION_CFG.eveningStart} to 11:30 pm)`; }
+  function primeRangeLabel(){ return `${cfgShort(SESSION_CFG.primeStart)} - 10 PM`; }
+  function primeRangeShort(){ return `${cfgShort(SESSION_CFG.primeStart)}-10 PM`; }
+  function primeTimeMsgText(){
+    // If not even the first Evening slot can finish (1 hr minimum) by Prime
+    // Time, small groups can't book ANY Evening slot in advance — say so.
+    if(eveningStartMins() + 60 > primeStartMins()){
+      return `As the number of players is less than 5, Evening slots can only be booked after ${cfgNice(SESSION_CFG.unlockTime)} on the same day.`;
+    }
+    return `As the number of players is less than 5, Prime Time slots (${cfgNice(SESSION_CFG.primeStart)} onwards) can only be booked after ${cfgNice(SESSION_CFG.unlockTime)} on the same day. Before that, you can book Evening slots that end by ${cfgNice(SESSION_CFG.primeStart)}.`;
+  }
+  // Copies valid values from the server into SESSION_CFG.
+  // Returns true if anything actually changed.
+  function setSessionCfg(st){
+    if(!st || typeof st !== 'object') return false;
+    let changed = false;
+    ['eveningStart','primeStart','unlockTime'].forEach(k=>{
+      const v = String(st[k]||'').trim().toLowerCase();
+      if(cfgMins(v) >= 0 && v !== SESSION_CFG[k]){ SESSION_CFG[k] = cfgLabel(cfgMins(v)); changed = true; }
+    });
+    return changed;
+  }
+  function refreshPrimeRangeText(){
+    document.querySelectorAll('.prime-range').forEach(el => { el.textContent = primeRangeLabel(); });
+  }
+
   // Builds the "already has a booking" question from the server's reply.
   // whoPrefix: 'You already have'  or  'Name (mobile) already has'
   function dupMessage(result, whoPrefix){
@@ -1202,6 +1258,7 @@
       const data = await res.json();
       if(data && typeof data.maxNets === 'number' && data.maxNets >= 0) MAX_NETS = data.maxNets;
       if(data && typeof data.maxNetsPerBooking === 'number') MAX_NETS_PER_BOOKING = data.maxNetsPerBooking;
+      if(data && data.sessionTimes) applySessionTimes(data.sessionTimes);
       if(data && data.rates && typeof data.rates === 'object'){
         BOOKING_RATES = data.rates;
         // Same self-correction as the client page: if the admin already
@@ -1222,6 +1279,25 @@
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
   const MORNING_A = ALL_TIMES_ADMIN.slice(0, ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
   const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("05:30 pm"));
+
+  // Applies session times from the Settings tab to the booking form and
+  // the Edit screen (arrays updated in place).
+  function applySessionTimes(st){
+    if(!setSessionCfg(st)) return;
+    const ev = ALL_TIMES_ADMIN.indexOf(SESSION_CFG.eveningStart);
+    if(ev > 0){
+      MORNING_A.splice(0, MORNING_A.length, ...ALL_TIMES_ADMIN.slice(0, ev));
+      EVENING_A.splice(0, EVENING_A.length, ...ALL_TIMES_ADMIN.slice(ev));
+    }
+    const as = document.getElementById('aSession');
+    if(as) Array.from(as.options).forEach(o=>{
+      if(o.value.startsWith('Morning')) o.value = morningLabel();
+      if(o.value.startsWith('Evening')) o.value = eveningLabel();
+    });
+    if(typeof window.applyEditSessionTimes === 'function') window.applyEditSessionTimes();
+    refreshPrimeRangeText();
+    if(as && as.value) as.dispatchEvent(new Event('change'));
+  }
 
   const aSession  = document.getElementById('aSession');
   const aTime     = document.getElementById('aTime');
@@ -1392,8 +1468,8 @@
     if(!isMorning && !isEvening) return; // unrecognised time — leave form blank rather than guess
 
     aSession.value = isMorning
-      ? 'Morning (09:00 am to 05:00 pm)'
-      : 'Evening (05:30 pm to 11:30 pm)';
+      ? morningLabel()
+      : eveningLabel();
 
     // Mirrors aSession's own change handler: populate the time list for
     // this session, then apply the specific pre-filled time on top of it.
@@ -1413,7 +1489,7 @@
     const timeVal    = aTime.value;
     if(!sessionVal || !timeVal) return;
     // Morning ends at 6pm (5pm slot + 1hr), Evening ends at midnight (11pm + 1hr)
-    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 23*60+30;
+    const sessionEndMins = sessionVal.startsWith('Morning') ? eveningStartMins()+30 : 23*60+30;
     const timeMins       = parseSlotMinutes(timeVal);
     Array.from(aDuration.options).forEach(o=>{
       if(!o.value) return;
@@ -2541,6 +2617,19 @@ https://countyindoornetz.com/Client_Booking.html`;
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
   const MORNING_E = ALL_TIMES_EDIT.slice(0, ALL_TIMES_EDIT.indexOf('05:00 pm')+1);
   const EVENING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('05:30 pm'));
+  function applyEditSessionTimes(){
+    const ev = ALL_TIMES_EDIT.indexOf(SESSION_CFG.eveningStart);
+    if(ev > 0){
+      MORNING_E.splice(0, MORNING_E.length, ...ALL_TIMES_EDIT.slice(0, ev));
+      EVENING_E.splice(0, EVENING_E.length, ...ALL_TIMES_EDIT.slice(ev));
+    }
+    const es = document.getElementById('editSession');
+    if(es) Array.from(es.options).forEach(o=>{
+      if(o.value.startsWith('Morning')) o.value = morningLabel();
+      if(o.value.startsWith('Evening')) o.value = eveningLabel();
+    });
+  }
+  window.applyEditSessionTimes = applyEditSessionTimes; // reachable from the booking-form code
 
   let editCurrentRef = '', editCurrentMobile = '', editCurrentName = '', editCurrentGroupRef = '';
 
@@ -2576,8 +2665,8 @@ https://countyindoornetz.com/Client_Booking.html`;
     const isPM = time.includes('pm');
     const hour24 = isPM && hour!==12 ? hour+12 : (!isPM && hour===12 ? 0 : hour);
     const minsOfDay = hour24*60 + (parseInt((time.split(':')[1]||'0'),10) || 0);
-    const isEveningEdit = minsOfDay >= 17*60+30; // Evening starts at 5:30 pm
-    const session = isEveningEdit ? 'Evening (05:30 pm to 11:30 pm)' : 'Morning (09:00 am to 05:00 pm)';
+    const isEveningEdit = minsOfDay >= eveningStartMins(); // Evening Start Time (Settings tab)
+    const session = isEveningEdit ? eveningLabel() : morningLabel();
     document.getElementById('editSession').value = session;
     populateEditTimes(isEveningEdit ? EVENING_E : MORNING_E);
     applyEditPastTimeFilter(); // hide past times if today
@@ -2788,7 +2877,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     const timeVal    = document.getElementById('editTime').value;
     const durSel     = document.getElementById('editDuration');
     if(!sessionVal || !timeVal) return;
-    const sessionEndMins = sessionVal.startsWith('Morning') ? 18*60 : 23*60+30;
+    const sessionEndMins = sessionVal.startsWith('Morning') ? eveningStartMins()+30 : 23*60+30;
     const timeMins = parseSlotMinutes(timeVal);
     Array.from(durSel.options).forEach(o=>{
       if(!o.value) return;
@@ -2984,7 +3073,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -2994,7 +3083,7 @@ https://countyindoornetz.com/Client_Booking.html
 
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (7 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -3306,7 +3395,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -3320,7 +3409,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name}${b0.teamName ? ` | Team: ${b0.teamName}` : ''} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (7 PM-10 PM) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name}${b0.teamName ? ` | Team: ${b0.teamName}` : ''} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');

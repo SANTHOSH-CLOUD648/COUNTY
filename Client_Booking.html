@@ -681,7 +681,7 @@
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
         <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
-        <div class="line">⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
       </div>
 
       <div class="receipt-box receipt-box-network">
@@ -721,7 +721,7 @@
       <div style="margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px solid #f0dcc0;border-radius:10px;font-size:13px;color:var(--ink);line-height:1.6;">
         <strong style="color:var(--navy);">Cancellation Policy</strong><br>
         Cancellation allowed up to 2 hours before the slot or inform us.<br>
-        For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+        For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.
       </div>
     </div>
   </div>
@@ -798,6 +798,62 @@
 </div>
 
 <script>
+  // ---- Session times (from the Settings tab in Google Sheets) ----
+  // These are the defaults; the real values arrive with ?action=settings
+  // when the page opens (Evening Start Time, Prime Time Start, Small Group
+  // Unlock Time) and are applied by applySessionTimes() further below.
+  const SESSION_CFG = { eveningStart:'05:30 pm', primeStart:'07:00 pm', unlockTime:'05:00 pm' };
+  function cfgMins(label){
+    const m = String(label||'').trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return -1;
+    let h = parseInt(m[1],10) % 12;
+    if(m[3].toLowerCase() === 'pm') h += 12;
+    return h*60 + parseInt(m[2],10);
+  }
+  function cfgLabel(mins){ // 1050 -> '05:30 pm'
+    const h = Math.floor(mins/60), m = mins % 60, ap = h >= 12 ? 'pm' : 'am';
+    let h12 = h % 12; if(h12 === 0) h12 = 12;
+    return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+  function cfgNice(label){ // '07:00 pm' -> '7:00 PM'
+    const m = String(label).match(/^0?(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    return m ? `${m[1]}:${m[2]} ${m[3].toUpperCase()}` : label;
+  }
+  function cfgShort(label){ // '07:00 pm' -> '7 PM', '07:30 pm' -> '7:30 PM'
+    const m = String(label).match(/^0?(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if(!m) return label;
+    return (m[2] === '00' ? m[1] : `${m[1]}:${m[2]}`) + ' ' + m[3].toUpperCase();
+  }
+  function eveningStartMins(){ return cfgMins(SESSION_CFG.eveningStart); }
+  function primeStartMins(){ return cfgMins(SESSION_CFG.primeStart); }
+  function unlockMins(){ return cfgMins(SESSION_CFG.unlockTime); }
+  function morningLabel(){ return `Morning (09:00 am to ${cfgLabel(eveningStartMins()-30)})`; }
+  function eveningLabel(){ return `Evening (${SESSION_CFG.eveningStart} to 11:30 pm)`; }
+  function primeRangeLabel(){ return `${cfgShort(SESSION_CFG.primeStart)} - 10 PM`; }
+  function primeRangeShort(){ return `${cfgShort(SESSION_CFG.primeStart)}-10 PM`; }
+  function primeTimeMsgText(){
+    // If not even the first Evening slot can finish (1 hr minimum) by Prime
+    // Time, small groups can't book ANY Evening slot in advance — say so.
+    if(eveningStartMins() + 60 > primeStartMins()){
+      return `As the number of players is less than 5, Evening slots can only be booked after ${cfgNice(SESSION_CFG.unlockTime)} on the same day.`;
+    }
+    return `As the number of players is less than 5, Prime Time slots (${cfgNice(SESSION_CFG.primeStart)} onwards) can only be booked after ${cfgNice(SESSION_CFG.unlockTime)} on the same day. Before that, you can book Evening slots that end by ${cfgNice(SESSION_CFG.primeStart)}.`;
+  }
+  // Copies valid values from the server into SESSION_CFG.
+  // Returns true if anything actually changed.
+  function setSessionCfg(st){
+    if(!st || typeof st !== 'object') return false;
+    let changed = false;
+    ['eveningStart','primeStart','unlockTime'].forEach(k=>{
+      const v = String(st[k]||'').trim().toLowerCase();
+      if(cfgMins(v) >= 0 && v !== SESSION_CFG[k]){ SESSION_CFG[k] = cfgLabel(cfgMins(v)); changed = true; }
+    });
+    return changed;
+  }
+  function refreshPrimeRangeText(){
+    document.querySelectorAll('.prime-range').forEach(el => { el.textContent = primeRangeLabel(); });
+  }
+
   // Builds the "already has a booking" question from the server's reply.
   // whoPrefix: 'You already have'  or  'Name (mobile) already has'
   function dupMessage(result, whoPrefix){
@@ -919,6 +975,7 @@
       if(data && typeof data.priorBookingDays === 'number' && data.priorBookingDays > 0){
         applyPriorBookingDays(data.priorBookingDays);
       }
+      if(data && data.sessionTimes) applySessionTimes(data.sessionTimes);
       if(data && Array.isArray(data.services)){
         buildServicesDropdown(data.services);
       }
@@ -987,6 +1044,23 @@
   // Morning = 09:00am..05:00pm ; Evening = 05:30pm..10:30pm (start times).
   const MORNING_TIMES = ALL_TIMES.slice(0, ALL_TIMES.indexOf("05:00 pm")+1);
   const EVENING_TIMES = ALL_TIMES.slice(ALL_TIMES.indexOf("05:30 pm"));
+
+  // Applies session times from the Settings tab (arrays are updated in
+  // place so everything that uses them sees the new times).
+  function applySessionTimes(st){
+    if(!setSessionCfg(st)) return;
+    const ev = ALL_TIMES.indexOf(SESSION_CFG.eveningStart);
+    if(ev > 0){
+      MORNING_TIMES.splice(0, MORNING_TIMES.length, ...ALL_TIMES.slice(0, ev));
+      EVENING_TIMES.splice(0, EVENING_TIMES.length, ...ALL_TIMES.slice(ev));
+    }
+    Array.from(sessionSel.options).forEach(o=>{
+      if(o.value.startsWith('Morning')){ o.value = morningLabel(); o.textContent = morningLabel().replace(' to ', ' – '); }
+      if(o.value.startsWith('Evening')){ o.value = eveningLabel(); o.textContent = eveningLabel().replace(' to ', ' – '); }
+    });
+    refreshPrimeRangeText();
+    if(sessionSel.value) sessionSel.dispatchEvent(new Event('change'));
+  }
 
   const sessionSel = document.getElementById('session');
   const timeSel = document.getElementById('time');
@@ -1196,8 +1270,8 @@
     if(!isMorning && !isEvening) return; // unrecognised time — leave form blank rather than guess
 
     sessionSel.value = isMorning
-      ? 'Morning (09:00 am to 05:00 pm)'
-      : 'Evening (05:30 pm to 11:30 pm)';
+      ? morningLabel()
+      : eveningLabel();
 
     populateTimes(isMorning ? MORNING_TIMES : EVENING_TIMES);
     timeSel.value = prefTime;
@@ -1247,7 +1321,7 @@
   // duration.
   const EARLY_EVENING_SLOT = '05:30 pm';
   const SMALL_GROUP_VALUES = ['1','2','3','4'];
-  const PRIME_START_MINS = 19*60; // 7:00 PM
+ // Prime Time start comes from SESSION_CFG (Settings tab) — see primeStartMins()
   const DUR_OPTION_MINS = [60, 90, 120, 150, 180]; // 1, 1.5, 2, 2.5, 3 hrs
 
   function slotToMins(label){
@@ -1267,7 +1341,7 @@
     if(!isSmallGroupEvening() || !timeSel.value) return null;
     if(!primeTimeAllowedNow()){
       // Before 5:00 PM on the day: must end by 7:00 PM
-      const room = PRIME_START_MINS - slotToMins(timeSel.value);  // minutes until 7:00 PM
+      const room = primeStartMins() - slotToMins(timeSel.value);  // minutes until 7:00 PM
       if(room >= 60) return DUR_OPTION_MINS.filter(d => d <= room).length; // 5:30 PM → 1.5 hrs, 6:00 PM → 1 hr
     }
     return null; // from 5:00 PM on the same day: any duration
@@ -1299,7 +1373,7 @@
     }
 
     durationNote.textContent = smallCap !== null
-      ? `For less than 5 players, this slot can be booked for up to ${durationOptionEls[allowedCount-1].textContent} (must end by 7:00 PM).`
+      ? `For less than 5 players, this slot can be booked for up to ${durationOptionEls[allowedCount-1].textContent} (must end by ${cfgNice(SESSION_CFG.primeStart)}).`
       : (allowedCount < durationOptionEls.length
           ? `Only sessions up to ${durationOptionEls[allowedCount-1].textContent} fit before this session ends.`
           : '');
@@ -1437,8 +1511,8 @@
     const players = playersSel.value;
     if(!sk || !players) return null;
     const sessionLabel = sk === 'Morning'
-      ? 'Morning (09:00 am to 05:00 pm)'
-      : 'Evening (05:30 pm to 11:30 pm)';
+      ? morningLabel()
+      : eveningLabel();
     return lookupRate(sessionLabel, players, ballSel.value);
   }
 
@@ -1471,7 +1545,7 @@
 
   // ---- "Prime Time" rule: Evening + fewer than 5 players can only be booked
   // same-day, after 5pm. (Keeps evening slots reserved for bigger groups in advance.)
-  const PRIME_TIME_MSG = "As the number of players is less than 5, Prime Time slots (7:00 PM onwards) can only be booked after 5:00 PM on the same day. Before that, you can book the 5:30 PM slot (up to 1.5 hrs) or the 6:00 PM slot (1 hr).";
+  // Message text is built from the Settings tab times — see primeTimeMsgText()
   const PRIME_TIME_PLAYER_VALUES = ['1','2','3','4'];
 
   // Applies to a small group choosing an Evening slot that can't end by
@@ -1479,20 +1553,20 @@
   function primeTimeRuleApplies(){
     if(!(sessionKey() === 'Evening' && PRIME_TIME_PLAYER_VALUES.includes(playersSel.value))) return false;
     if(!timeSel.value) return false;
-    return slotToMins(timeSel.value) + 60 > PRIME_START_MINS;
+    return slotToMins(timeSel.value) + 60 > primeStartMins();
   }
 
   function primeTimeAllowedNow(){
     if(dateInput.value !== todayStr) return false; // future date: never allowed under this rule
     const nowMinutes = new Date().getHours()*60 + new Date().getMinutes();
-    return nowMinutes >= 17*60; // 5:00 pm
+    return nowMinutes >= unlockMins(); // Small Group Unlock Time (default 5:00 pm)
   }
 
   function refreshPrimeTimeCheck(){
     const fld = document.getElementById('f-players');
-    const showingPrimeMsg = fld.querySelector('.errmsg').textContent === PRIME_TIME_MSG;
+    const showingPrimeMsg = fld.querySelector('.errmsg').textContent === primeTimeMsgText();
     if(primeTimeRuleApplies() && !primeTimeAllowedNow()){
-      setError('f-players', PRIME_TIME_MSG);
+      setError('f-players', primeTimeMsgText());
     } else if(showingPrimeMsg){
       clearError('f-players');
     }
@@ -1558,14 +1632,14 @@
     if(!time){ setError('f-time','Please select a time slot.'); valid=false; } else clearError('f-time');
 
     if(!players){ setError('f-players','Please select number of players.'); valid=false; }
-    else if(primeTimeRuleApplies() && !primeTimeAllowedNow()){ setError('f-players', PRIME_TIME_MSG); valid=false; }
+    else if(primeTimeRuleApplies() && !primeTimeAllowedNow()){ setError('f-players', primeTimeMsgText()); valid=false; }
     else clearError('f-players');
 
     if(!duration){ setError('f-duration','Please select a duration.'); valid=false; }
     else if((()=>{ const cap = smallGroupDurationCap();
                    const idx = durationOptionEls.findIndex(o=>o.value === duration);
                    return cap !== null && idx >= cap; })()){
-      setError('f-duration','For less than 5 players, this slot must end by 7:00 PM (5:30 PM: up to 1.5 hrs, 6:00 PM: 1 hr).'); valid=false;
+      setError('f-duration',`For less than 5 players, a booking made before ${cfgNice(SESSION_CFG.unlockTime)} on the day must end by ${cfgNice(SESSION_CFG.primeStart)}.`); valid=false;
     }
     else clearError('f-duration');
 
@@ -1677,7 +1751,7 @@ If a team fails to arrive within 15 minutes of the booking time without prior in
 
 *📋 Cancellation Policy*
 Cancellation allowed up to 2 hours before the slot or inform us.
-⭐ For Prime Time slots (7 PM - 10 PM), kindly cancel or inform us at least 5 hours prior.
+⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -1706,7 +1780,7 @@ Helmet compulsory for leather balls. Rate changes if player count exceeds bookin
 
 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
-Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (7 PM-10 PM) cancel or inform us at least 5 hours prior.
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.
 
 Network/Technical Issues: please contact us directly.
 Tip: Click the link below and use "Add to Home screen" for quick access anytime.
