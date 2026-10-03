@@ -582,6 +582,7 @@
       <div class="wk-block">
         <div class="wk-block-title">Additional Payments <button type="button" class="wk-link" onclick="wkAddExtra()">+ Add</button></div>
         <div id="wkExtras"></div>
+        <button type="button" class="wk-link" onclick="wkAddExtra()">+ Add another item</button>
         <div id="wkExtrasEmpty" style="font-size:13px;color:#5a6152;">Accessories (AP, Grip, Ball, Kit Rent), Drinks, Throwers Charge, Coaching Charges… tap “+ Add”.</div>
       </div>
 
@@ -1983,6 +1984,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       </div>
       <div class="wk-block-title" style="margin-top:12px;">Additional Payments <button type="button" class="wk-link" onclick="wkPayAddExtra()">+ Add</button></div>
       <div id="wkPayExtras"></div>
+      <button type="button" class="wk-link" onclick="wkPayAddExtra()">+ Add another item</button>
       <div><label class="admin-lbl" for="wkPayNote">Note (optional)</label><input type="text" id="wkPayNote" value="${p ? esc(p.note) : ''}" placeholder="Anything to remember"></div>
       <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;min-height:44px;"><input type="checkbox" id="wkPayNoShow" style="width:20px;height:20px;"${p && p.noShow ? ' checked' : ''}> Did not turn up (No-show)</label>
       <div class="wk-sum" style="margin:8px 0 4px;"><span>Total for this booking<br><small id="wkPayBreak" style="font-size:12px;color:#cfdcd3;"></small></span><strong id="wkPayTotal">₹0</strong></div>
