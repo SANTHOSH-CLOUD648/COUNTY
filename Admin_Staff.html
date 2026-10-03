@@ -293,6 +293,12 @@
   .wk-tag.pending{background:#fff4e0;color:#6b4a10;}
   .wk-tag.free{background:#eeeeec;color:#4a4a46;}
   .wk-breakdown{font-size:13px;color:#3d4436;line-height:1.8;margin-bottom:12px;}
+  .wk-due{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:3px;background:#fde8d8;color:#8a3b0a;}
+  .wk-noshow{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:3px;background:#eeeeec;color:#4a4a46;}
+  .wk-rec-btn{font-family:inherit;font-size:13.5px;font-weight:700;min-height:40px;padding:0 12px;border-radius:10px;border:none;background:#d9b44a;color:#17251c;cursor:pointer;margin-top:6px;}
+  .wk-rec-btn.edit{background:#fff;border:1.5px solid #d9d3c0;color:var(--navy);}
+  .wk-pay{grid-column:1 / -1;border-top:1px dashed #d9d3c0;margin-top:8px;padding-top:10px;}
+  .wk-row.cancelled{opacity:.6;}
   @media(max-width:520px){.wk-extra{grid-template-columns:1fr 1fr;}.wk-extra .wk-x{grid-column:span 2;width:100%;}}
 </style>
 </head>
@@ -540,12 +546,13 @@
     <div class="wk-preview">Preview only — entries are NOT saved to Google Sheets yet and disappear when the page is refreshed.</div>
 
     <div class="wk-sub">
-      <button type="button" id="wkSubEntry" class="active" onclick="wkShowSub('entry')">New Entry</button>
-      <button type="button" id="wkSubToday" onclick="wkShowSub('today')">Today's Register</button>
+      <button type="button" id="wkSubToday" class="active" onclick="wkShowSub('today')">Today's Register</button>
+      <button type="button" id="wkSubEntry" onclick="wkShowSub('entry')">Walk-in Entry</button>
     </div>
 
-    <!-- New Entry -->
-    <div id="wkEntry">
+    <!-- Walk-in Entry (no booking) -->
+    <div id="wkEntry" style="display:none;">
+      <div style="font-size:13px;color:#5a6152;margin-bottom:10px;line-height:1.5;">For players <strong>without a booking</strong> and club sessions. Tip: for walk-ins it's better to use <strong>➕ New Booking</strong> first (so the net shows as taken online), then record the payment in Today's Register.</div>
       <div class="wk-block">
         <div class="admin-grid">
           <div><label class="admin-lbl" for="wkDate">Date</label><input type="date" id="wkDate"></div>
@@ -586,11 +593,20 @@
     </div>
 
     <!-- Today's Register -->
-    <div id="wkToday" style="display:none;">
+    <div id="wkToday">
+      <div style="display:flex;gap:8px;align-items:end;margin-bottom:12px;">
+        <div style="flex:1;"><label class="admin-lbl" for="wkRegDate">Date</label><input type="date" id="wkRegDate"></div>
+        <button type="button" class="wk-chip" style="padding:0 14px;" onclick="wkLoadBookings()">↻ Refresh</button>
+      </div>
       <div class="wk-cards" id="wkCards"></div>
       <div class="wk-breakdown" id="wkBreakdown"></div>
+
+      <div class="wk-block-title" style="margin-top:4px;">Bookings <span id="wkBkStatus" style="font-weight:500;color:#5a6152;font-size:12.5px;"></span></div>
+      <div id="wkBkList"></div>
+
+      <div class="wk-block-title" style="margin-top:14px;">Walk-ins &amp; Club <button type="button" class="wk-link" onclick="wkShowSub('entry')">+ Walk-in Entry</button></div>
       <div id="wkList"></div>
-      <button type="button" class="wk-link" onclick="wkLoadSample()">Load sample entries (from your register page)</button>
+      <button type="button" class="wk-link" onclick="wkLoadSample()">Load sample walk-ins (from your register page)</button>
     </div>
   </div>
   </div>
@@ -1770,8 +1786,13 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
   window.toggleNormalResult = toggleNormalResult;
 </script>
 <script>
-/* ── Walk-in & Payment — PREVIEW (nothing is sent to the server) ── */
+/* ── Walk-in & Payment — PREVIEW ──
+   Reads today's REAL bookings (read-only, via the existing searchBookings
+   action). Payments and walk-ins are kept on this screen only — nothing is
+   saved to Google Sheets yet. */
 (function(){
+  const WK_URL = (typeof SHEET_SCRIPT_URL !== 'undefined') ? SHEET_SCRIPT_URL
+    : 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
   const MODES = [
     { key:'cash',    label:'Cash' },
     { key:'upi',     label:'Paytm / UPI' },
@@ -1790,23 +1811,55 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     { key:'Other',                  group:'Other' }
   ];
   const GROUP_OF = Object.fromEntries(EXTRA_ITEMS.map(i => [i.key, i.group]));
-  const entries = [];            // kept in this page only (preview)
+  const DUR_MIN = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
+
+  const walkins  = [];   // walk-in / club entries (this screen only)
+  const payments = {};   // ref -> recorded payment (this screen only)
+  let bookings = [];     // bookings for the register date
+  let openRef = null;    // booking whose Record Payment panel is open
+  let payMode = 'cash';
   let wkNet = null, wkMode = 'cash';
 
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2,'0');
   const rupees = n => '₹' + Number(n||0).toLocaleString('en-IN');
-  const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const num = v => parseFloat(String(v==null?'':v).replace(/[₹,\s]/g,'')) || 0;
   function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
-  function to12(t){ if(!t) return ''; let [h,m]=t.split(':').map(Number); const ap=h>=12?'pm':'am'; h=h%12||12; return `${pad(h)}:${pad(m)} ${ap}`; }
-  function hrsText(mins){ const h=mins/60; return (h===1?'1 hr':(Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,''))+' hrs'); }
-  function durationMins(){
-    const s=$('wkStart').value, e=$('wkEnd').value;
-    if(!s||!e) return null;
-    const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
-    return (eh*60+em)-(sh*60+sm);
-  }
+  function labelToMins(l){ const m=String(l||'').match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i); if(!m) return null; let h=parseInt(m[1],10)%12; if(m[3].toLowerCase()==='pm') h+=12; return h*60+parseInt(m[2],10); }
+  function minsToLabel(t){ let h=Math.floor(t/60)%24, m=t%60; const ap=h>=12?'pm':'am'; h=h%12||12; return `${pad(h)}:${pad(m)} ${ap}`; }
+  function to12(t){ if(!t) return ''; const [h,m]=t.split(':').map(Number); return minsToLabel(h*60+m); }
+  function hrsText(mins){ const h=mins/60; return h===1 ? '1 hr' : (Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,'')) + ' hrs'; }
 
+  /* ---------- extras rows (shared by walk-in form and Record Payment) ---------- */
+  function modeOptions(sel){
+    return MODES.filter(m=>m.key!=='free').map(m => `<option value="${m.key}"${m.key===sel?' selected':''}>${m.label}</option>`).join('');
+  }
+  function addExtraRow(containerId, defMode, onChange){
+    const row = document.createElement('div');
+    row.className = 'wk-extra';
+    row.innerHTML = `
+      <div><label class="admin-lbl">Item</label><select class="wkx-item">${EXTRA_ITEMS.map(i=>`<option>${i.key}</option>`).join('')}</select></div>
+      <div><label class="admin-lbl">Qty</label><input type="number" class="wkx-qty" value="1" min="1" inputmode="numeric"></div>
+      <div><label class="admin-lbl">Amount ₹</label><input type="number" class="wkx-amt" placeholder="0" min="0" inputmode="numeric"></div>
+      <div><label class="admin-lbl">Paid by</label><select class="wkx-mode">${modeOptions(defMode==='free'?'cash':defMode)}</select></div>
+      <button type="button" class="wk-x" aria-label="Remove this item">×</button>`;
+    row.querySelector('.wk-x').onclick = () => { row.remove(); onChange && onChange(); };
+    row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => onChange && onChange()));
+    $(containerId).appendChild(row);
+    onChange && onChange();
+  }
+  function readExtras(containerId){
+    return Array.from(document.querySelectorAll('#'+containerId+' .wk-extra')).map(r => ({
+      item: r.querySelector('.wkx-item').value,
+      qty:  parseInt(r.querySelector('.wkx-qty').value,10) || 1,
+      amount: num(r.querySelector('.wkx-amt').value),
+      mode: r.querySelector('.wkx-mode').value
+    }));
+  }
+  const extrasText = xs => xs.map(x => `${esc(x.item.replace('Accessories – ',''))}${x.qty>1?' ×'+x.qty:''} ${rupees(x.amount)}`).join(', ');
+
+  /* ---------- Walk-in Entry form ---------- */
   function renderNets(){
     const n = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
     let html='';
@@ -1817,108 +1870,197 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     $('wkModes').innerHTML = MODES.map(m =>
       `<button type="button" class="wk-chip${wkMode===m.key?' active':''}" onclick="wkPickMode('${m.key}')">${m.label}</button>`).join('');
   }
-  function modeOptions(sel){
-    return MODES.filter(m=>m.key!=='free').map(m => `<option value="${m.key}"${m.key===sel?' selected':''}>${m.label}</option>`).join('');
-  }
   window.wkPickNet  = n => { wkNet = n; renderNets(); };
-  window.wkPickMode = k => { wkMode = k; if(k==='free') $('wkNetAmt').value = 0; renderModes(); updateTotals(); };
+  window.wkPickMode = k => { wkMode = k; if(k==='free') $('wkNetAmt').value = 0; renderModes(); updateEntryTotals(); };
+  window.wkAddExtra = () => addExtraRow('wkExtras', wkMode, updateEntryTotals);
 
-  window.wkAddExtra = function(){
-    const row = document.createElement('div');
-    row.className = 'wk-extra';
-    row.innerHTML = `
-      <div><label class="admin-lbl">Item</label><select class="wkx-item">${EXTRA_ITEMS.map(i=>`<option>${i.key}</option>`).join('')}</select></div>
-      <div><label class="admin-lbl">Qty</label><input type="number" class="wkx-qty" value="1" min="1" inputmode="numeric"></div>
-      <div><label class="admin-lbl">Amount ₹</label><input type="number" class="wkx-amt" placeholder="0" min="0" inputmode="numeric"></div>
-      <div><label class="admin-lbl">Paid by</label><select class="wkx-mode">${modeOptions(wkMode==='free'?'cash':wkMode)}</select></div>
-      <button type="button" class="wk-x" aria-label="Remove this item">×</button>`;
-    row.querySelector('.wk-x').onclick = () => { row.remove(); updateTotals(); };
-    row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', updateTotals));
-    $('wkExtras').appendChild(row);
-    updateTotals();
-  };
-
-  function readExtras(){
-    return Array.from(document.querySelectorAll('#wkExtras .wk-extra')).map(r => ({
-      item: r.querySelector('.wkx-item').value,
-      qty:  parseInt(r.querySelector('.wkx-qty').value,10) || 1,
-      amount: parseFloat(r.querySelector('.wkx-amt').value) || 0,
-      mode: r.querySelector('.wkx-mode').value
-    }));
+  function entryMins(){
+    const s=$('wkStart').value, e=$('wkEnd').value;
+    if(!s||!e) return null;
+    const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
+    return (eh*60+em)-(sh*60+sm);
   }
-  function updateTotals(){
-    const m = durationMins();
+  function updateEntryTotals(){
+    const m = entryMins();
     $('wkTotalTime').textContent = (m===null) ? '—' : (m>0 ? hrsText(m) : 'End must be after Start');
-    const extras = readExtras();
-    $('wkExtrasEmpty').style.display = extras.length ? 'none' : 'block';
-    const net = wkMode==='free' ? 0 : (parseFloat($('wkNetAmt').value)||0);
-    $('wkEntryTotal').textContent = rupees(net + extras.reduce((a,x)=>a+x.amount,0));
+    const xs = readExtras('wkExtras');
+    $('wkExtrasEmpty').style.display = xs.length ? 'none' : 'block';
+    const net = wkMode==='free' ? 0 : num($('wkNetAmt').value);
+    $('wkEntryTotal').textContent = rupees(net + xs.reduce((a,x)=>a+x.amount,0));
   }
-
-  function showMsg(text, ok){
-    const el=$('wkMsg'); el.textContent=text; el.className='admin-msg '+(ok?'ok':'err');
-  }
+  function showMsg(text, ok){ const el=$('wkMsg'); el.textContent=text; el.className='admin-msg '+(ok?'ok':'err'); }
 
   window.wkSave = function(){
-    const name = $('wkName').value.trim();
-    const m = durationMins();
+    const name = $('wkName').value.trim(), m = entryMins();
     if(!name){ showMsg('Please enter the name.', false); return; }
     if(!wkNet){ showMsg('Please choose the net number.', false); return; }
     if(m===null || m<=0){ showMsg('Please enter a valid Start and End time.', false); return; }
-    entries.push({
+    walkins.push({
       date: $('wkDate').value || todayISO(), ref: $('wkRef').value.trim().toUpperCase(),
-      name, mobile: $('wkMobile').value.trim(), net: wkNet,
-      start: to12($('wkStart').value), end: to12($('wkEnd').value), mins: m,
-      netAmount: wkMode==='free' ? 0 : (parseFloat($('wkNetAmt').value)||0), mode: wkMode,
-      extras: readExtras(), note: $('wkNote').value.trim()
+      name, net: wkNet, start: to12($('wkStart').value), end: to12($('wkEnd').value), mins: m,
+      netAmount: wkMode==='free' ? 0 : num($('wkNetAmt').value), mode: wkMode,
+      extras: readExtras('wkExtras'), note: $('wkNote').value.trim()
     });
     showMsg(`✅ Added to Today's Register (preview only — not saved to Google Sheets).`, true);
     ['wkRef','wkName','wkMobile','wkStart','wkEnd','wkNetAmt','wkNote'].forEach(id => $(id).value='');
-    $('wkExtras').innerHTML=''; wkNet=null; wkMode='cash'; renderNets(); renderModes(); updateTotals();
-    renderToday();
+    $('wkExtras').innerHTML=''; wkNet=null; wkMode='cash'; renderNets(); renderModes(); updateEntryTotals();
+    renderRegister();
   };
 
-  function renderToday(){
-    const day = $('wkDate').value || todayISO();
-    const list = entries.filter(e => e.date === day);
-    const tot = { all:0, cash:0, upi:0, pending:0, free:0, mins:0 };
+  /* ---------- Bookings (read-only from the sheet) ---------- */
+  window.wkLoadBookings = async function(){
+    const day = $('wkRegDate').value || todayISO();
+    $('wkBkStatus').textContent = '· loading…';
+    openRef = null;
+    try{
+      const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 20000);
+      const res = await fetch(`${WK_URL}?action=searchBookings&date=${encodeURIComponent(day)}&includeBulk=true`, { signal: ctrl.signal });
+      clearTimeout(t);
+      const data = await res.json();
+      bookings = (data && Array.isArray(data.results)) ? data.results : [];
+      $('wkBkStatus').textContent = `· ${bookings.filter(b=>b.status!=='Cancelled').length} booking(s) from the sheet`;
+    }catch(err){
+      bookings = [];
+      $('wkBkStatus').innerHTML = '· could not load — <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadSampleBookings()">show sample bookings</button>';
+    }
+    renderRegister();
+  };
+  window.wkLoadSampleBookings = function(){
+    bookings = [
+      { ref:'F7M7ZI', name:'Santhosh Kamalan', teamName:'', time:'05:00 pm', duration:'1 hr',  amount:'400',  net:'Net 1', status:'Confirmed', players:'2' },
+      { ref:'UR2PAQ', name:'Bibin', teamName:'County Strikers', time:'08:00 pm', duration:'1 hr', amount:'1000', net:'Net 2', status:'Confirmed', players:'Team Booking' },
+      { ref:'C5F64N', name:'Arunkumar V', teamName:'', time:'08:00 pm', duration:'2 hrs', amount:'2000', net:'Net 3', status:'Confirmed', players:'Team Booking' },
+      { ref:'Z3OSAM', name:'Rohith', teamName:'', time:'09:00 pm', duration:'1 hr', amount:'500', net:'Net 1', status:'Cancelled', players:'1' }
+    ];
+    $('wkBkStatus').textContent = '· sample bookings';
+    renderRegister();
+  };
+
+  function bookingNets(b){ const m=String(b.net||'').match(/\d+/g); return m ? m.join(', ') : '–'; }
+  function bookingEnd(b){ const s=labelToMins(b.time); return s===null ? '' : minsToLabel(s + (DUR_MIN[b.duration]||60)); }
+
+  window.wkOpenPay = function(ref){ openRef = (openRef===ref) ? null : ref; renderRegister(); };
+  window.wkPayMode = function(k){
+    payMode = k;
+    document.querySelectorAll('#wkPayModes .wk-chip').forEach(btn => btn.classList.toggle('active', btn.dataset.mode===k));
+  };
+  window.wkPayAddExtra = () => addExtraRow('wkPayExtras', payMode, null);
+  window.wkPaySave = function(){
+    const b = bookings.find(x => x.ref === openRef); if(!b) return;
+    const noShow = $('wkPayNoShow').checked;
+    payments[b.ref] = {
+      received: noShow ? 0 : num($('wkPayAmt').value), mode: noShow ? 'pending' : payMode,
+      extras: noShow ? [] : readExtras('wkPayExtras'),
+      actualEnd: $('wkPayEnd').value ? to12($('wkPayEnd').value) : '',
+      noShow, note: $('wkPayNote').value.trim(), net: bookingNets(b)
+    };
+    openRef = null;
+    renderRegister();
+  };
+
+  function payPanelHtml(b){
+    const p = payments[b.ref];
+    payMode = p ? p.mode : 'cash';
+    return `<div class="wk-pay">
+      <div class="admin-grid">
+        <div><label class="admin-lbl" for="wkPayAmt">Amount received (₹)</label><input type="number" id="wkPayAmt" value="${p ? p.received : num(b.amount)}" min="0" inputmode="numeric"></div>
+        <div><label class="admin-lbl" for="wkPayEnd">Actual end time (if different)</label><input type="time" id="wkPayEnd"></div>
+      </div>
+      <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
+      <div class="wk-chips" id="wkPayModes" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+        ${MODES.filter(m=>m.key!=='free').map(m => `<button type="button" class="wk-chip${payMode===m.key?' active':''}" data-mode="${m.key}" onclick="wkPayMode('${m.key}')">${m.label}</button>`).join('')}
+      </div>
+      <div class="wk-block-title" style="margin-top:12px;">Additional Payments <button type="button" class="wk-link" onclick="wkPayAddExtra()">+ Add</button></div>
+      <div id="wkPayExtras"></div>
+      <div><label class="admin-lbl" for="wkPayNote">Note (optional)</label><input type="text" id="wkPayNote" value="${p ? esc(p.note) : ''}" placeholder="Anything to remember"></div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;min-height:44px;"><input type="checkbox" id="wkPayNoShow" style="width:20px;height:20px;"${p && p.noShow ? ' checked' : ''}> Did not turn up (No-show)</label>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button type="button" class="add-btn" style="flex:2;" onclick="wkPaySave()">Save Payment (preview)</button>
+        <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;" onclick="wkOpenPay('${esc(b.ref)}')">Close</button>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- Register ---------- */
+  function renderRegister(){
+    const day = $('wkRegDate').value || todayISO();
+    const tot = { cash:0, upi:0, pending:0, free:0, mins:0, sessions:0 };
     const groups = {};
+    const addExtras = xs => xs.forEach(x => { tot[x.mode] += x.amount; const g=GROUP_OF[x.item]||'Other'; groups[g]=(groups[g]||0)+x.amount; });
+
+    // bookings
+    const live = bookings.slice().sort((a,b)=>(labelToMins(a.time)||0)-(labelToMins(b.time)||0));
+    let notRecorded = 0;
+    $('wkBkList').innerHTML = live.length ? live.map(b => {
+      const p = payments[b.ref], cancelled = b.status === 'Cancelled';
+      const mins = DUR_MIN[b.duration] || 60;
+      if(!cancelled){
+        if(p && !p.noShow){ tot.sessions++; tot.mins += mins; tot[p.mode] += p.received; addExtras(p.extras); }
+        else if(!p) notRecorded++;
+      }
+      let right;
+      if(cancelled) right = `<span class="wk-noshow">Cancelled</span>`;
+      else if(p && p.noShow) right = `<span class="wk-noshow">No-show</span><br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
+      else if(p) right = `${rupees(p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><span class="wk-tag ${p.mode}">${MODE_LABEL[p.mode]}</span><br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
+      else right = `${rupees(num(b.amount))}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${esc(b.ref)}')">Record Payment</button>`;
+      const extras = p && p.extras.length ? `<div class="sub">+ ${extrasText(p.extras)}</div>` : '';
+      const endTxt = p && p.actualEnd ? `${esc(p.actualEnd)} (actual)` : esc(bookingEnd(b));
+      return `<div class="wk-row${cancelled?' cancelled':''}">
+        <div class="wk-net"><small>NET</small><b>${esc(bookingNets(b))}</b></div>
+        <div><div class="nm">${esc(b.name)}${b.teamName ? ' <span class="sub">('+esc(b.teamName)+')</span>' : ''}</div>
+          <div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>
+          ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
+        <div class="amt">${right}</div>
+        ${openRef === b.ref ? payPanelHtml(b) : ''}
+      </div>`;
+    }).join('') : `<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No bookings loaded for this date. <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadSampleBookings()">Show sample bookings</button></div>`;
+
+    // walk-ins
+    const list = walkins.filter(e => e.date === day);
     list.forEach(e => {
-      tot.mins += e.mins;
-      if(e.mode==='free') tot.free++;
-      else { tot[e.mode] += e.netAmount; }
-      e.extras.forEach(x => { tot[x.mode] += x.amount; const g=GROUP_OF[x.item]||'Other'; groups[g]=(groups[g]||0)+x.amount; });
+      tot.sessions++; tot.mins += e.mins;
+      if(e.mode==='free') tot.free++; else tot[e.mode] += e.netAmount;
+      addExtras(e.extras);
     });
-    tot.all = tot.cash + tot.upi;
-    const dp = day.split('-');
-    $('wkCards').innerHTML = `
-      <div class="wk-card big"><div class="lbl">Collected on ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.all)}</div><div class="lbl">${list.length} session${list.length===1?'':'s'} · ${hrsText(tot.mins||0).replace('0 hrs','0 hrs')} of nets</div></div>
-      <div class="wk-card"><div class="lbl">Cash</div><div class="val">${rupees(tot.cash)}</div></div>
-      <div class="wk-card"><div class="lbl">Paytm / UPI</div><div class="val">${rupees(tot.upi)}</div></div>
-      <div class="wk-card pending"><div class="lbl">Pending</div><div class="val">${rupees(tot.pending)}</div></div>
-      <div class="wk-card"><div class="lbl">No charge (Club)</div><div class="val">${tot.free} session${tot.free===1?'':'s'}</div></div>`;
-    const g = Object.keys(groups);
-    $('wkBreakdown').innerHTML = g.length
-      ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ')
-      : '';
     $('wkList').innerHTML = list.length ? list.map(e => {
       const extraTotal = e.extras.reduce((a,x)=>a+x.amount,0);
-      const extrasTxt = e.extras.map(x => `${esc(x.item.replace('Accessories – ',''))}${x.qty>1?' ×'+x.qty:''} ${rupees(x.amount)}`).join(', ');
       return `<div class="wk-row">
         <div class="wk-net"><small>NET</small><b>${e.net}</b></div>
         <div><div class="nm">${esc(e.name)}</div>
           <div class="sub">${e.start} – ${e.end} · ${hrsText(e.mins)}${e.ref?' · Ref '+esc(e.ref):''}</div>
-          ${extrasTxt?`<div class="sub">+ ${extrasTxt}</div>`:''}
+          ${e.extras.length?`<div class="sub">+ ${extrasText(e.extras)}</div>`:''}
           ${e.note?`<div class="sub">📝 ${esc(e.note)}</div>`:''}</div>
         <div class="amt">${e.mode==='free'?'—':rupees(e.netAmount+extraTotal)}<br><span class="wk-tag ${e.mode}">${MODE_LABEL[e.mode]}</span></div>
       </div>`;}).join('')
-      : '<div style="font-size:13.5px;color:#5a6152;padding:8px 0;">No entries for this date yet.</div>';
+      : '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No walk-in entries for this date.</div>';
+
+    // summary
+    const dp = day.split('-');
+    $('wkCards').innerHTML = `
+      <div class="wk-card big"><div class="lbl">Collected on ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.cash + tot.upi)}</div><div class="lbl">${tot.sessions} session${tot.sessions===1?'':'s'} recorded · ${hrsText(tot.mins)} of nets</div></div>
+      <div class="wk-card"><div class="lbl">Cash</div><div class="val">${rupees(tot.cash)}</div></div>
+      <div class="wk-card"><div class="lbl">Paytm / UPI</div><div class="val">${rupees(tot.upi)}</div></div>
+      <div class="wk-card pending"><div class="lbl">Pending</div><div class="val">${rupees(tot.pending)}</div></div>
+      <div class="wk-card${notRecorded ? ' pending' : ''}"><div class="lbl">Bookings not recorded</div><div class="val">${notRecorded}</div></div>`;
+    const g = Object.keys(groups);
+    $('wkBreakdown').innerHTML = (g.length ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ') : '')
+      + (tot.free ? `${g.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '');
+
+    // restore the open payment panel's extras (kept across re-render)
+    if(openRef && payments[openRef] && $('wkPayExtras') && !$('wkPayExtras').children.length){
+      payments[openRef].extras.forEach(x => {
+        addExtraRow('wkPayExtras', x.mode, null);
+        const r = $('wkPayExtras').lastElementChild;
+        r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
+        r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
+      });
+    }
   }
 
   window.wkLoadSample = function(){
-    const d = $('wkDate').value || todayISO();
-    const S = (name,net,start,end,mins,amt,mode,extras) => ({date:d,ref:'',name,mobile:'',net,start,end,mins,netAmount:amt,mode,extras:extras||[],note:''});
-    entries.push(
+    const d = $('wkRegDate').value || todayISO();
+    const S = (name,net,start,end,mins,amt,mode,extras) => ({date:d,ref:'',name,net,start,end,mins,netAmount:amt,mode,extras:extras||[],note:''});
+    walkins.push(
       S('County',1,'07:00 pm','08:00 pm',60,0,'free'),
       S('County',2,'07:00 pm','08:00 pm',60,0,'free'),
       S('County',3,'07:00 pm','08:00 pm',60,0,'free'),
@@ -1927,7 +2069,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       S('Rahan',2,'03:20 pm','04:50 pm',90,600,'upi'),
       S('Adithya',1,'04:45 pm','05:45 pm',60,400,'cash')
     );
-    renderToday();
+    renderRegister();
   };
 
   window.wkShowSub = function(which){
@@ -1935,13 +2077,19 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     $('wkToday').style.display = which==='today' ? 'block' : 'none';
     $('wkSubEntry').classList.toggle('active', which==='entry');
     $('wkSubToday').classList.toggle('active', which==='today');
-    if(which==='today') renderToday();
+    if(which==='today') renderRegister();
   };
 
+  // Load the register automatically the first time the tab is opened
+  let loadedOnce = false;
+  const tabBtn = $('tabBtnWalkin');
+  if(tabBtn) tabBtn.addEventListener('click', () => { if(!loadedOnce){ loadedOnce = true; wkLoadBookings(); } });
+
   $('wkDate').value = todayISO();
-  ['wkStart','wkEnd','wkNetAmt'].forEach(id => $(id).addEventListener('input', updateTotals));
-  $('wkDate').addEventListener('change', renderToday);
-  renderNets(); renderModes(); updateTotals();
+  $('wkRegDate').value = todayISO();
+  ['wkStart','wkEnd','wkNetAmt'].forEach(id => $(id).addEventListener('input', updateEntryTotals));
+  $('wkRegDate').addEventListener('change', wkLoadBookings);
+  renderNets(); renderModes(); updateEntryTotals(); renderRegister();
 })();
 </script>
 </body>
