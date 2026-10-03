@@ -251,6 +251,49 @@
   .admin-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
   @media(max-width:520px){.admin-grid{grid-template-columns:1fr;}.admin-tabs{gap:6px;}}
+
+  /* ── Walk-in & Payment (preview) ── */
+  .wk-preview{background:#fff7e0;border:1px solid #f0d58a;color:#6b4a10;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;margin-bottom:14px;}
+  .wk-sub{display:flex;gap:8px;margin-bottom:14px;}
+  .wk-sub button{flex:1;font-family:inherit;font-size:14px;font-weight:700;padding:11px 0;border-radius:10px;border:2px solid #d9d3c0;background:#fff;color:var(--navy);cursor:pointer;}
+  .wk-sub button.active{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .wk-block{border:1px solid #e3e0d4;border-radius:12px;padding:14px;margin-bottom:12px;background:#fff;}
+  .wk-block-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .wk-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+  .wk-chips.two{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .wk-chip{font-family:inherit;font-size:15px;font-weight:600;min-height:46px;border-radius:10px;border:1.5px solid #d9d3c0;background:#fff;color:var(--ink);cursor:pointer;}
+  .wk-chip.active{border-color:var(--navy);background:var(--navy);color:#fff;font-weight:700;}
+  .wk-total-time{display:flex;justify-content:space-between;align-items:center;background:#eef4ef;border-radius:10px;padding:11px 14px;margin-top:10px;font-size:14px;}
+  .wk-total-time strong{color:var(--navy);font-size:17px;}
+  .wk-extra{display:grid;grid-template-columns:1.6fr .6fr .9fr 1.1fr 44px;gap:6px;align-items:end;margin-bottom:8px;}
+  .wk-extra select,.wk-extra input{width:100%;box-sizing:border-box;}
+  .wk-x{font-family:inherit;width:44px;height:44px;border-radius:10px;border:1.5px solid #e8b4b4;background:#fff;color:#8b1c1c;font-size:18px;cursor:pointer;}
+  .wk-link{font-family:inherit;background:none;border:none;color:var(--navy);font-weight:700;font-size:14px;cursor:pointer;padding:8px 0;min-height:44px;}
+  .wk-sum{display:flex;justify-content:space-between;align-items:center;background:#17251c;color:#fff;border-radius:12px;padding:14px 16px;margin:6px 0 12px;}
+  .wk-sum span{font-size:13.5px;color:#cfdcd3;}
+  .wk-sum strong{font-family:Georgia,serif;font-size:24px;color:#e8c766;}
+  .wk-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+  .wk-card{border:1px solid #e3e0d4;border-radius:12px;padding:10px 12px;background:#fff;}
+  .wk-card .lbl{font-size:12.5px;color:#5a6152;}
+  .wk-card .val{font-size:18px;font-weight:700;color:var(--ink);}
+  .wk-card.big{grid-column:span 2;background:#17251c;border-color:#17251c;}
+  .wk-card.big .lbl{color:#cfdcd3;}
+  .wk-card.big .val{font-family:Georgia,serif;font-size:26px;color:#e8c766;}
+  .wk-card.pending{background:#fff4e0;border-color:#f0d7a8;}
+  .wk-row{border:1px solid #e3e0d4;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;background:#fff;}
+  .wk-net{width:44px;height:44px;border-radius:10px;background:#e3ebe5;color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;}
+  .wk-net small{font-size:9.5px;font-weight:700;}
+  .wk-net b{font-size:17px;}
+  .wk-row .nm{font-weight:700;font-size:15px;}
+  .wk-row .sub{font-size:12.5px;color:#5a6152;}
+  .wk-row .amt{font-weight:700;font-size:15px;text-align:right;}
+  .wk-tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:3px;}
+  .wk-tag.cash{background:#e3ebe5;color:#1a5c38;}
+  .wk-tag.upi{background:#e3ecf7;color:#1d4f86;}
+  .wk-tag.pending{background:#fff4e0;color:#6b4a10;}
+  .wk-tag.free{background:#eeeeec;color:#4a4a46;}
+  .wk-breakdown{font-size:13px;color:#3d4436;line-height:1.8;margin-bottom:12px;}
+  @media(max-width:520px){.wk-extra{grid-template-columns:1fr 1fr;}.wk-extra .wk-x{grid-column:span 2;width:100%;}}
 </style>
 </head>
 <body>
@@ -269,6 +312,7 @@
     <button class="admin-tab" id="tabBtnSearch" onclick="showStaffTab('search')">🔍 Search Bookings</button>
     <button class="admin-tab" id="tabBtnName" onclick="showStaffTab('name')">🧑 Name Search</button>
     <button class="admin-tab" id="tabBtnBooking" onclick="showStaffTab('booking')">➕ New Booking</button>
+    <button class="admin-tab" id="tabBtnWalkin" onclick="showStaffTab('walkin')">💰 Walk-in &amp; Payment</button>
   </div>
 
   <!-- ── Free Slots Search ── -->
@@ -489,6 +533,68 @@
   </div>
   </div>
 
+  <!-- ── Walk-in & Payment (PREVIEW — not saved to Google Sheets yet) ── -->
+  <div class="admin-tab-content" id="staffTabWalkin" style="display:none;">
+  <div class="card">
+    <div class="lock-title">💰 Walk-in &amp; Payment <span class="badge">PREVIEW</span></div>
+    <div class="wk-preview">Preview only — entries are NOT saved to Google Sheets yet and disappear when the page is refreshed.</div>
+
+    <div class="wk-sub">
+      <button type="button" id="wkSubEntry" class="active" onclick="wkShowSub('entry')">New Entry</button>
+      <button type="button" id="wkSubToday" onclick="wkShowSub('today')">Today's Register</button>
+    </div>
+
+    <!-- New Entry -->
+    <div id="wkEntry">
+      <div class="wk-block">
+        <div class="admin-grid">
+          <div><label class="admin-lbl" for="wkDate">Date</label><input type="date" id="wkDate"></div>
+          <div><label class="admin-lbl" for="wkRef">Booking Ref (if any)</label><input type="text" id="wkRef" placeholder="e.g. F7M7ZI" maxlength="10"></div>
+          <div><label class="admin-lbl" for="wkName">Name</label><input type="text" id="wkName" placeholder="Customer / team name"></div>
+          <div><label class="admin-lbl" for="wkMobile">Mobile (optional)</label><input type="tel" id="wkMobile" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
+        </div>
+      </div>
+
+      <div class="wk-block">
+        <div class="wk-block-title">Net No.</div>
+        <div class="wk-chips" id="wkNets"></div>
+        <div class="admin-grid" style="margin-top:12px;">
+          <div><label class="admin-lbl" for="wkStart">Start Time</label><input type="time" id="wkStart"></div>
+          <div><label class="admin-lbl" for="wkEnd">End Time</label><input type="time" id="wkEnd"></div>
+        </div>
+        <div class="wk-total-time"><span>Total Time (auto)</span><strong id="wkTotalTime">—</strong></div>
+      </div>
+
+      <div class="wk-block">
+        <div class="wk-block-title">Net Charges</div>
+        <div><label class="admin-lbl" for="wkNetAmt">Amount (₹)</label><input type="number" id="wkNetAmt" placeholder="0" min="0" inputmode="numeric"></div>
+        <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
+        <div class="wk-chips two" id="wkModes"></div>
+      </div>
+
+      <div class="wk-block">
+        <div class="wk-block-title">Additional Payments <button type="button" class="wk-link" onclick="wkAddExtra()">+ Add</button></div>
+        <div id="wkExtras"></div>
+        <div id="wkExtrasEmpty" style="font-size:13px;color:#5a6152;">Accessories (AP, Grip, Ball, Kit Rent), Drinks, Throwers Charge, Coaching Charges… tap “+ Add”.</div>
+      </div>
+
+      <div><label class="admin-lbl" for="wkNote">Note (optional)</label><input type="text" id="wkNote" placeholder="Anything to remember about this session"></div>
+
+      <div class="wk-sum" style="margin-top:14px;"><span>Total for this entry</span><strong id="wkEntryTotal">₹0</strong></div>
+      <button type="button" class="add-btn" style="width:100%;" onclick="wkSave()">Save Entry (preview)</button>
+      <div class="admin-msg" id="wkMsg"></div>
+    </div>
+
+    <!-- Today's Register -->
+    <div id="wkToday" style="display:none;">
+      <div class="wk-cards" id="wkCards"></div>
+      <div class="wk-breakdown" id="wkBreakdown"></div>
+      <div id="wkList"></div>
+      <button type="button" class="wk-link" onclick="wkLoadSample()">Load sample entries (from your register page)</button>
+    </div>
+  </div>
+  </div>
+
 </div>
 
 <script>
@@ -571,7 +677,7 @@
 
   const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
 
-  const STAFF_TABS = ['free','freetime','dayview','search','name','booking'];
+  const STAFF_TABS = ['free','freetime','dayview','search','name','booking','walkin'];
   function showStaffTab(tab){
     STAFF_TABS.forEach(function(t){
       const cap = t.charAt(0).toUpperCase()+t.slice(1);
@@ -1662,6 +1768,181 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     chev.classList.toggle('open');
   }
   window.toggleNormalResult = toggleNormalResult;
+</script>
+<script>
+/* ── Walk-in & Payment — PREVIEW (nothing is sent to the server) ── */
+(function(){
+  const MODES = [
+    { key:'cash',    label:'Cash' },
+    { key:'upi',     label:'Paytm / UPI' },
+    { key:'pending', label:'Pending' },
+    { key:'free',    label:'No Charge (Club)' }
+  ];
+  const MODE_LABEL = Object.fromEntries(MODES.map(m => [m.key, m.label]));
+  const EXTRA_ITEMS = [
+    { key:'Accessories – AP',       group:'Accessories' },
+    { key:'Accessories – Grip',     group:'Accessories' },
+    { key:'Accessories – Ball',     group:'Accessories' },
+    { key:'Accessories – Kit Rent', group:'Accessories' },
+    { key:'Drinks',                 group:'Drinks' },
+    { key:'Throwers Charge',        group:'Throwers' },
+    { key:'Coaching Charges',       group:'Coaching' },
+    { key:'Other',                  group:'Other' }
+  ];
+  const GROUP_OF = Object.fromEntries(EXTRA_ITEMS.map(i => [i.key, i.group]));
+  const entries = [];            // kept in this page only (preview)
+  let wkNet = null, wkMode = 'cash';
+
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,'0');
+  const rupees = n => '₹' + Number(n||0).toLocaleString('en-IN');
+  const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function to12(t){ if(!t) return ''; let [h,m]=t.split(':').map(Number); const ap=h>=12?'pm':'am'; h=h%12||12; return `${pad(h)}:${pad(m)} ${ap}`; }
+  function hrsText(mins){ const h=mins/60; return (h===1?'1 hr':(Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,''))+' hrs'); }
+  function durationMins(){
+    const s=$('wkStart').value, e=$('wkEnd').value;
+    if(!s||!e) return null;
+    const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
+    return (eh*60+em)-(sh*60+sm);
+  }
+
+  function renderNets(){
+    const n = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
+    let html='';
+    for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${wkNet===i?' active':''}" onclick="wkPickNet(${i})">${i}</button>`;
+    $('wkNets').innerHTML = html;
+  }
+  function renderModes(){
+    $('wkModes').innerHTML = MODES.map(m =>
+      `<button type="button" class="wk-chip${wkMode===m.key?' active':''}" onclick="wkPickMode('${m.key}')">${m.label}</button>`).join('');
+  }
+  function modeOptions(sel){
+    return MODES.filter(m=>m.key!=='free').map(m => `<option value="${m.key}"${m.key===sel?' selected':''}>${m.label}</option>`).join('');
+  }
+  window.wkPickNet  = n => { wkNet = n; renderNets(); };
+  window.wkPickMode = k => { wkMode = k; if(k==='free') $('wkNetAmt').value = 0; renderModes(); updateTotals(); };
+
+  window.wkAddExtra = function(){
+    const row = document.createElement('div');
+    row.className = 'wk-extra';
+    row.innerHTML = `
+      <div><label class="admin-lbl">Item</label><select class="wkx-item">${EXTRA_ITEMS.map(i=>`<option>${i.key}</option>`).join('')}</select></div>
+      <div><label class="admin-lbl">Qty</label><input type="number" class="wkx-qty" value="1" min="1" inputmode="numeric"></div>
+      <div><label class="admin-lbl">Amount ₹</label><input type="number" class="wkx-amt" placeholder="0" min="0" inputmode="numeric"></div>
+      <div><label class="admin-lbl">Paid by</label><select class="wkx-mode">${modeOptions(wkMode==='free'?'cash':wkMode)}</select></div>
+      <button type="button" class="wk-x" aria-label="Remove this item">×</button>`;
+    row.querySelector('.wk-x').onclick = () => { row.remove(); updateTotals(); };
+    row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', updateTotals));
+    $('wkExtras').appendChild(row);
+    updateTotals();
+  };
+
+  function readExtras(){
+    return Array.from(document.querySelectorAll('#wkExtras .wk-extra')).map(r => ({
+      item: r.querySelector('.wkx-item').value,
+      qty:  parseInt(r.querySelector('.wkx-qty').value,10) || 1,
+      amount: parseFloat(r.querySelector('.wkx-amt').value) || 0,
+      mode: r.querySelector('.wkx-mode').value
+    }));
+  }
+  function updateTotals(){
+    const m = durationMins();
+    $('wkTotalTime').textContent = (m===null) ? '—' : (m>0 ? hrsText(m) : 'End must be after Start');
+    const extras = readExtras();
+    $('wkExtrasEmpty').style.display = extras.length ? 'none' : 'block';
+    const net = wkMode==='free' ? 0 : (parseFloat($('wkNetAmt').value)||0);
+    $('wkEntryTotal').textContent = rupees(net + extras.reduce((a,x)=>a+x.amount,0));
+  }
+
+  function showMsg(text, ok){
+    const el=$('wkMsg'); el.textContent=text; el.className='admin-msg '+(ok?'ok':'err');
+  }
+
+  window.wkSave = function(){
+    const name = $('wkName').value.trim();
+    const m = durationMins();
+    if(!name){ showMsg('Please enter the name.', false); return; }
+    if(!wkNet){ showMsg('Please choose the net number.', false); return; }
+    if(m===null || m<=0){ showMsg('Please enter a valid Start and End time.', false); return; }
+    entries.push({
+      date: $('wkDate').value || todayISO(), ref: $('wkRef').value.trim().toUpperCase(),
+      name, mobile: $('wkMobile').value.trim(), net: wkNet,
+      start: to12($('wkStart').value), end: to12($('wkEnd').value), mins: m,
+      netAmount: wkMode==='free' ? 0 : (parseFloat($('wkNetAmt').value)||0), mode: wkMode,
+      extras: readExtras(), note: $('wkNote').value.trim()
+    });
+    showMsg(`✅ Added to Today's Register (preview only — not saved to Google Sheets).`, true);
+    ['wkRef','wkName','wkMobile','wkStart','wkEnd','wkNetAmt','wkNote'].forEach(id => $(id).value='');
+    $('wkExtras').innerHTML=''; wkNet=null; wkMode='cash'; renderNets(); renderModes(); updateTotals();
+    renderToday();
+  };
+
+  function renderToday(){
+    const day = $('wkDate').value || todayISO();
+    const list = entries.filter(e => e.date === day);
+    const tot = { all:0, cash:0, upi:0, pending:0, free:0, mins:0 };
+    const groups = {};
+    list.forEach(e => {
+      tot.mins += e.mins;
+      if(e.mode==='free') tot.free++;
+      else { tot[e.mode] += e.netAmount; }
+      e.extras.forEach(x => { tot[x.mode] += x.amount; const g=GROUP_OF[x.item]||'Other'; groups[g]=(groups[g]||0)+x.amount; });
+    });
+    tot.all = tot.cash + tot.upi;
+    const dp = day.split('-');
+    $('wkCards').innerHTML = `
+      <div class="wk-card big"><div class="lbl">Collected on ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.all)}</div><div class="lbl">${list.length} session${list.length===1?'':'s'} · ${hrsText(tot.mins||0).replace('0 hrs','0 hrs')} of nets</div></div>
+      <div class="wk-card"><div class="lbl">Cash</div><div class="val">${rupees(tot.cash)}</div></div>
+      <div class="wk-card"><div class="lbl">Paytm / UPI</div><div class="val">${rupees(tot.upi)}</div></div>
+      <div class="wk-card pending"><div class="lbl">Pending</div><div class="val">${rupees(tot.pending)}</div></div>
+      <div class="wk-card"><div class="lbl">No charge (Club)</div><div class="val">${tot.free} session${tot.free===1?'':'s'}</div></div>`;
+    const g = Object.keys(groups);
+    $('wkBreakdown').innerHTML = g.length
+      ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ')
+      : '';
+    $('wkList').innerHTML = list.length ? list.map(e => {
+      const extraTotal = e.extras.reduce((a,x)=>a+x.amount,0);
+      const extrasTxt = e.extras.map(x => `${esc(x.item.replace('Accessories – ',''))}${x.qty>1?' ×'+x.qty:''} ${rupees(x.amount)}`).join(', ');
+      return `<div class="wk-row">
+        <div class="wk-net"><small>NET</small><b>${e.net}</b></div>
+        <div><div class="nm">${esc(e.name)}</div>
+          <div class="sub">${e.start} – ${e.end} · ${hrsText(e.mins)}${e.ref?' · Ref '+esc(e.ref):''}</div>
+          ${extrasTxt?`<div class="sub">+ ${extrasTxt}</div>`:''}
+          ${e.note?`<div class="sub">📝 ${esc(e.note)}</div>`:''}</div>
+        <div class="amt">${e.mode==='free'?'—':rupees(e.netAmount+extraTotal)}<br><span class="wk-tag ${e.mode}">${MODE_LABEL[e.mode]}</span></div>
+      </div>`;}).join('')
+      : '<div style="font-size:13.5px;color:#5a6152;padding:8px 0;">No entries for this date yet.</div>';
+  }
+
+  window.wkLoadSample = function(){
+    const d = $('wkDate').value || todayISO();
+    const S = (name,net,start,end,mins,amt,mode,extras) => ({date:d,ref:'',name,mobile:'',net,start,end,mins,netAmount:amt,mode,extras:extras||[],note:''});
+    entries.push(
+      S('County',1,'07:00 pm','08:00 pm',60,0,'free'),
+      S('County',2,'07:00 pm','08:00 pm',60,0,'free'),
+      S('County',3,'07:00 pm','08:00 pm',60,0,'free'),
+      S('Shanker',2,'08:30 pm','09:30 pm',60,400,'upi',[{item:'Accessories – Ball',qty:2,amount:900,mode:'upi'}]),
+      S('Vikki',3,'10:00 am','11:00 am',60,400,'cash'),
+      S('Rahan',2,'03:20 pm','04:50 pm',90,600,'upi'),
+      S('Adithya',1,'04:45 pm','05:45 pm',60,400,'cash')
+    );
+    renderToday();
+  };
+
+  window.wkShowSub = function(which){
+    $('wkEntry').style.display = which==='entry' ? 'block' : 'none';
+    $('wkToday').style.display = which==='today' ? 'block' : 'none';
+    $('wkSubEntry').classList.toggle('active', which==='entry');
+    $('wkSubToday').classList.toggle('active', which==='today');
+    if(which==='today') renderToday();
+  };
+
+  $('wkDate').value = todayISO();
+  ['wkStart','wkEnd','wkNetAmt'].forEach(id => $(id).addEventListener('input', updateTotals));
+  $('wkDate').addEventListener('change', renderToday);
+  renderNets(); renderModes(); updateTotals();
+})();
 </script>
 </body>
 </html>
