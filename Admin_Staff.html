@@ -1944,7 +1944,18 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     payMode = k;
     document.querySelectorAll('#wkPayModes .wk-chip').forEach(btn => btn.classList.toggle('active', btn.dataset.mode===k));
   };
-  window.wkPayAddExtra = () => addExtraRow('wkPayExtras', payMode, null);
+  // Live total inside the Record Payment panel: net amount + all extras
+  function updatePayTotal(){
+    const el = $('wkPayTotal'); if(!el) return;
+    const noShow = $('wkPayNoShow') && $('wkPayNoShow').checked;
+    const xs = readExtras('wkPayExtras');
+    const total = noShow ? 0 : num($('wkPayAmt').value) + xs.reduce((a,x)=>a+x.amount,0);
+    el.textContent = rupees(total);
+    const br = $('wkPayBreak');
+    if(br) br.textContent = noShow ? 'No-show — nothing collected'
+      : (xs.length ? `Nets ${rupees(num($('wkPayAmt').value))} + extras ${rupees(xs.reduce((a,x)=>a+x.amount,0))}` : 'Nets only');
+  }
+  window.wkPayAddExtra = () => addExtraRow('wkPayExtras', payMode, updatePayTotal);
   window.wkPaySave = function(){
     const b = bookings.find(x => x.ref === openRef); if(!b) return;
     const noShow = $('wkPayNoShow').checked;
@@ -1974,6 +1985,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       <div id="wkPayExtras"></div>
       <div><label class="admin-lbl" for="wkPayNote">Note (optional)</label><input type="text" id="wkPayNote" value="${p ? esc(p.note) : ''}" placeholder="Anything to remember"></div>
       <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;min-height:44px;"><input type="checkbox" id="wkPayNoShow" style="width:20px;height:20px;"${p && p.noShow ? ' checked' : ''}> Did not turn up (No-show)</label>
+      <div class="wk-sum" style="margin:8px 0 4px;"><span>Total for this booking<br><small id="wkPayBreak" style="font-size:12px;color:#cfdcd3;"></small></span><strong id="wkPayTotal">₹0</strong></div>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button type="button" class="add-btn" style="flex:2;" onclick="wkPaySave()">Save Payment (preview)</button>
         <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;" onclick="wkOpenPay('${esc(b.ref)}')">Close</button>
@@ -2049,11 +2061,16 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     // restore the open payment panel's extras (kept across re-render)
     if(openRef && payments[openRef] && $('wkPayExtras') && !$('wkPayExtras').children.length){
       payments[openRef].extras.forEach(x => {
-        addExtraRow('wkPayExtras', x.mode, null);
+        addExtraRow('wkPayExtras', x.mode, updatePayTotal);
         const r = $('wkPayExtras').lastElementChild;
         r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
         r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
       });
+    }
+    if(openRef && $('wkPayAmt')){
+      $('wkPayAmt').addEventListener('input', updatePayTotal);
+      $('wkPayNoShow').addEventListener('change', updatePayTotal);
+      updatePayTotal();
     }
   }
 
