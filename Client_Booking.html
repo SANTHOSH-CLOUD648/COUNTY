@@ -16,7 +16,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="https://countyindoornetz.com/facility-images/app-icon-192.png">
 <link rel="apple-touch-icon" href="https://countyindoornetz.com/facility-images/app-icon-192.png">
-<link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjogIkNvdW50eSBJbmRvb3IgTmV0eiIsICJzaG9ydF9uYW1lIjogIkNvdW50eSBOZXR6IiwgImljb25zIjogW3sic3JjIjogImh0dHBzOi8vY291bnR5aW5kb29ybmV0ei5jb20vZmFjaWxpdHktaW1hZ2VzL2FwcC1pY29uLTE5Mi5wbmciLCAic2l6ZXMiOiAiMTkyeDE5MiIsICJ0eXBlIjogImltYWdlL3BuZyJ9LCB7InNyYyI6ICJodHRwczovL2NvdW50eWluZG9vcm5ldHouY29tL2ZhY2lsaXR5LWltYWdlcy9hcHAtaWNvbi01MTIucG5nIiwgInNpemVzIjogIjUxMng1MTIiLCAidHlwZSI6ICJpbWFnZS9wbmcifV0sICJzdGFydF91cmwiOiAiaHR0cHM6Ly9jb3VudHlpbmRvb3JuZXR6LmNvbS9DbGllbnRfQm9va2luZy5odG1sIiwgInNjb3BlIjogImh0dHBzOi8vY291bnR5aW5kb29ybmV0ei5jb20vQ2xpZW50X0Jvb2tpbmcuaHRtbCIsICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLCAiYmFja2dyb3VuZF9jb2xvciI6ICIjMEE2N0ZGIiwgInRoZW1lX2NvbG9yIjogIiMxYTVjMzgifQ==">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a5c38">
 <style>
   :root{
     --navy:#1a5c38;
@@ -450,6 +451,23 @@
   .edit-modal.show{display:block;}
   .edit-msg.ok{color:#1c4a22;} .edit-msg.err{color:#8b1c1c;}
   @media(max-width:520px){}
+
+  /* ── Install App button ── */
+  .install-bar{display:none;align-items:center;gap:12px;background:#fff8e6;border:1px solid #ecd59a;border-radius:14px;padding:12px 14px;margin:0 auto 14px;max-width:640px;box-sizing:border-box;}
+  .install-bar.show{display:flex;}
+  .install-bar .ib-text{flex:1;font-size:13.5px;line-height:1.4;color:#3d3420;}
+  .install-bar .ib-text strong{display:block;font-size:14.5px;color:var(--navy);}
+  .install-btn{font-family:inherit;font-size:14.5px;font-weight:700;min-height:44px;padding:0 16px;border-radius:12px;border:none;background:var(--navy);color:#fff;cursor:pointer;white-space:nowrap;}
+  .install-btn:hover{background:var(--navy-dark);}
+  .install-x{font-family:inherit;width:36px;height:44px;border:none;background:none;color:#7a6a40;font-size:20px;cursor:pointer;}
+  .install-receipt{display:none;margin-top:12px;background:#eef4ef;border:1px solid #cfe0d3;border-radius:10px;padding:10px 13px;align-items:center;gap:10px;font-size:12.5px;color:#1f3a28;}
+  .install-receipt.show{display:flex;}
+  .install-receipt span{flex:1;}
+  .ios-guide{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:9999;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));}
+  .ios-guide.show{display:flex;}
+  .ios-guide .box{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:20px;box-sizing:border-box;}
+  .ios-guide h4{margin:0 0 10px;font-size:17px;color:var(--navy);}
+  .ios-guide ol{margin:0 0 14px;padding-left:20px;font-size:15px;line-height:1.7;color:#222;}
 </style>
 </head>
 <body>
@@ -504,6 +522,22 @@
     </button>
     <div class="services-dropdown" id="newsDropdown">
       <!-- Populated by buildNewsDropdown() on load -->
+    </div>
+  </div>
+
+  <!-- Install App bar (shown only when the app can be installed) -->
+  <div class="install-bar" id="installBar" role="region" aria-label="Install the app">
+    <div class="ib-text"><strong>📲 Get the County Indoor Netz app</strong>Book your nets in seconds, right from your home screen.</div>
+    <button type="button" class="install-btn" onclick="installApp()">Install App</button>
+    <button type="button" class="install-x" aria-label="Hide" onclick="hideInstallBar()">×</button>
+  </div>
+
+  <!-- How to install on iPhone / other browsers -->
+  <div class="ios-guide" id="installGuide" role="dialog" aria-modal="true" aria-labelledby="installGuideTitle" onclick="if(event.target===this)closeInstallGuide()">
+    <div class="box">
+      <h4 id="installGuideTitle">📲 Install the app</h4>
+      <ol id="installGuideSteps"></ol>
+      <button type="button" class="install-btn" style="width:100%;" onclick="closeInstallGuide()">Got it</button>
     </div>
   </div>
 
@@ -666,6 +700,11 @@
             🚗 Get directions on Google Maps
           </a>
         </div>
+      </div>
+
+      <div class="install-receipt" id="receiptInstall">
+        <span>📲 Book faster next time — install the app on your phone.</span>
+        <button type="button" class="install-btn" onclick="installApp()">Install App</button>
       </div>
 
       <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
@@ -1756,7 +1795,7 @@ Cancellation allowed up to 2 hours before the slot or inform us.
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
 
-👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
+📲 Tip: Open the link below and tap the *Install App* button to add County Indoor Netz to your phone, just like an app!
 https://countyindoornetz.com/Client_Booking.html
 
 Thank you for your cooperation! See you at the nets! 🏏`;
@@ -1783,7 +1822,7 @@ Please note: Payment is applicable for the selected number of players, duration,
 Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.
 
 Network/Technical Issues: please contact us directly.
-Tip: Click the link below and use "Add to Home screen" for quick access anytime.
+Tip: Open the link below and tap "Install App" to add it to your phone.
 https://countyindoornetz.com/Client_Booking.html
 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 Thank you for your cooperation! See you at the nets!`;
@@ -1843,6 +1882,11 @@ Thank you for your cooperation! See you at the nets!`;
           smsMessage = smsMessage.split(ref).join(finalRef);
         }
         handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage);
+      } else if(result.status === 'settings_changed'){
+        showBookingError('⚠️ ' + (result.message || 'Booking times or rates have just been updated. Please refresh the page and book again.'));
+      } else if(result.status === 'too_late'){
+        showBookingError(result.message || 'This time slot has already passed. Please choose a later time.');
+        refreshAvailability();
       } else if(result.status === 'full'){
         showBookingError('Sorry, this time slot just filled up. Please select a different time or reduce the number of nets.');
         refreshAvailability(); // update labels immediately
@@ -2521,6 +2565,118 @@ Thank you for your cooperation! See you at the nets!`;
       if (e.key === 'ArrowRight') newsNextImage();
     }
   });
+})();
+</script>
+<script>
+/* ── Install App button ──
+   Android (Chrome, Edge, Samsung Internet): tapping the button opens the
+   phone's own "Install app?" box — one tap to install.
+   iPhone (Safari) and in-app browsers (e.g. inside WhatsApp): Apple and
+   these apps don't allow automatic install, so the button shows the short
+   steps instead. Hidden automatically when the app is already installed. */
+(function(){
+  let deferredPrompt = null;
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isInApp = /FBAN|FBAV|Instagram|WhatsApp|Line\//i.test(ua) || (/Android/i.test(ua) && /; wv\)/.test(ua));
+  const isAndroid = /Android/i.test(ua);
+  const isMobile = isIOS || isAndroid;
+  const runningAsApp = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  // Remember on this phone that the app has been installed, so the button
+  // also stays hidden when the link is opened in the normal browser later.
+  const INSTALLED_KEY = 'cin_app_installed';
+  function markInstalled(){ try{ localStorage.setItem(INSTALLED_KEY, '1'); }catch(e){} }
+  function knownInstalled(){ try{ return localStorage.getItem(INSTALLED_KEY) === '1'; }catch(e){ return false; } }
+  if(runningAsApp()) markInstalled();
+  const installed = () => runningAsApp() || knownInstalled();
+
+  const bar = () => document.getElementById('installBar');
+  const rec = () => document.getElementById('receiptInstall');
+  function showButtons(){
+    if(installed()) return;
+    let hidden = false;
+    try{ hidden = sessionStorage.getItem('cin_install_bar_hidden') === '1'; }catch(e){}
+    if(bar() && !hidden) bar().classList.add('show');
+    if(rec()) rec().classList.add('show');
+  }
+  function hideButtons(){
+    if(bar()) bar().classList.remove('show');
+    if(rec()) rec().classList.remove('show');
+  }
+  window.hideInstallBar = function(){
+    if(bar()) bar().classList.remove('show');
+    try{ sessionStorage.setItem('cin_install_bar_hidden','1'); }catch(e){}
+  };
+
+  function openGuide(){
+    const steps = document.getElementById('installGuideSteps');
+    if(isIOS && !isInApp){
+      steps.innerHTML = '<li>Tap the <strong>Share</strong> button <strong>⬆️</strong> at the bottom of Safari.</li>'
+        + '<li>Scroll down and tap <strong>“Add to Home Screen”</strong>.</li>'
+        + '<li>Tap <strong>Add</strong> (top right).</li>';
+    } else if(isAndroid){
+      // Opened from WhatsApp, the page may be showing inside WhatsApp's own
+      // viewer, where installing isn't possible. One tap moves it to Chrome.
+      const chromeLink = 'intent://' + location.host + location.pathname + location.search +
+        '#Intent;scheme=https;package=com.android.chrome;end';
+      steps.innerHTML = '<li>Tap <a href="' + chromeLink + '" class="install-btn" style="display:inline-flex;align-items:center;text-decoration:none;margin:4px 0;">Open in Chrome</a></li>'
+        + '<li>In Chrome, tap the <strong>Install App</strong> button again (or tap <strong>⋮</strong> → <strong>“Install app”</strong> / <strong>“Add to Home screen”</strong>).</li>'
+        + '<li>Tap <strong>Install</strong>.</li>';
+    } else if(isInApp){
+      steps.innerHTML = '<li>Tap <strong>⋮</strong> or <strong>⋯</strong> and choose <strong>“Open in Safari”</strong>.</li>'
+        + '<li>Then tap the <strong>Install App</strong> button again.</li>';
+    } else {
+      steps.innerHTML = '<li>Tap the browser menu <strong>⋮</strong> (top right).</li>'
+        + '<li>Tap <strong>“Install app”</strong> or <strong>“Add to Home screen”</strong>.</li>'
+        + '<li>Tap <strong>Install</strong>.</li>';
+    }
+    document.getElementById('installGuide').classList.add('show');
+  }
+  window.closeInstallGuide = function(){ document.getElementById('installGuide').classList.remove('show'); };
+
+  window.installApp = async function(){
+    if(deferredPrompt){
+      deferredPrompt.prompt();
+      try{
+        const choice = await deferredPrompt.userChoice;
+        if(choice && choice.outcome === 'accepted'){ markInstalled(); hideButtons(); }
+      }catch(e){}
+      deferredPrompt = null;
+      return;
+    }
+    openGuide();
+  };
+
+  // Android/Chrome tells us the app can be installed
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Chrome only offers this when the app is NOT installed — so if it was
+    // removed from the phone, forget the old "installed" note.
+    try{ localStorage.removeItem(INSTALLED_KEY); }catch(err){}
+    showButtons();
+  });
+  window.addEventListener('appinstalled', () => { deferredPrompt = null; markInstalled(); hideButtons(); });
+
+  // iPhone and in-app browsers never send that signal — show the button
+  // anyway on phones, with the step-by-step guide.
+  if(isMobile && (isIOS || isInApp) && !installed()) showButtons();
+
+  // Android: links opened from WhatsApp often show inside WhatsApp's own
+  // viewer, which never offers the install box. If Chrome hasn't offered it
+  // within a few seconds, show the button anyway — it then guides the
+  // customer to "Open in Chrome" with one tap.
+  if(isAndroid && !installed()){
+    setTimeout(() => { if(!deferredPrompt && !installed()) showButtons(); }, 4000);
+  }
+
+  // Small helper file needed for Android's install box. It never stores
+  // old copies of the page, so updates always appear straight away.
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 })();
 </script>
 </body>

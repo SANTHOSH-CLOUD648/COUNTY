@@ -1352,7 +1352,7 @@
     const ref = 'STF'+Math.random().toString(36).slice(2,7).toUpperCase();
     const rate = lookupRate(session, players, ball);
     const amount = rate ? rate * ADMIN_DUR_HRS[dur] * nets : '';
-    const buildQs = (confirmDup) => `action=adminBook&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}&teamName=${encodeURIComponent(teamName)}`+
+    const buildQs = (confirmDup) => `action=adminBook&src=staff&ref=${encodeURIComponent(ref)}&name=${encodeURIComponent(name)}&teamName=${encodeURIComponent(teamName)}`+
       `&mobile=${encodeURIComponent(mobile)}&date=${encodeURIComponent(date)}&session=${encodeURIComponent(session)}`+
       `&time=${encodeURIComponent(time)}&players=${encodeURIComponent(players)}&netsRequired=${nets}`+
       `&duration=${encodeURIComponent(dur)}&ball=${encodeURIComponent(ball)}&amount=${encodeURIComponent(amount)}`+
@@ -1480,6 +1480,9 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
       if(result.status === 'ok'){
         handleSuccess(result);
+      } else if(result.status === 'settings_changed'){
+        msg.textContent = '⚠️ ' + (result.message || 'Booking times or rates have just been updated. Please refresh the page and book again.');
+        msg.className = 'admin-msg err';
       } else if(result.status === 'full'){
         msg.textContent = `❌ ${time} on ${date} — No nets available. Choose another slot.`;
         msg.className = 'admin-msg err';

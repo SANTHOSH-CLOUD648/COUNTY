@@ -1,0 +1,15 @@
+{
+  "id": "/Client_Booking.html",
+  "name": "County Indoor Netz",
+  "short_name": "County Netz",
+  "description": "Book your practice nets at County Indoor Netz.",
+  "start_url": "/Client_Booking.html",
+  "scope": "/Client_Booking.html",
+  "display": "standalone",
+  "background_color": "#0A67FF",
+  "theme_color": "#1a5c38",
+  "icons": [
+    { "src": "/facility-images/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/facility-images/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

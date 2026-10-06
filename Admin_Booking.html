@@ -3275,6 +3275,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
       if(result.status === 'ok'){
         handleAdminSuccess(result);
+      } else if(result.status === 'settings_changed'){
+        msg.textContent = '⚠️ ' + (result.message || 'Booking times or rates have just been updated. Please refresh the page and book again.');
+        msg.className = 'admin-msg err';
       } else if(result.status === 'full'){
         msg.textContent = `❌ ${time} on ${dateDisplay} — No nets available. Choose another slot.`;
         msg.className = 'admin-msg err';
