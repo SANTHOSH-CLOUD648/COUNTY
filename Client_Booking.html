@@ -468,6 +468,34 @@
   .ios-guide .box{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:20px;box-sizing:border-box;}
   .ios-guide h4{margin:0 0 10px;font-size:17px;color:var(--navy);}
   .ios-guide ol{margin:0 0 14px;padding-left:20px;font-size:15px;line-height:1.7;color:#222;}
+
+  /* ── My Bookings ── */
+  .mybk-row{display:flex;justify-content:center;margin:0 0 14px;}
+  .mybk-btn{font-family:inherit;font-size:14.5px;font-weight:700;min-height:46px;padding:0 18px;border-radius:12px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);cursor:pointer;}
+  .mybk-btn:hover{background:#eef4ef;}
+  .mybk-btn span{font-weight:500;color:var(--muted);}
+  .mybk-box{display:none;margin:0 0 18px;background:#f3f7f4;border:1px solid #cfe0d3;border-radius:14px;padding:16px 18px;}
+  .mybk-box.show{display:block;}
+  .mybk-box h3{margin:0 0 4px;font-size:15px;color:var(--navy);font-family:Georgia,serif;}
+  .mybk-box .sub{margin:0 0 12px;font-size:12.5px;color:var(--muted);}
+  .mb-status{margin:10px 0 4px;font-size:13px;font-weight:600;min-height:18px;}
+  .mb-status.ok{color:#1c4a22;} .mb-status.err{color:#8b1c1c;}
+  .mb-card{background:#fff;border:1px solid #dfe7e1;border-radius:12px;padding:12px 14px;margin-top:10px;}
+  .mb-card .mb-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .mb-card .mb-when{font-weight:700;font-size:15px;color:var(--ink);}
+  .mb-card .mb-ref{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--navy);color:var(--gold);}
+  .mb-card .mb-info{font-size:13px;color:#3d4436;margin-top:4px;line-height:1.5;}
+  .mb-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .mb-actions button{font-family:inherit;font-size:14px;font-weight:700;min-height:44px;padding:0 16px;border-radius:10px;cursor:pointer;}
+  .mb-edit{border:none;background:var(--navy);color:#fff;}
+  .mb-edit:disabled{background:#c9d0c9;color:#5a6152;cursor:not-allowed;}
+  .mb-cancel{border:1.5px solid #e8b4b4;background:#fff;color:#8b1c1c;}
+  .mb-note{font-size:12px;color:#6b4a10;margin-top:6px;}
+  .mb-policy{margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px solid #f0dcc0;border-radius:10px;font-size:13px;color:var(--ink);line-height:1.6;}
+  .edit-banner{display:none;background:#fff8e6;border:1px solid #ecd59a;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13.5px;color:#3d3420;line-height:1.5;}
+  .edit-banner.show{display:block;}
+  .edit-banner strong{color:var(--navy);}
+  input.locked{background:#eef0ec;color:#555;}
 </style>
 </head>
 <body>
@@ -556,7 +584,35 @@
       <button type="button" id="notYouBtn" class="link-btn-inline">Not you?</button>
     </div>
 
+    <div class="mybk-row">
+      <button type="button" class="mybk-btn" id="myBookingsBtn">📋 My Bookings <span>— change or cancel</span></button>
+    </div>
+
+    <div class="mybk-box" id="myBookingsBox">
+      <h3>My Bookings</h3>
+      <p class="sub">Your upcoming bookings. Enter your name and mobile number exactly as you booked.</p>
+      <div class="cancel-row">
+        <input type="text" id="mbName" placeholder="Your name (as booked)" autocomplete="name">
+        <input type="tel" id="mbMobile" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+        <button type="button" id="mbShowBtn" class="cancel-submit">Show my bookings</button>
+      </div>
+      <div class="mb-status" id="mbStatus"></div>
+      <div id="mbList"></div>
+      <div class="mb-policy">
+        <strong style="color:var(--navy);">Cancellation Policy</strong><br>
+        Cancellation allowed up to 2 hours before the slot or inform us.<br>
+        For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.<br>
+        <strong style="color:var(--navy);">Changes</strong><br>
+        Changes are allowed up to 1 hour before the start time (mobile number can't be changed). For team bookings, the number of players can't be reduced, and nets can be reduced only up to 2 hours before.
+      </div>
+    </div>
+
     <form id="bookingForm" novalidate>
+
+      <div class="edit-banner" id="editBanner">
+        ✏️ <strong>Changing booking Ref #<span id="editBannerRef"></span></strong> — update the details below and tap <strong>Update Booking</strong>. Your Ref No. stays the same.
+        <button type="button" id="stopEditBtn" class="link-btn-inline">Stop changing</button>
+      </div>
 
       <div class="field full" id="f-name">
         <label for="name">Name <span class="req">*</span></label>
@@ -689,7 +745,7 @@
     </form>
 
     <div class="confirm" id="confirmPanel">
-      <h3>✅ Booking received <span class="ref-badge">Ref #<span id="refNo"></span></span></h3>
+      <h3><span id="confirmTitle">✅ Booking received</span> <span class="ref-badge">Ref #<span id="refNo"></span></span></h3>
       <dl id="confirmDetails"></dl>
       <div class="receipt-box receipt-box-general">
         <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
@@ -744,6 +800,7 @@
     <div class="booking-error" id="bookingErrorBox"></div>
 
     <div class="cancel-toggle">
+      <button type="button" class="link-btn" onclick="document.getElementById('myBookingsBtn').click();document.getElementById('myBookingsBox').scrollIntoView({behavior:'smooth',block:'start'});">Change or cancel a booking → My Bookings</button><br>
       <button type="button" id="cancelToggleBtn" class="link-btn">Need to cancel a booking?</button>
       <div style="color:#c0392b;font-size:12.5px;margin-top:4px;font-weight:600;">Read the Cancellation Policy in the Receipt</div>
     </div>
@@ -1154,6 +1211,18 @@
 
   // ---- Net availability (max 4 nets per time slot per day) ----
   let availabilityCache = {};
+  // When a customer is changing an existing booking (My Bookings → Change),
+  // this holds that booking. Its own nets are treated as free while choosing
+  // the new time, so it never blocks itself.
+  let EDIT_MODE = null;
+  function adjustAvailForEdit(counts, dateStr){
+    if(!EDIT_MODE || !counts || dateStr !== EDIT_MODE.date) return counts;
+    const out = Object.assign({}, counts);
+    getSpanSlots(EDIT_MODE.time, EDIT_MODE.duration).forEach(sl => {
+      out[sl] = Math.max(0, (out[sl] || 0) - EDIT_MODE.nets);
+    });
+    return out;
+  }
   let ALL_CLOSED   = false;
   let CLOSED_NETS  = [];
   let FROM_MINUTES = -1; // -1 = full day closure; >=0 = closure starts from this time
@@ -1240,7 +1309,7 @@
     const hint = document.getElementById('availLoadingHint');
     if(hint) hint.remove();
 
-    availabilityCache = counts || {};
+    availabilityCache = adjustAvailForEdit(counts || {}, dateStr);
 
     const closedNotice = document.getElementById('closedNotice');
     const submitBtn = document.querySelector('button.submit');
@@ -1696,6 +1765,17 @@
 
     if(!ball){ setError('f-ball','Please select a ball type.'); valid=false; } else clearError('f-ball');
 
+    // Changing an existing booking: team players can't be reduced, and nets
+    // can be reduced only up to 2 hours before the start time.
+    if(EDIT_MODE){
+      if(EDIT_MODE.wasTeam && players !== 'Team Booking'){
+        setError('f-players','For team bookings, the number of players cannot be reduced.'); valid=false;
+      }
+      if(!EDIT_MODE.canReduceNets && netsRequired < EDIT_MODE.nets){
+        setError('f-nets-req','The number of nets can be reduced only up to 2 hours before the start time.'); valid=false;
+      }
+    }
+
     if(!valid){
       showBookingError('⚠️ Booking Not Confirmed — please fill all required fields correctly before submitting.');
       // Scroll to first error
@@ -1734,7 +1814,8 @@
     submitBtn.textContent = 'Confirming…';
     document.getElementById('bookingProgress').style.display = 'block';
 
-    const ref = Math.random().toString(36).slice(2,8).toUpperCase();
+    const wasEdit = !!EDIT_MODE;
+    const ref = wasEdit ? EDIT_MODE.ref : Math.random().toString(36).slice(2,8).toUpperCase();
 
     // Format date as dd/mm/yy for receipt and confirmation panel
     const dateParts = date.split('-');
@@ -1827,12 +1908,18 @@ https://countyindoornetz.com/Client_Booking.html
 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
 Thank you for your cooperation! See you at the nets!`;
 
+    if(wasEdit){
+      waMessage  = waMessage.replace('Booking Confirmed', 'Booking Updated');
+      smsMessage = smsMessage.replace('Booking Confirmed', 'Booking Updated');
+    }
+    document.getElementById('confirmTitle').textContent = wasEdit ? '✅ Booking updated' : '✅ Booking received';
+
     // Send booking via GET so we can read the server response.
     // This prevents fake confirmations when the server rejects (e.g. slot just filled up).
-    submitBtn.textContent = 'Confirming…';
+    submitBtn.textContent = wasEdit ? 'Updating…' : 'Confirming…';
     try {
       const buildQs = (confirmDup) => [
-        `action=book`,
+        `action=${wasEdit ? 'customerEdit' : 'book'}`,
         `ref=${encodeURIComponent(ref)}`,
         `name=${encodeURIComponent(name)}`,
         `teamName=${encodeURIComponent(teamName)}`,
@@ -1882,18 +1969,22 @@ Thank you for your cooperation! See you at the nets!`;
           smsMessage = smsMessage.split(ref).join(finalRef);
         }
         handleBookingSuccess(result, name, mobile, ball, waMessage, smsMessage);
+        if(wasEdit){ exitEditMode(false); mbInvalidate(); }
       } else if(result.status === 'settings_changed'){
         showBookingError('⚠️ ' + (result.message || 'Booking times or rates have just been updated. Please refresh the page and book again.'));
       } else if(result.status === 'too_late'){
         showBookingError(result.message || 'This time slot has already passed. Please choose a later time.');
         refreshAvailability();
       } else if(result.status === 'full'){
-        showBookingError('Sorry, this time slot just filled up. Please select a different time or reduce the number of nets.');
+        showBookingError(result.message || 'Sorry, this time slot just filled up. Please select a different time or reduce the number of nets.');
         refreshAvailability(); // update labels immediately
       } else {
-        showBookingError('Your booking could not be confirmed. Please try again or contact us directly.');
+        showBookingError(result.message || 'Your booking could not be confirmed. Please try again or contact us directly.');
       }
     } catch(err){
+      if(wasEdit){
+        showBookingError('Connection error — your change may not have been saved. Open My Bookings to check, then try again.');
+      } else {
       // The request failed or timed out — but that doesn't necessarily mean
       // the booking itself failed. A slow/dropped response after Google's
       // server already saved it is common (see fetchWithTimeout above).
@@ -1921,10 +2012,11 @@ Thank you for your cooperation! See you at the nets!`;
         bookingIsRetry = true; // a re-click now should ask the server to check for a duplicate
         showBookingError('Connection error — please check your internet and try again, or contact us directly.');
       }
+      }
     }
 
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Confirm Booking';
+    submitBtn.textContent = EDIT_MODE ? 'Update Booking' : 'Confirm Booking';
     document.getElementById('bookingProgress').style.display = 'none';
   });
 
@@ -1981,6 +2073,174 @@ Thank you for your cooperation! See you at the nets!`;
     el.scrollIntoView({behavior:'smooth', block:'nearest'});
     setTimeout(()=>el.classList.remove('show'), 8000);
   }
+
+  // ---- My Bookings: list, change and cancel the customer's upcoming bookings ----
+  const myBookingsBtn = document.getElementById('myBookingsBtn');
+  const mbBox    = document.getElementById('myBookingsBox');
+  const mbName   = document.getElementById('mbName');
+  const mbMobile = document.getElementById('mbMobile');
+  const mbStatus = document.getElementById('mbStatus');
+  const mbList   = document.getElementById('mbList');
+  let mbData = [];
+  const mbEsc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function mbSay(text, ok){ mbStatus.textContent = text; mbStatus.className = 'mb-status' + (text ? (ok ? ' ok' : ' err') : ''); }
+  function mbInvalidate(){ mbData = []; mbList.innerHTML = ''; }
+
+  function mbPrefill(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if(saved && saved.name && !mbName.value) mbName.value = saved.name;
+      if(saved && saved.mobile && !mbMobile.value) mbMobile.value = saved.mobile;
+    }catch(err){}
+  }
+
+  myBookingsBtn.addEventListener('click', ()=>{
+    mbBox.classList.toggle('show');
+    if(!mbBox.classList.contains('show')) return;
+    mbPrefill();
+    if(mbName.value.trim() && /^\d{10}$/.test(mbMobile.value.trim())) mbLoad();
+    mbBox.scrollIntoView({behavior:'smooth', block:'nearest'});
+  });
+  document.getElementById('mbShowBtn').addEventListener('click', mbLoad);
+
+  async function mbLoad(){
+    const name = mbName.value.trim(), mobile = mbMobile.value.trim();
+    if(!name || !/^\d{10}$/.test(mobile)){ mbSay('Please enter your name and 10-digit mobile number.', false); return; }
+    mbSay('⏳ Loading your bookings…', true);
+    mbList.innerHTML = '';
+    try{
+      const res = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=myBookings&mobile=${encodeURIComponent(mobile)}&name=${encodeURIComponent(name)}`, null, 25000);
+      const data = await res.json();
+      if(data.status !== 'ok'){ mbSay(data.message || 'Could not load your bookings. Please try again.', false); return; }
+      mbData = data.bookings || [];
+      mbRender();
+    }catch(err){
+      mbSay('Connection error — please check your internet and try again.', false);
+    }
+  }
+
+  function mbRender(){
+    if(!mbData.length){
+      mbSay('No upcoming bookings found. Please check that the name and mobile number are exactly as you booked, or contact us directly.', false);
+      mbList.innerHTML = '';
+      return;
+    }
+    mbSay(`${mbData.length} upcoming booking${mbData.length>1?'s':''}`, true);
+    mbList.innerHTML = mbData.map((b,i) => {
+      const nets = b.players === 'Team Booking' ? ` · ${b.nets} net${b.nets>1?'s':''}` : '';
+      let actions;
+      if(b.groupCode){
+        actions = `<div class="mb-note">Part of group booking ${mbEsc(b.groupCode)} — please contact us directly to change or cancel.</div>`;
+      } else {
+        actions = `<div class="mb-actions">
+            <button type="button" class="mb-edit" data-i="${i}"${b.canEdit ? '' : ' disabled'}>Edit Bookings</button>
+            <button type="button" class="mb-cancel" data-i="${i}">Cancel</button>
+          </div>` + (b.canEdit ? '' : `<div class="mb-note">Changes close 1 hour before the Start Time.</div>`);
+      }
+      return `<div class="mb-card">
+        <div class="mb-top"><span class="mb-when">${mbEsc(b.date)} · ${mbEsc(b.time)}</span><span class="mb-ref">Ref #${mbEsc(b.ref)}</span></div>
+        <div class="mb-info">${mbEsc(b.duration)} · Players: ${mbEsc(b.players)}${nets} · ${mbEsc(b.ball)} · <strong>₹${Number(b.amount||0).toLocaleString('en-IN')}</strong>${b.teamName ? '<br>Team: '+mbEsc(b.teamName) : ''}</div>
+        ${actions}
+      </div>`;
+    }).join('');
+  }
+
+  mbList.addEventListener('click', async (ev)=>{
+    const btn = ev.target.closest('button'); if(!btn) return;
+    const b = mbData[parseInt(btn.dataset.i,10)]; if(!b) return;
+    if(btn.classList.contains('mb-edit')) startEditBooking(b);
+    if(btn.classList.contains('mb-cancel')) mbCancel(b, btn);
+  });
+
+  async function mbCancel(b, btn){
+    const ok = confirm(
+      `Cancel this booking?\n\n${b.date} · ${b.time} · ${b.duration}\nRef #${b.ref}\n\n` +
+      `Cancellation Policy:\nCancellation allowed up to 2 hours before the slot or inform us.\n` +
+      `For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.`
+    );
+    if(!ok) return;
+    btn.disabled = true; btn.textContent = 'Cancelling…';
+    try{
+      const res = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(b.ref)}&mobile=${encodeURIComponent(b.mobile)}`, null, 25000);
+      const data = await res.json();
+      if(data.status === 'cancelled'){
+        if(EDIT_MODE && EDIT_MODE.ref === b.ref) exitEditMode(true);
+        await mbLoad();
+        mbSay(`✅ Booking Ref #${b.ref} on ${b.date} at ${b.time} has been cancelled. The net is now free for others.`, true);
+        refreshAvailability();
+        return;
+      }
+      const msgs = {
+        already_cancelled: 'This booking has already been cancelled.',
+        too_late: "This session has already started, so it can't be cancelled online. Please contact us directly.",
+        admin_only: 'This slot is part of a group booking. Please contact us directly to cancel it.',
+        not_found: 'Booking not found. Please refresh the list.',
+        busy: 'The server is busy. Please try again in a moment.'
+      };
+      mbSay(msgs[data.status] || 'Could not cancel. Please try again or contact us directly.', false);
+    }catch(err){
+      mbSay('Connection error — the booking may not be cancelled. Please tap "Show my bookings" to check.', false);
+    }
+    btn.disabled = false; btn.textContent = 'Cancel';
+  }
+
+  // ---- Change mode: the booking form is reused to change an existing booking ----
+  const editBanner = document.getElementById('editBanner');
+  function setSelect(sel, value){
+    if(value == null) return;
+    sel.value = value;
+    sel.dispatchEvent(new Event('change'));
+  }
+  function startEditBooking(b){
+    EDIT_MODE = {
+      ref: b.ref, date: b.dateISO, time: b.time, duration: b.duration,
+      nets: b.nets || 1, wasTeam: b.players === 'Team Booking', canReduceNets: !!b.canReduceNets
+    };
+    mbBox.classList.remove('show');
+    confirmPanel.classList.remove('show');
+    nameInput.value = b.name;
+    if(teamInput) teamInput.value = b.teamName || '';
+    mobileInput.value = b.mobile;
+    mobileInput.readOnly = true; mobileInput.classList.add('locked');
+    dateInput.value = b.dateISO;
+    dateInput.dispatchEvent(new Event('change'));
+    const sess = slotToMins(b.time) >= eveningStartMins() ? 'Evening' : 'Morning';
+    const sOpt = Array.from(sessionSel.options).find(o => o.value.startsWith(sess));
+    if(sOpt) setSelect(sessionSel, sOpt.value);
+    setSelect(timeSel, b.time);
+    setSelect(playersSel, b.players);
+    Array.from(playersSel.options).forEach(o => { if(o.value) o.disabled = EDIT_MODE.wasTeam && o.value !== 'Team Booking'; });
+    setSelect(durationSel, b.duration);
+    if(b.players === 'Team Booking') setSelect(netsReqSel, String(b.nets || 1));
+    setSelect(ballSel, b.ball);
+    updateAmount();
+    document.getElementById('editBannerRef').textContent = b.ref;
+    editBanner.classList.add('show');
+    const submitBtn = form.querySelector('button.submit');
+    submitBtn.textContent = 'Update Booking';
+    editBanner.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  function exitEditMode(resetForm){
+    EDIT_MODE = null;
+    editBanner.classList.remove('show');
+    mobileInput.readOnly = false; mobileInput.classList.remove('locked');
+    Array.from(playersSel.options).forEach(o => { if(o.value) o.disabled = false; });
+    form.querySelector('button.submit').textContent = 'Confirm Booking';
+    if(resetForm){
+      form.reset();
+      dateInput.value = todayStr;
+      loadRememberedCustomer();
+      populateTimes(null);
+      netsReqSel.disabled = true;
+      netsReqSel.innerHTML = '<option value="1" selected>1</option>';
+      netsReqMsg.textContent = '';
+      durationOptionEls.forEach(o=> o.disabled = false);
+      durationNote.textContent = '';
+      updateAmount();
+      refreshAvailability();
+    }
+  }
+  document.getElementById('stopEditBtn').addEventListener('click', ()=> exitEditMode(true));
 
   // ---- Cancel a Booking ----
   const cancelToggleBtn = document.getElementById('cancelToggleBtn');
