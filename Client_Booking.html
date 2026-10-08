@@ -576,9 +576,6 @@
       All nets are offline today. Please contact us directly or try again later.
     </div>
 
-    <h2>New Booking</h2>
-    <p class="sub">All fields are required. Time slots update automatically once you choose a session.</p>
-
     <div class="welcome-back" id="welcomeBack">
       Welcome back, <strong id="welcomeBackName"></strong> 👋
       <button type="button" id="notYouBtn" class="link-btn-inline">Not you?</button>
@@ -606,6 +603,9 @@
         Changes are allowed up to 1 hour before the start time (mobile number can't be changed). For team bookings, the number of players can't be reduced, and nets can be reduced only up to 2 hours before.
       </div>
     </div>
+
+    <h2 id="formHeading">New Booking</h2>
+    <p class="sub" id="formSub">All fields are required. Time slots update automatically once you choose a session.</p>
 
     <form id="bookingForm" novalidate>
 
@@ -2216,13 +2216,15 @@ Thank you for your cooperation! See you at the nets!`;
     updateAmount();
     document.getElementById('editBannerRef').textContent = b.ref;
     editBanner.classList.add('show');
+    document.getElementById('formHeading').textContent = `Edit Booking – Ref #${b.ref}`;
     const submitBtn = form.querySelector('button.submit');
     submitBtn.textContent = 'Update Booking';
-    editBanner.scrollIntoView({behavior:'smooth', block:'start'});
+    document.getElementById('formHeading').scrollIntoView({behavior:'smooth', block:'start'});
   }
   function exitEditMode(resetForm){
     EDIT_MODE = null;
     editBanner.classList.remove('show');
+    document.getElementById('formHeading').textContent = 'New Booking';
     mobileInput.readOnly = false; mobileInput.classList.remove('locked');
     Array.from(playersSel.options).forEach(o => { if(o.value) o.disabled = false; });
     form.querySelector('button.submit').textContent = 'Confirm Booking';
