@@ -2035,7 +2035,17 @@ Thank you for your cooperation! See you at the nets!`;
     }
 
     // Show receipt
-    document.getElementById('waBtn').href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+    // Phones: open the WhatsApp app directly in the SAME tab, so the page (and this receipt) stays put
+    // and coming back from WhatsApp returns here. Computers: keep wa.me in a new tab (WhatsApp Web/Desktop).
+    const waBtnEl = document.getElementById('waBtn');
+    const isPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isPhone) {
+      waBtnEl.href = `whatsapp://send?text=${encodeURIComponent(waMessage)}`;
+      waBtnEl.removeAttribute('target');
+    } else {
+      waBtnEl.href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+      waBtnEl.setAttribute('target', '_blank');
+    }
     const smsNumber = '91' + mobile;
     document.getElementById('smsBtn').href = `sms:+${smsNumber}?body=${encodeURIComponent(smsMessage)}`;
 
