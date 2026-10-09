@@ -831,27 +831,6 @@
 
     <div class="booking-error" id="bookingErrorBox"></div>
 
-    <div class="cancel-toggle">
-      <button type="button" class="link-btn" onclick="document.getElementById('myBookingsBtn').click();document.getElementById('myBookingsBox').scrollIntoView({behavior:'smooth',block:'start'});">Edit or Cancel a booking → My Bookings</button><br>
-      <button type="button" id="cancelToggleBtn" class="link-btn">Need to cancel a booking?</button>
-      <div style="color:#c0392b;font-size:12.5px;margin-top:4px;font-weight:600;">Read the Cancellation Policy in the Receipt</div>
-    </div>
-
-    <div class="cancel-box" id="cancelBox">
-      <h3>Cancel a Booking</h3>
-      <p class="sub">Enter your Booking Ref # or Group Ref (GRP-XXXXX) and the mobile number used to book.</p>
-      <div class="cancel-row">
-        <input type="text" id="cancelRef" placeholder="Ref # or GRP-XXXXX" maxlength="12" style="text-transform:uppercase;">
-        <input type="tel" id="cancelMobile" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
-        <button type="button" id="cancelSubmitBtn" class="cancel-submit">Cancel Booking</button>
-      </div>
-      <div class="cancel-result" id="cancelResult"></div>
-      <div style="margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px solid #f0dcc0;border-radius:10px;font-size:13px;color:var(--ink);line-height:1.6;">
-        <strong style="color:var(--navy);">Cancellation Policy</strong><br>
-        Cancellation allowed up to 2 hours before the slot or inform us.<br>
-        For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.
-      </div>
-    </div>
   </div>
 
   <!-- More Services -->
@@ -2338,73 +2317,6 @@ Thank you for your cooperation! See you at the nets!`;
   }
   document.getElementById('stopEditBtn').addEventListener('click', ()=> exitEditMode(true));
 
-  // ---- Cancel a Booking ----
-  const cancelToggleBtn = document.getElementById('cancelToggleBtn');
-  const cancelBox = document.getElementById('cancelBox');
-  const cancelRefInput = document.getElementById('cancelRef');
-  const cancelMobileInput = document.getElementById('cancelMobile');
-  const cancelSubmitBtn = document.getElementById('cancelSubmitBtn');
-  const cancelResult = document.getElementById('cancelResult');
-
-  cancelToggleBtn.addEventListener('click', ()=>{
-    cancelBox.classList.toggle('show');
-    cancelToggleBtn.textContent = cancelBox.classList.contains('show')
-      ? 'Hide cancellation form' : 'Need to cancel a booking?';
-  });
-
-  cancelSubmitBtn.addEventListener('click', async ()=>{
-    const ref = cancelRefInput.value.trim().toUpperCase();
-    const mobile = cancelMobileInput.value.trim();
-    cancelResult.className = 'cancel-result';
-    cancelResult.textContent = '';
-
-    if(!ref){ cancelResult.className='cancel-result err'; cancelResult.textContent='Please enter your booking Ref #.'; return; }
-    if(!/^[6-9]\d{9}$/.test(mobile)){ cancelResult.className='cancel-result err'; cancelResult.textContent='Please enter the 10-digit mobile number used to book.'; return; }
-
-    cancelSubmitBtn.disabled = true;
-    cancelSubmitBtn.textContent = 'Cancelling…';
-
-    try{
-      const cancelUrl = `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}`;
-      const res = await fetchWithTimeout(cancelUrl, null, 20000);
-      const data = await res.json();
-
-      if(data.status === 'cancelled'){
-        cancelResult.className = 'cancel-result ok';
-        cancelResult.textContent = `✅ Booking ${ref} has been cancelled. That net is now free for others to book.`;
-        cancelRefInput.value = ''; cancelMobileInput.value = '';
-      } else if(data.status && data.status.startsWith('group_cancelled:')){
-        const count = data.status.split(':')[1];
-        cancelResult.className = 'cancel-result ok';
-        cancelResult.textContent = `✅ Group booking ${ref} cancelled — ${count} slot${count>1?'s':''} freed up.`;
-        cancelRefInput.value = ''; cancelMobileInput.value = '';
-      } else if(data.status === 'admin_only'){
-        cancelResult.className = 'cancel-result err';
-        cancelResult.textContent = 'This booking is part of a group booking and can only be cancelled by contacting us directly.';
-      } else if(data.status === 'already_cancelled'){
-        cancelResult.className = 'cancel-result err';
-        cancelResult.textContent = 'This booking has already been cancelled.';
-      } else if(data.status === 'too_late'){
-        cancelResult.className = 'cancel-result err';
-        cancelResult.textContent = "This session has already started or finished, so it can't be cancelled online. Please contact us directly if needed.";
-      } else if(data.status === 'not_found'){
-        cancelResult.className = 'cancel-result err';
-        cancelResult.textContent = 'No matching booking found. Please check the Ref # and mobile number.';
-      } else if(data.status === 'busy'){
-        cancelResult.className = 'cancel-result err';
-        cancelResult.textContent = 'The schedule is being updated right now. Please try again in a few seconds.';
-      } else {
-        cancelResult.className = 'cancel-result err';
-        cancelResult.textContent = 'Something went wrong. Please try again or contact us directly.';
-      }
-    }catch(err){
-      cancelResult.className = 'cancel-result err';
-      cancelResult.textContent = "Couldn't reach the server to cancel. Please check your connection and try again, or contact us directly.";
-    }
-
-    cancelSubmitBtn.disabled = false;
-    cancelSubmitBtn.textContent = 'Cancel Booking';
-  });
   function toTitleCase(str){
     return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
