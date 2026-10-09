@@ -814,6 +814,20 @@
     return parseSlotMinutes(timeStr) <= (now.getHours()*60 + now.getMinutes());
   }
 
+  // True once a booking's session has fully ENDED (start + duration).
+  // Admin/staff can cancel until then — e.g. a no-show team — so the rest
+  // of that time becomes free for others to book.
+  function isSlotEnded(dateStr, timeStr, durLabel){
+    let iso = String(dateStr||'');
+    const sp = iso.split('/');
+    if(sp.length === 3) iso = '20'+sp[2]+'-'+sp[1]+'-'+sp[0];
+    if(iso < todayStr) return true;
+    if(iso > todayStr) return false;
+    const dur = (parseFloat(String(durLabel||'').replace(/[^0-9.]/g,'')) || 1) * 60;
+    const now = new Date();
+    return parseSlotMinutes(timeStr) + dur <= now.getHours()*60 + now.getMinutes();
+  }
+
   function toTitleCase(str){
     return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -1625,8 +1639,8 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
             </div>
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:#b3261e;">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
-                : isPast ? '<span class="bulk-slot-past">Past</span>'
-                : `<button type="button" class="bulk-slot-cancel staff-cancel-btn" onclick="event.stopPropagation();staffCancelBooking(${i})">🚫 Cancel Booking</button>`}
+                : isSlotEnded(b.dateISO || b.date, b.time, b.duration) ? '<span class="bulk-slot-past">Past</span>'
+                : `${isPast ? '<span class="bulk-slot-past">In progress</span>' : ''}<button type="button" class="bulk-slot-cancel staff-cancel-btn" onclick="event.stopPropagation();staffCancelBooking(${i})">🚫 Cancel Booking</button>`}
             </div>
             <div class="staff-cancel-msg" id="ncancelmsg${i}" style="margin-top:8px;font-size:13px;font-weight:600;"></div>
           </div>
@@ -1643,18 +1657,18 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
   window.searchNormalBookings = searchNormalBookings;
 
   // ── Staff: cancel one booking from the search results ──────────
-  // Uses the same server cancel as Main Admin (admin=true). The server
-  // refuses a booking that has already started/finished ('too_late'),
-  // so staff can only cancel bookings that haven't started yet.
+  // Uses the same server cancel as Main Admin (admin=true). Staff can cancel
+  // until the session has ENDED (e.g. a no-show team), so the rest of that
+  // time can be booked by others; the server refuses ended ones ('too_late').
   let lastNormalResults = [];
   async function staffCancelBooking(i){
     const b   = lastNormalResults[i];
     const msg = document.getElementById('ncancelmsg' + i);
     const btn = document.querySelector('#nslot_' + i + ' .staff-cancel-btn');
     if(!b || !btn) return;
-    if(isSlotPast(b.dateISO || b.date, b.time)){
+    if(isSlotEnded(b.dateISO || b.date, b.time, b.duration)){
       msg.style.color = '#b3261e';
-      msg.textContent = "This booking has already started or finished, so it can't be cancelled.";
+      msg.textContent = "This session has already ended, so it can't be cancelled.";
       return;
     }
     const ok = confirm(
@@ -1680,7 +1694,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       } else if(data.status === 'too_late'){
         btn.remove();
         msg.style.color = '#b3261e';
-        msg.textContent = "This booking has already started or finished, so it can't be cancelled.";
+        msg.textContent = "This session has already ended, so it can't be cancelled.";
       } else if(data.status === 'already_cancelled'){
         btn.remove();
         msg.style.color = '#b3261e';

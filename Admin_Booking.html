@@ -1256,6 +1256,20 @@
     return false;
   }
 
+  // True once a booking's session has fully ENDED (start + duration).
+  // Admin/staff can cancel until then — e.g. a no-show team — so the rest
+  // of that time becomes free for others to book.
+  function isSlotEnded(dateStr, timeStr, durLabel){
+    let iso = String(dateStr||'');
+    const sp = iso.split('/');
+    if(sp.length === 3) iso = '20'+sp[2]+'-'+sp[1]+'-'+sp[0];
+    if(iso < todayStr) return true;
+    if(iso > todayStr) return false;
+    const dur = (parseFloat(String(durLabel||'').replace(/[^0-9.]/g,'')) || 1) * 60;
+    const now = new Date();
+    return parseSlotMinutes(timeStr) + dur <= now.getHours()*60 + now.getMinutes();
+  }
+
   function toTitleCase(str){
     return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -2214,6 +2228,9 @@
                     : !isPast ? `
                     <button class="bulk-slot-edit" onclick="openEditModal('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}','${s.duration}','${s.net}','${s.ball||''}','${s.players||''}')">✏️ Edit</button>
                     <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
+                  ` : !isSlotEnded(s.date, s.time, s.duration) ? `
+                    <span class="bulk-slot-past">In progress</span>
+                    <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
                   ` : '<span class="bulk-slot-past">Past</span>'}
                 </div>
               </div>`;
@@ -2552,6 +2569,7 @@ https://countyindoornetz.com/Client_Booking.html`;
             </div>
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
+                : (isPast && !isSlotEnded(b.date, b.time, b.duration)) ? '<span class="bulk-slot-past">In progress</span><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'
                 : isPast ? '<span class="bulk-slot-past">Past</span>'
                 : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'}
             </div>
