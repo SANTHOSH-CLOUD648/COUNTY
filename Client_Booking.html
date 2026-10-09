@@ -616,7 +616,7 @@
         <strong style="color:var(--navy);">Cancellation Policy</strong><br>
         Cancellation allowed up to 2 hours before the slot or inform us.<br>
         For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.<br>
-        <strong style="color:var(--navy);">Changes</strong><br>
+        <strong style="color:var(--navy);">Editing Policy</strong><br>
         Changes are allowed up to 1 hour before the start time (mobile number can't be changed). For team bookings, the number of players can't be reduced, and nets can be reduced only up to 2 hours before.
       </div>
     </div>
@@ -627,9 +627,6 @@
     </div>
 
     <h2 id="formHeading">New Booking</h2>
-    <div class="post-note" id="anotherNote" role="status">
-      <span class="pn-text" id="anotherNoteText"></span>
-    </div>
     <p class="sub" id="formSub">All fields are required. Time slots update automatically once you choose a session.</p>
 
     <form id="bookingForm" novalidate>
@@ -2114,7 +2111,6 @@ Thank you for your cooperation! See you at the nets!`;
 
   // ---- After a booking: receipt-only view, then "Done" or "Book Another Slot" ----
   const doneNote       = document.getElementById('doneNote');
-  const anotherNote    = document.getElementById('anotherNote');
   function setReceiptMode(on){
     ['bookingForm','formHeading','formSub'].forEach(id=>{
       const el = document.getElementById(id);
@@ -2123,7 +2119,6 @@ Thank you for your cooperation! See you at the nets!`;
   }
   function hidePostNotes(){
     doneNote.classList.remove('show');
-    anotherNote.classList.remove('show');
   }
   function receiptSummary(){
     // Ref + date + time, read from the receipt that is on screen
@@ -2155,11 +2150,7 @@ Thank you for your cooperation! See you at the nets!`;
   });
   document.getElementById('doneNoteClose').addEventListener('click', ()=> doneNote.classList.remove('show'));
   document.getElementById('bookAnotherBtn').addEventListener('click', ()=>{
-    const s = receiptSummary();
     leaveReceipt();
-    document.getElementById('anotherNoteText').innerHTML =
-      `✅ Ref #${s.ref} is saved. Your details are filled in — just choose the date and time for the next slot.`;
-    anotherNote.classList.add('show');
     document.getElementById('formHeading').scrollIntoView({behavior:'smooth', block:'start'});
   });
 
@@ -2236,7 +2227,7 @@ Thank you for your cooperation! See you at the nets!`;
         actions = `<div class="mb-note">Part of group booking ${mbEsc(b.groupCode)} — please contact us directly to edit or cancel.</div>`;
       } else {
         actions = `<div class="mb-actions">
-            <button type="button" class="mb-edit" data-i="${i}"${b.canEdit ? '' : ' disabled'}>Edit Bookings</button>
+            <button type="button" class="mb-edit" data-i="${i}"${b.canEdit ? '' : ' disabled'}>Edit</button>
             <button type="button" class="mb-cancel" data-i="${i}">Cancel</button>
           </div>` + (b.canEdit ? '' : `<div class="mb-note">Changes close 1 hour before the Start Time.</div>`);
       }
