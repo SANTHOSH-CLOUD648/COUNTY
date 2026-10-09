@@ -696,7 +696,6 @@
       ? `${whoPrefix} a booking on ${d} - ${fmt(list[0])}.`
       : `${whoPrefix} ${list.length} bookings on ${d}:\n` + list.map(b => '• ' + fmt(b)).join('\n');
     return head +
-      `\n\nTo change the time, please cancel the old booking before making a new one.` +
       `\n\nPress OK to book this as an ADDITIONAL slot, or Cancel to go back.`;
   }
 
