@@ -239,6 +239,21 @@
   .share-btn.wa{background:#25D366;color:#fff;}
   .share-btn.sms{background:var(--navy);color:#fff;}
 
+  /* ---- After a booking: receipt-only view + Done / Book Another Slot ---- */
+  .receipt-mode{display:none !important;}
+  .next-steps{margin-top:16px;background:#fff;border:1px solid #cfe3d3;border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--ink);line-height:1.6;}
+  .next-steps .ns-title{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+  .next-steps b{color:var(--navy);}
+  .after-row{display:flex;flex-direction:column;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid #cfe3d3;}
+  .after-btn{font-family:inherit;font-size:16px;font-weight:700;min-height:52px;border-radius:12px;cursor:pointer;width:100%;}
+  .after-btn.another{background:#fff;color:var(--navy);border:2px solid var(--navy);}
+  .after-btn.done{background:var(--navy);color:#fff;border:2px solid var(--navy);}
+  .after-hint{text-align:center;font-size:12.5px;color:var(--muted);}
+  .post-note{display:none;align-items:flex-start;gap:10px;background:#e6f3ea;border:1.5px solid var(--tennis);border-radius:12px;padding:12px 6px 12px 14px;margin:0 0 16px;color:var(--navy);font-size:14px;line-height:1.5;}
+  .post-note.show{display:flex;}
+  .post-note .pn-text{flex:1;}
+  .post-note .pn-close{flex-shrink:0;width:40px;height:40px;border:none;background:none;color:var(--navy);font-size:18px;cursor:pointer;}
+
   .cancel-toggle{text-align:center;margin-top:22px;}
   .link-btn{
     background:none;border:none;color:var(--navy);
@@ -605,7 +620,15 @@
       </div>
     </div>
 
+    <div class="post-note" id="doneNote" role="status">
+      <span class="pn-text" id="doneNoteText"></span>
+      <button type="button" class="pn-close" id="doneNoteClose" aria-label="Hide message">✕</button>
+    </div>
+
     <h2 id="formHeading">New Booking</h2>
+    <div class="post-note" id="anotherNote" role="status">
+      <span class="pn-text" id="anotherNoteText"></span>
+    </div>
     <p class="sub" id="formSub">All fields are required. Time slots update automatically once you choose a session.</p>
 
     <form id="bookingForm" novalidate>
@@ -785,6 +808,11 @@
         <div class="line">In case of any network issues, please contact us directly.</div>
       </div>
       <div style="text-align:center;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--navy);">Thank you for your cooperation! See you at the nets! 🏏</div>
+      <div class="next-steps">
+        <div class="ns-title">Next steps</div>
+        <div><b>1.</b> Send the receipt to yourself (WhatsApp or SMS below)</div>
+        <div><b>2.</b> Tap <b>Done</b> – or <b>Book Another Slot</b></div>
+      </div>
       <div class="share-row">
         <div class="receipt-header">🧾 Booking Receipt</div>
         <a id="waBtn" class="share-btn wa" target="_blank" rel="noopener">
@@ -795,6 +823,11 @@
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
           Get Me via SMS
         </a>
+      </div>
+      <div class="after-row">
+        <button type="button" class="after-btn another" id="bookAnotherBtn">＋ Book Another Slot</button>
+        <button type="button" class="after-btn done" id="doneBtn">Done</button>
+        <div class="after-hint">Need to change it later? Use <b>My Bookings</b> at the top.</div>
       </div>
     </div>
 
@@ -1714,6 +1747,7 @@
   form.addEventListener('submit', async (e)=>{
     e.preventDefault();
     confirmPanel.classList.remove('show');
+    hidePostNotes();
     document.getElementById('bookingErrorBox').classList.remove('show');
 
     let valid = true;
@@ -2050,7 +2084,8 @@ Thank you for your cooperation! See you at the nets!`;
     document.getElementById('smsBtn').href = `sms:+${smsNumber}?body=${encodeURIComponent(smsMessage)}`;
 
     confirmPanel.classList.add('show');
-    confirmPanel.scrollIntoView({behavior:'smooth', block:'nearest'});
+    setReceiptMode(true);   // show only the receipt — hide the (now empty) form until Done / Book Another
+    confirmPanel.scrollIntoView({behavior:'smooth', block:'start'});
 
     // Team name used for THIS booking (blank if they cleared it) — remembered
     // on this phone and filled in again next time; they can change or clear it.
@@ -2075,6 +2110,57 @@ Thank you for your cooperation! See you at the nets!`;
     durationNote.textContent = '';
     updateAmount();
   }
+
+  // ---- After a booking: receipt-only view, then "Done" or "Book Another Slot" ----
+  const doneNote       = document.getElementById('doneNote');
+  const anotherNote    = document.getElementById('anotherNote');
+  function setReceiptMode(on){
+    ['bookingForm','formHeading','formSub'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.classList.toggle('receipt-mode', !!on);
+    });
+  }
+  function hidePostNotes(){
+    doneNote.classList.remove('show');
+    anotherNote.classList.remove('show');
+  }
+  function receiptSummary(){
+    // Ref + date + time, read from the receipt that is on screen
+    const ref = (document.getElementById('refNo').textContent || '').trim();
+    let date = '', time = '';
+    const dts = confirmDetails.querySelectorAll('dt');
+    dts.forEach(dt=>{
+      const dd = dt.nextElementSibling;
+      if(!dd) return;
+      if(dt.textContent.trim() === 'Date') date = dd.textContent.trim();
+      if(dt.textContent.trim() === 'Time') time = dd.textContent.trim();
+    });
+    return { ref, when: [date, time].filter(Boolean).join(' · ') };
+  }
+  function leaveReceipt(){
+    confirmPanel.classList.remove('show');
+    setReceiptMode(false);
+    hidePostNotes();
+  }
+  document.getElementById('doneBtn').addEventListener('click', ()=>{
+    const s = receiptSummary();
+    const updated = /updated/i.test(document.getElementById('confirmTitle').textContent);
+    leaveReceipt();
+    document.getElementById('doneNoteText').innerHTML =
+      `<strong>✅ Booking ${updated ? 'updated' : 'confirmed'} – Ref #${s.ref}</strong><br>` +
+      (s.when ? `${s.when}. ` : '') + 'You can close this page now. See you at the nets! 🏏';
+    doneNote.classList.add('show');
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+  document.getElementById('doneNoteClose').addEventListener('click', ()=> doneNote.classList.remove('show'));
+  document.getElementById('bookAnotherBtn').addEventListener('click', ()=>{
+    const s = receiptSummary();
+    leaveReceipt();
+    document.getElementById('anotherNoteText').innerHTML =
+      `✅ Ref #${s.ref} is saved. Your details are filled in — just choose the date and time for the next slot.`;
+    anotherNote.classList.add('show');
+    document.getElementById('formHeading').scrollIntoView({behavior:'smooth', block:'start'});
+  });
 
   function showBookingError(msg){
     const el = document.getElementById('bookingErrorBox');
@@ -2213,7 +2299,7 @@ Thank you for your cooperation! See you at the nets!`;
       nets: b.nets || 1, wasTeam: b.players === 'Team Booking', canReduceNets: !!b.canReduceNets
     };
     mbBox.classList.remove('show');
-    confirmPanel.classList.remove('show');
+    leaveReceipt();
     nameInput.value = b.name;
     if(teamInput) teamInput.value = b.teamName || '';
     mobileInput.value = b.mobile;
