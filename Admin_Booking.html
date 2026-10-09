@@ -222,6 +222,12 @@
   .share-btn:hover{transform:translateY(-1px);}
   .share-btn.wa{background:#25D366;color:#fff;}
   .share-btn.sms{background:var(--navy);color:#fff;}
+  /* Customer Support call buttons (Cancellation Policy) */
+  .support-calls{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+  .sc-item{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #f0dcc0;border-radius:10px;padding:6px 6px 6px 12px;}
+  .sc-item span{font-weight:700;color:var(--navy);font-size:13px;}
+  .sc-call{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:9px;background:var(--navy);color:#fff !important;font-weight:700;font-size:13px;text-decoration:none;}
+
 
   .cancel-toggle{text-align:center;margin-top:22px;}
   .link-btn{
@@ -820,8 +826,10 @@
           </div>
           <div class="receipt-box receipt-box-cancellation">
             <div class="box-title">📋 Cancellation Policy</div>
-            <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
+            <div class="line">Cancellation allowed up to 2 hours before the slot.</div>
             <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
+            <div class="line">To inform us, please call:</div>
+            <div class="support-calls"><div class="sc-item"><span>Customer Support 1</span><a class="sc-call" href="tel:+919847047462">📞 Call Us</a></div><div class="sc-item"><span>Customer Support 2</span><a class="sc-call" href="tel:+919895011774">📞 Call Us</a></div></div>
           </div>
           <div class="receipt-box receipt-box-network">
             <div class="box-title">📶 Network / Technical Issues</div>
@@ -1045,8 +1053,10 @@
       </div>
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
-        <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
+        <div class="line">Cancellation allowed up to 2 hours before the slot.</div>
         <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">To inform us, please call:</div>
+        <div class="support-calls"><div class="sc-item"><span>Customer Support 1</span><a class="sc-call" href="tel:+919847047462">📞 Call Us</a></div><div class="sc-item"><span>Customer Support 2</span><a class="sc-call" href="tel:+919895011774">📞 Call Us</a></div></div>
       </div>
       <div class="receipt-box receipt-box-network">
         <div class="box-title">📶 Network / Technical Issues</div>
@@ -3072,8 +3082,11 @@ Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
 *📋 Cancellation Policy*
-Cancellation allowed up to 2 hours before the slot or inform us.
+Cancellation allowed up to 2 hours before the slot.
 ⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
+To inform us, please call:
+📞 Customer Support 1: 9847047462
+📞 Customer Support 2: 9895011774
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -3083,7 +3096,7 @@ https://countyindoornetz.com/Client_Booking.html
 
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot. For Prime Time (${primeRangeShort()}) kindly cancel or inform us at least 5 hours prior. To inform us, call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
@@ -3397,8 +3410,11 @@ Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
 *📋 Cancellation Policy*
-Cancellation allowed up to 2 hours before the slot or inform us.
+Cancellation allowed up to 2 hours before the slot.
 ⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
+To inform us, please call:
+📞 Customer Support 1: 9847047462
+📞 Customer Support 2: 9895011774
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -3412,7 +3428,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
     const smsLines = adminBookings.map((b,i)=>
       `${i+1}. ${b.dateDisplay} ${b.time} ${b.dur} P:${b.players} Nets Required:${b.nets} ${b.ball==='Leather Ball'?'Ltr':'Tns'} Ref:${b.ref}`
     ).join('\n');
-    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name}${b0.teamName ? ` | Team: ${b0.teamName}` : ''} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
+    const smsMsg = `County Indoor Netz - Bulk Booking\nCustomer: ${b0.name}${b0.teamName ? ` | Team: ${b0.teamName}` : ''} | Mobile: ${b0.mobile}\nGroup Ref: ${b0.groupRef}\n\n${smsLines}\n\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot. For Prime Time (${primeRangeShort()}) kindly cancel or inform us at least 5 hours prior. To inform us, call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494\n\nTo cancel any or all slots quote your individual Booking Ref No. and Group Ref ${b0.groupRef}`;
 
     const waBtn  = document.getElementById('adminWaBtn');
     const smsBtn = document.getElementById('adminSmsBtn');

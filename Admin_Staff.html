@@ -226,6 +226,12 @@
   .share-btn:hover{transform:translateY(-1px);}
   .share-btn.wa{background:#25D366;color:#fff;}
   .share-btn.sms{background:var(--navy);color:#fff;}
+  /* Customer Support call buttons (Cancellation Policy) */
+  .support-calls{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+  .sc-item{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #f0dcc0;border-radius:10px;padding:6px 6px 6px 12px;}
+  .sc-item span{font-weight:700;color:var(--navy);font-size:13px;}
+  .sc-call{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:9px;background:var(--navy);color:#fff !important;font-weight:700;font-size:13px;text-decoration:none;}
+
 
   .receipt-box{
     margin-top:12px;padding:11px 13px;border-radius:10px;
@@ -516,8 +522,10 @@
       </div>
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
-        <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
+        <div class="line">Cancellation allowed up to 2 hours before the slot.</div>
         <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">To inform us, please call:</div>
+        <div class="support-calls"><div class="sc-item"><span>Customer Support 1</span><a class="sc-call" href="tel:+919847047462">📞 Call Us</a></div><div class="sc-item"><span>Customer Support 2</span><a class="sc-call" href="tel:+919895011774">📞 Call Us</a></div></div>
       </div>
       <div class="receipt-box receipt-box-network">
         <div class="box-title">📶 Network / Technical Issues</div>
@@ -1412,8 +1420,11 @@ Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
 *📋 Cancellation Policy*
-Cancellation allowed up to 2 hours before the slot or inform us.
+Cancellation allowed up to 2 hours before the slot.
 ⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
+To inform us, please call:
+📞 Customer Support 1: 9847047462
+📞 Customer Support 2: 9895011774
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -1441,7 +1452,7 @@ Helmet compulsory for leather balls. Rate changes if player count exceeds bookin
 
 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
-Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot. For Prime Time (${primeRangeShort()}) kindly cancel or inform us at least 5 hours prior. To inform us, call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.
 
 Network/Technical Issues: please contact us directly.
 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
@@ -1586,6 +1597,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       msg.textContent = `${data.results.length} booking${data.results.length>1?'s':''} found.`;
       msg.className = 'admin-msg ok';
 
+      lastNormalResults = data.results;
       let totalAmount = 0;
       results.innerHTML = data.results.map((b,i)=>{
         const isCancelled = b.status === 'Cancelled';
@@ -1613,8 +1625,10 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
             </div>
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:#b3261e;">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
-                : isPast ? '<span class="bulk-slot-past">Past</span>' : ''}
+                : isPast ? '<span class="bulk-slot-past">Past</span>'
+                : `<button type="button" class="bulk-slot-cancel staff-cancel-btn" onclick="event.stopPropagation();staffCancelBooking(${i})">🚫 Cancel Booking</button>`}
             </div>
+            <div class="staff-cancel-msg" id="ncancelmsg${i}" style="margin-top:8px;font-size:13px;font-weight:600;"></div>
           </div>
         </div>`;
       }).join('') + `
@@ -1627,6 +1641,68 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
   }
   window.searchNormalBookings = searchNormalBookings;
+
+  // ── Staff: cancel one booking from the search results ──────────
+  // Uses the same server cancel as Main Admin (admin=true). The server
+  // refuses a booking that has already started/finished ('too_late'),
+  // so staff can only cancel bookings that haven't started yet.
+  let lastNormalResults = [];
+  async function staffCancelBooking(i){
+    const b   = lastNormalResults[i];
+    const msg = document.getElementById('ncancelmsg' + i);
+    const btn = document.querySelector('#nslot_' + i + ' .staff-cancel-btn');
+    if(!b || !btn) return;
+    if(isSlotPast(b.dateISO || b.date, b.time)){
+      msg.style.color = '#b3261e';
+      msg.textContent = "This booking has already started or finished, so it can't be cancelled.";
+      return;
+    }
+    const ok = confirm(
+      `Cancel this booking?\n\n${b.name}${b.mobile ? ' (' + b.mobile + ')' : ''}\n` +
+      `${b.date} at ${b.time} · ${b.duration}\nRef: ${b.ref}` +
+      (b.groupCode ? `\n\nNote: this is one slot of group ${b.groupCode}. Only this slot will be cancelled.` : '') +
+      `\n\nThis cannot be undone.`);
+    if(!ok) return;
+    btn.disabled = true; btn.textContent = 'Cancelling…';
+    msg.textContent = '';
+    try{
+      const res  = await fetchWithTimeout(
+        `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(b.ref)}&mobile=${encodeURIComponent(b.mobile)}&admin=true`,
+        null, 20000);
+      const data = await res.json();
+      if(data.status === 'cancelled'){
+        b.status = 'Cancelled';
+        btn.remove();
+        msg.style.color = '#1c4a22';
+        msg.textContent = `✅ Booking ${b.ref} cancelled. The net is free again.`;
+        const nm = document.querySelector('#nslot_' + i + ' .bulk-group-name');
+        if(nm) nm.style.textDecoration = 'line-through';
+      } else if(data.status === 'too_late'){
+        btn.remove();
+        msg.style.color = '#b3261e';
+        msg.textContent = "This booking has already started or finished, so it can't be cancelled.";
+      } else if(data.status === 'already_cancelled'){
+        btn.remove();
+        msg.style.color = '#b3261e';
+        msg.textContent = 'This booking was already cancelled.';
+      } else if(data.status === 'busy'){
+        btn.disabled = false; btn.textContent = '🚫 Cancel Booking';
+        msg.style.color = '#b3261e';
+        msg.textContent = 'The server is busy. Please try again in a few seconds.';
+      } else {
+        btn.disabled = false; btn.textContent = '🚫 Cancel Booking';
+        msg.style.color = '#b3261e';
+        msg.textContent = data.status === 'not_found'
+          ? 'Booking not found — please search again.'
+          : 'Could not cancel. Please try again.';
+      }
+    }catch(e){
+      btn.disabled = false; btn.textContent = '🚫 Cancel Booking';
+      msg.style.color = '#b3261e';
+      msg.textContent = '❌ Connection error. Please try again.';
+    }
+  }
+  window.staffCancelBooking = staffCancelBooking;
 
   // ── Name Search (autocomplete + custom date range history) ─────
   let selectedPersonMobile = '';

@@ -238,6 +238,12 @@
   .share-btn:hover{transform:translateY(-1px);}
   .share-btn.wa{background:#25D366;color:#fff;}
   .share-btn.sms{background:var(--navy);color:#fff;}
+  /* Customer Support call buttons (Cancellation Policy) */
+  .support-calls{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+  .sc-item{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #f0dcc0;border-radius:10px;padding:6px 6px 6px 12px;}
+  .sc-item span{font-weight:700;color:var(--navy);font-size:13px;}
+  .sc-call{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:9px;background:var(--navy);color:#fff !important;font-weight:700;font-size:13px;text-decoration:none;}
+
   .receipt-header-top{font-size:17px;margin:0 0 12px;}
 
   /* ---- After a booking: receipt-only view + Done / Book Another Slot ---- */
@@ -507,6 +513,7 @@
   .mb-edit:disabled{background:#c9d0c9;color:#5a6152;cursor:not-allowed;}
   .mb-cancel{border:1.5px solid #e8b4b4;background:#fff;color:#8b1c1c;}
   .mb-note{font-size:12px;color:#6b4a10;margin-top:6px;}
+  .mb-cancel:disabled{border-color:#d9d9d9;color:#9a9a9a;background:#f4f4f4;cursor:not-allowed;}
   .mb-empty{background:#fff8e6;border-color:#ecd59a;}
   .mb-policy{margin-top:14px;padding:12px 14px;background:#fff7ee;border:1px solid #f0dcc0;border-radius:10px;font-size:13px;color:var(--ink);line-height:1.6;}
   .edit-banner{display:none;background:#fff8e6;border:1px solid #ecd59a;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13.5px;color:#3d3420;line-height:1.5;}
@@ -614,8 +621,10 @@
       <div id="mbList"></div>
       <div class="mb-policy">
         <strong style="color:var(--navy);">Cancellation Policy</strong><br>
-        Cancellation allowed up to 2 hours before the slot or inform us.<br>
+        Cancellation allowed up to 2 hours before the slot.<br>
         For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.<br>
+        To inform us, please call:
+        <div class="support-calls"><div class="sc-item"><span>Customer Support 1</span><a class="sc-call" href="tel:+919847047462">📞 Call Us</a></div><div class="sc-item"><span>Customer Support 2</span><a class="sc-call" href="tel:+919895011774">📞 Call Us</a></div></div>
         <strong style="color:var(--navy);">Editing Policy</strong><br>
         Changes are allowed up to 1 hour before the start time (mobile number can't be changed). For team bookings, the number of players can't be reduced, and nets can be reduced only up to 2 hours before.
       </div>
@@ -798,8 +807,10 @@
 
       <div class="receipt-box receipt-box-cancellation">
         <div class="box-title">📋 Cancellation Policy</div>
-        <div class="line">Cancellation allowed up to 2 hours before the slot or inform us.</div>
+        <div class="line">Cancellation allowed up to 2 hours before the slot.</div>
         <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">To inform us, please call:</div>
+        <div class="support-calls"><div class="sc-item"><span>Customer Support 1</span><a class="sc-call" href="tel:+919847047462">📞 Call Us</a></div><div class="sc-item"><span>Customer Support 2</span><a class="sc-call" href="tel:+919895011774">📞 Call Us</a></div></div>
       </div>
 
       <div class="receipt-box receipt-box-network">
@@ -1882,8 +1893,11 @@ Late arrivals will affect other bookings. Kindly report on time for your slot.
 If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
 *📋 Cancellation Policy*
-Cancellation allowed up to 2 hours before the slot or inform us.
+Cancellation allowed up to 2 hours before the slot.
 ⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
+To inform us, please call:
+📞 Customer Support 1: 9847047462
+📞 Customer Support 2: 9895011774
 
 *📶 Network / Technical Issues*
 In case of any network issues, please contact us directly.
@@ -1912,7 +1926,7 @@ Helmet compulsory for leather balls. Rate changes if player count exceeds bookin
 
 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
 
-Cancellation Policy: Cancellation allowed up to 2 hours before the slot or inform us. For Prime Time (${primeRangeShort()}) cancel or inform us at least 5 hours prior.
+Cancellation Policy: Cancellation allowed up to 2 hours before the slot. For Prime Time (${primeRangeShort()}) kindly cancel or inform us at least 5 hours prior. To inform us, call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.
 
 Network/Technical Issues: please contact us directly.
 Tip: Open the link below and tap "Install App" to add it to your phone.
@@ -2207,8 +2221,9 @@ Thank you for your cooperation! See you at the nets!`;
       } else {
         actions = `<div class="mb-actions">
             <button type="button" class="mb-edit" data-i="${i}"${b.canEdit ? '' : ' disabled'}>Edit</button>
-            <button type="button" class="mb-cancel" data-i="${i}">Cancel</button>
-          </div>` + (b.canEdit ? '' : `<div class="mb-note">Changes close 1 hour before the Start Time.</div>`);
+            <button type="button" class="mb-cancel" data-i="${i}"${b.canCancel === false ? ' disabled' : ''}>Cancel</button>
+          </div>` + (b.canEdit ? '' : `<div class="mb-note">Changes close 1 hour before the Start Time.</div>`)
+                 + (b.canCancel === false ? `<div class="mb-note">Online cancellation closes 2 hours before the Start Time. To cancel now, please call us:</div>${MB_SUPPORT_HTML}` : '');
       }
       return `<div class="mb-card">
         <div class="mb-top"><span class="mb-when">${mbEsc(b.date)} · ${mbEsc(b.time)}</span><span class="mb-ref">Ref #${mbEsc(b.ref)}</span></div>
@@ -2225,10 +2240,11 @@ Thank you for your cooperation! See you at the nets!`;
     if(btn.classList.contains('mb-cancel')) mbCancel(b, btn);
   });
 
+  const MB_SUPPORT_HTML = '<div class="support-calls"><div class="sc-item"><span>Customer Support 1</span><a class="sc-call" href="tel:+919847047462">📞 Call Us</a></div><div class="sc-item"><span>Customer Support 2</span><a class="sc-call" href="tel:+919895011774">📞 Call Us</a></div></div>';
   async function mbCancel(b, btn){
     const ok = confirm(
       `Cancel this booking?\n\n${b.date} · ${b.time} · ${b.duration}\nRef #${b.ref}\n\n` +
-      `Cancellation Policy:\nCancellation allowed up to 2 hours before the slot or inform us.\n` +
+      `Cancellation Policy:\nCancellation allowed up to 2 hours before the slot.\n` +
       `For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.`
     );
     if(!ok) return;
@@ -2246,6 +2262,7 @@ Thank you for your cooperation! See you at the nets!`;
       const msgs = {
         already_cancelled: 'This booking has already been cancelled.',
         too_late: "This session has already started, so it can't be cancelled online. Please contact us directly.",
+        cancel_closed: 'Online cancellation closes 2 hours before the Start Time. To cancel now, please call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.',
         admin_only: 'This slot is part of a group booking. Please contact us directly to cancel it.',
         not_found: 'Booking not found. Please refresh the list.',
         busy: 'The server is busy. Please try again in a moment.'
