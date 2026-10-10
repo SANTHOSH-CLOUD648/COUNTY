@@ -975,6 +975,7 @@
       <span id="editSumBall"></span> &nbsp;·&nbsp;
       <span id="editSumAmount" style="color:var(--navy);font-weight:800;"></span>
     </div>
+    <div id="editRunningNote" style="display:none;background:#fff4e0;border:1px solid #f0d7a8;color:#6b4a10;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:0 0 12px;">⏱ This session is in progress — only Duration, Players, Nets and Ball Type can be changed.</div>
     <div class="admin-grid">
       <div><label class="admin-lbl">Date</label><input type="date" id="editDate"></div>
       <div><label class="admin-lbl">Session</label>
@@ -2229,6 +2230,7 @@
                     <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
                   ` : !isSlotEnded(s.date, s.time, s.duration) ? `
                     <span class="bulk-slot-past">In progress</span>
+                    <button class="bulk-slot-edit" onclick="openEditModal('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}','${s.duration}','${s.net}','${s.ball||''}','${s.players||''}')">✏️ Edit</button>
                     <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
                   ` : '<span class="bulk-slot-past">Past</span>'}
                 </div>
@@ -2568,7 +2570,7 @@ https://countyindoornetz.com/Client_Booking.html`;
             </div>
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
-                : (isPast && !isSlotEnded(b.date, b.time, b.duration)) ? '<span class="bulk-slot-past">In progress</span><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'
+                : (isPast && !isSlotEnded(b.date, b.time, b.duration)) ? '<span class="bulk-slot-past">In progress</span><button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'
                 : isPast ? '<span class="bulk-slot-past">Past</span>'
                 : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'}
             </div>
@@ -2659,6 +2661,7 @@ https://countyindoornetz.com/Client_Booking.html`;
   window.applyEditSessionTimes = applyEditSessionTimes; // reachable from the booking-form code
 
   let editCurrentRef = '', editCurrentMobile = '', editCurrentName = '', editCurrentGroupRef = '';
+  let editOriginalStarted = false;
 
   function openEditModal(ref, mobile, name, groupRef, date, time, duration, net, ball, players){
     editCurrentRef      = ref;
@@ -2666,6 +2669,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     editCurrentName     = name;
     editCurrentGroupRef = groupRef;
     editCurrentPlayers  = players || '';
+    editOriginalStarted = isSlotPast(date, time);
     const isBulk = !!(groupRef && groupRef.startsWith('GRP-'));
     // Show amount row for all bookings where player count is known
     document.getElementById('editAmountRow').style.display = players ? 'block' : 'none';
@@ -2740,6 +2744,11 @@ https://countyindoornetz.com/Client_Booking.html`;
       nSelEdit.disabled = false;
     }
 
+    // Session already running: only Duration, Players, Nets and Ball Type
+    // can change — date, session and start time are locked.
+    ['editDate','editSession','editTime'].forEach(id=>{ document.getElementById(id).disabled = editOriginalStarted; });
+    const runNote = document.getElementById('editRunningNote');
+    if(runNote) runNote.style.display = editOriginalStarted ? 'block' : 'none';
     document.getElementById('editOverlay').classList.add('show');
     document.getElementById('editModal').classList.add('show');
     filterEditDurations();
@@ -2941,6 +2950,7 @@ https://countyindoornetz.com/Client_Booking.html`;
   });
 
   function closeEditModal(){
+    ['editDate','editSession','editTime'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = false; });
     document.getElementById('editOverlay').classList.remove('show');
     document.getElementById('editModal').classList.remove('show');
     document.getElementById('editReceipt').style.display = 'none';
@@ -3022,8 +3032,8 @@ https://countyindoornetz.com/Client_Booking.html`;
       return;
     }
 
-    // Block saving to a past time slot
-    if(isSlotPast(document.getElementById('editDate').value.split('-').reverse().map((v,i)=>i===2?v.slice(2):v).join('/'), time)){
+    // Block saving to a past time slot (a running session keeps its own start time)
+    if(!editOriginalStarted && isSlotPast(document.getElementById('editDate').value.split('-').reverse().map((v,i)=>i===2?v.slice(2):v).join('/'), time)){
       msg.textContent = '❌ Cannot save — this time slot has already passed. Please choose a future time.';
       msg.className = 'edit-msg err'; return;
     }
@@ -3121,12 +3131,16 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
         // Refresh the booking list in the background
         setTimeout(()=> loadBulkList(), 500);
+      } else if(result.status === 'locked' || result.status === 'settings_changed'){
+        msg.textContent = '⚠️ ' + (result.message || 'This change is not allowed.');
+        msg.className = 'edit-msg err';
       } else if(result.status === 'full'){
         msg.textContent = '❌ No nets available at that slot. Choose a different time.';
         msg.className = 'edit-msg err';
       } else if(result.status === 'too_late'){
         msg.textContent = '❌ This slot time has already passed — it cannot be edited.';
         msg.className = 'edit-msg err';
+      } else if(result.status === 'not_found'){
         msg.textContent = '❌ Booking not found or already cancelled.';
         msg.className = 'edit-msg err';
       } else {

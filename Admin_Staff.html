@@ -113,6 +113,12 @@
   .normal-slot-info{flex:1;font-size:13px;color:var(--ink);line-height:1.7;}
   .normal-slot-btns{display:flex;gap:6px;flex-shrink:0;align-items:center;}
   .bulk-slot-past{font-size:11px;color:var(--muted);font-style:italic;padding:4px 10px;}
+  .bulk-slot-edit{
+    background:none;border:1.5px solid var(--navy);color:var(--navy);
+    border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;
+    cursor:pointer;font-family:inherit;white-space:nowrap;
+  }
+  .bulk-slot-edit:hover{background:var(--navy);color:#fff;}
   .bulk-slot-cancel{
     background:none;border:1.5px solid #b3261e;color:#b3261e;
     border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;
@@ -306,6 +312,47 @@
   .wk-pay{grid-column:1 / -1;border-top:1px dashed #d9d3c0;margin-top:8px;padding-top:10px;}
   .wk-row.cancelled{opacity:.6;}
   @media(max-width:520px){.wk-extra{grid-template-columns:1fr 1fr;}.wk-extra .wk-x{grid-column:span 2;width:100%;}}
+  /* Edit modal */
+  .edit-overlay{
+    display:none;position:fixed;inset:0;background:rgba(8,12,40,.6);
+    z-index:1000;backdrop-filter:blur(3px);
+  }
+  .edit-overlay.show{display:block;}
+  .edit-modal{
+    display:none;position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    background:var(--cream);border-radius:20px;
+    padding:24px 24px 20px;max-width:560px;width:94%;
+    max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    z-index:1001;box-shadow:0 32px 80px rgba(8,12,40,.45);
+  }
+  .edit-modal.show{display:block;}
+  .edit-modal-title{font-family:Georgia,serif;font-weight:700;font-size:18px;color:var(--navy);margin-bottom:4px;}
+  .edit-ref{font-size:12px;color:var(--muted);margin-bottom:16px;}
+  .edit-msg{margin-top:10px;font-size:13px;font-weight:600;}
+  .edit-msg.ok{color:#1c4a22;} .edit-msg.err{color:#8b1c1c;}
+  .edit-actions{display:flex;gap:10px;margin-top:16px;}
+  .edit-save-btn{
+    flex:1;background:var(--gold);color:var(--navy-dark);border:none;
+    border-radius:10px;padding:11px;font-size:14px;font-weight:700;
+    cursor:pointer;font-family:inherit;
+  }
+  .edit-save-btn:hover{background:#d8b14c;}
+  .edit-save-btn:disabled{opacity:.6;cursor:not-allowed;}
+  .edit-cancel-btn{
+    background:#fff;border:1.5px solid #d9d3c0;color:var(--navy);
+    border-radius:10px;padding:11px 16px;font-size:14px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .edit-cancel-btn:hover{background:#f7f4ec;}
+  .edit-receipt{
+    margin-top:14px;background:#fff;border:1.5px solid #d9d3c0;
+    border-radius:12px;padding:14px 16px;
+  }
+  .edit-receipt dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;}
+  .edit-receipt dt{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;}
+  .edit-receipt dd{font-size:13px;color:var(--ink);margin:0;font-weight:600;}
+
 </style>
 </head>
 <body>
@@ -620,6 +667,121 @@
   </div>
   </div>
 
+  <!-- Edit Booking Modal -->
+  <div class="edit-overlay" id="editOverlay" onclick="closeEditModal()"></div>
+  <div class="edit-modal" id="editModal">
+    <div class="edit-modal-title">✏️ Edit Booking <span style="font-size:12px;color:var(--muted);font-weight:600;">(Staff)</span></div>
+    <div class="edit-ref" id="editRefDisplay"></div>
+    <div id="editSummaryBadges" style="display:none;margin:6px 0 10px;font-size:12px;color:var(--muted);font-weight:600;">
+      <span id="editSumDuration"></span> &nbsp;·&nbsp;
+      <span id="editSumBall"></span> &nbsp;·&nbsp;
+      <span id="editSumAmount" style="color:var(--navy);font-weight:800;"></span>
+    </div>
+    <div id="editRunningNote" style="display:none;background:#fff4e0;border:1px solid #f0d7a8;color:#6b4a10;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:0 0 12px;">⏱ This session is in progress — only Duration, Players, Nets and Ball Type can be changed.</div>
+    <div class="admin-grid">
+      <div><label class="admin-lbl">Date</label><input type="date" id="editDate"></div>
+      <div><label class="admin-lbl">Session</label>
+        <select id="editSession">
+          <option value="" disabled selected>Select</option>
+          <option value="Morning (09:00 am to 05:00 pm)">Morning</option>
+          <option value="Evening (05:30 pm to 11:30 pm)">Evening</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">Time</label>
+        <select id="editTime"><option value="" disabled selected>Select session first</option></select>
+      </div>
+      <div><label class="admin-lbl">Duration</label>
+        <select id="editDuration">
+          <option value="" disabled selected>Select</option>
+          <option>1 hr</option><option>1.5 hrs</option><option>2 hrs</option>
+          <option>2.5 hrs</option><option>3 hrs</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">No. of Nets</label>
+        <select id="editNets">
+          <option value="1" selected>1</option>
+          <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+        </select>
+      </div>
+      <div><label class="admin-lbl">Ball Type</label>
+        <select id="editBall">
+          <option value="" disabled selected>Select</option>
+          <option value="Leather Ball">Leather Ball</option>
+          <option value="Tennis ball">Tennis ball</option>
+        </select>
+      </div>
+      <div id="editPlayersRow" style="display:none;">
+        <label class="admin-lbl">No. of Players</label>
+        <select id="editPlayers">
+          <option value="" disabled selected>Select</option>
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option value="Team Booking">5 &amp; Above (Team Booking)</option>
+        </select>
+      </div>
+      <div id="editAmountRow" style="display:none;">
+        <div class="admin-amount-row full" style="margin-top:4px;">
+          <div>
+            <div class="admin-amount-label">Updated Amount</div>
+            <div class="admin-amount-val" id="editAmountVal">—</div>
+            <div class="admin-amount-note" id="editAmountNote"></div>
+          </div>
+          <div class="ball-tag" id="editBallTag" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="edit-msg-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div class="edit-msg" id="editMsg" style="margin:0;"></div>
+    </div>
+    <div class="edit-receipt" id="editReceipt" style="display:none;">
+      <div class="receipt-title">🧾 Updated Booking Receipt</div>
+      <dl id="editReceiptDetails"></dl>
+      <div class="receipt-box receipt-box-general">
+        <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5C4 8.25 7.8 4 12 4s8 4.25 8 9.5v1a1 1 0 0 1-1 1h-1.3c-.4 1.7-1.9 3-3.7 3H9c-1.8 0-3.3-1.3-3.7-3H4a1 1 0 0 1-1-1z" fill="#c0392b"/><path d="M8 12.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5" stroke="#8e2a1f" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M8.5 15.5l1 3.8M15.5 15.5l-1 3.8" stroke="#8e2a1f" stroke-width="1.3" stroke-linecap="round"/></svg> Helmet compulsory for leather balls.</div>
+        <div class="line">🧍🧍🧍 Rate changes if player count exceeds booking.</div>
+        <div class="line">
+          <a href="https://www.google.com/maps/search/?api=1&query=County+Indoor+Netz+Mamangalam+Edappally+Kochi+Metro+Pillar+494"
+             target="_blank" rel="noopener" style="color:var(--navy);font-weight:600;">
+            🚗 Get directions on Google Maps
+          </a>
+        </div>
+      </div>
+      <div style="background:#fff0e0;border:1px solid #f0c090;border-radius:10px;padding:9px 13px;font-size:11.5px;color:#7a3d00;font-weight:600;margin-top:12px;">
+        👉 Please note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
+      </div>
+      <div class="receipt-box receipt-box-punctuality">
+        <div class="box-title">🕐 Punctuality is Mandatory</div>
+        <div class="line">Late arrivals will affect other bookings. Kindly report on time for your slot.</div>
+        <div class="line">If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.</div>
+      </div>
+      <div class="receipt-box receipt-box-cancellation">
+        <div class="box-title">📋 Cancellation Policy</div>
+        <div class="line">Cancellation allowed up to 2 hours before the slot.</div>
+        <div class="line">⭐ For Prime Time slots (<span class="prime-range">7 PM - 10 PM</span>), kindly cancel or inform us at least 5 hours prior.</div>
+        <div class="line">To inform us, please call:</div>
+        <div class="support-calls"><div class="sc-item"><span>Customer Support 1</span><a class="sc-call" href="tel:+919847047462">📞 Call Us</a></div><div class="sc-item"><span>Customer Support 2</span><a class="sc-call" href="tel:+919895011774">📞 Call Us</a></div></div>
+      </div>
+      <div class="receipt-box receipt-box-network">
+        <div class="box-title">📶 Network / Technical Issues</div>
+        <div class="line">In case of any network issues, please contact us directly.</div>
+      </div>
+      <div style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:600;color:var(--navy);">Thank you for your cooperation! See you at the nets! 🏏</div>
+      <div class="share-row" style="margin-top:12px;">
+        <a id="editWaBtn" class="share-btn wa" target="_blank" rel="noopener">
+          <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor"><path d="M16 0C7.2 0 0 7.2 0 16c0 2.9.8 5.6 2.1 8L0 32l8.3-2.1c2.3 1.3 5 2.1 7.7 2.1 8.8 0 16-7.2 16-16S24.8 0 16 0zm0 29.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.9 1.3 1.3-4.8-.3-.5C3.5 21 2.7 18.6 2.7 16 2.7 8.7 8.7 2.7 16 2.7S29.3 8.7 29.3 16 23.3 29.3 16 29.3zm7.3-9.7c-.4-.2-2.4-1.2-2.7-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.3 1.5-.2.3-.5.3-.9.1-1.2-.6-2-1-2.8-1.9-.6-.7-1.1-1.5-1.5-2.2-.2-.4 0-.6.1-.8.2-.2.4-.4.6-.7.2-.2.2-.4.1-.7-.1-.3-1-2.4-1.3-3.2-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5-.3.4-1.2 1.2-1.2 2.8 0 1.7 1.2 3.3 1.4 3.6.2.3 2.1 3.3 5.2 4.6 2.5 1.1 3.1.9 3.6.8.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>
+          Send via WhatsApp
+        </a>
+        <a id="editSmsBtn" class="share-btn sms">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          Send via SMS
+        </a>
+      </div>
+    </div>
+    <div class="edit-actions">
+      <button class="edit-save-btn" id="editSaveBtn" onclick="saveEdit()">💾 Save Changes</button>
+      <button class="edit-cancel-btn" onclick="closeEditModal()">✕ Close</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -781,6 +943,7 @@
       if(o.value.startsWith('Morning')) o.value = morningLabel();
       if(o.value.startsWith('Evening')) o.value = eveningLabel();
     });
+    if(typeof window.applyEditSessionTimes === 'function') window.applyEditSessionTimes();
     refreshPrimeRangeText();
     if(as && as.value) as.dispatchEvent(new Event('change'));
   }
@@ -1639,7 +1802,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:#b3261e;">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
                 : isSlotEnded(b.dateISO || b.date, b.time, b.duration) ? '<span class="bulk-slot-past">Past</span>'
-                : `${isPast ? '<span class="bulk-slot-past">In progress</span>' : ''}<button type="button" class="bulk-slot-cancel staff-cancel-btn" onclick="event.stopPropagation();staffCancelBooking(${i})">🚫 Cancel Booking</button>`}
+                : `${isPast ? '<span class="bulk-slot-past">In progress</span>' : ''}<button type="button" class="bulk-slot-edit staff-edit-btn" onclick="event.stopPropagation();staffEditBooking(${i})">✏️ Edit</button><button type="button" class="bulk-slot-cancel staff-cancel-btn" onclick="event.stopPropagation();staffCancelBooking(${i})">🚫 Cancel Booking</button>`}
             </div>
             <div class="staff-cancel-msg" id="ncancelmsg${i}" style="margin-top:8px;font-size:13px;font-weight:600;"></div>
           </div>
@@ -1716,6 +1879,537 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     }
   }
   window.staffCancelBooking = staffCancelBooking;
+
+  function updateEditBallTag(){
+    const editBallEl = document.getElementById('editBall');
+    const editBallTag = document.getElementById('editBallTag');
+    if(!editBallEl || !editBallTag) return;
+    if(editBallEl.value === 'Leather Ball'){
+      editBallTag.style.display='inline-flex';
+      editBallTag.style.background='#5c1414';
+      editBallTag.style.color='#fff';
+      editBallTag.textContent='Leather';
+    } else if(editBallEl.value === 'Tennis ball'){
+      editBallTag.style.display='inline-flex';
+      editBallTag.style.background='#234d29';
+      editBallTag.style.color='#fff';
+      editBallTag.textContent='Tennis';
+    } else {
+      editBallTag.style.display='none';
+    }
+  }
+  document.getElementById('editBall').addEventListener('change', updateEditBallTag);
+
+  function ddmmyyToIso(d){
+    const sp = String(d||'').split('/');
+    return sp.length === 3 ? '20'+sp[2]+'-'+sp[1]+'-'+sp[0] : String(d||'');
+  }
+  // Opens the Edit window for one booking from the search results
+  function staffEditBooking(i){
+    const b = lastNormalResults[i];
+    if(!b) return;
+    const dmy = (b.date && b.date.includes('/')) ? b.date
+      : (b.dateISO ? b.dateISO.slice(8,10)+'/'+b.dateISO.slice(5,7)+'/'+b.dateISO.slice(2,4) : '');
+    openEditModal(b.ref, b.mobile, b.name, b.groupCode || '', dmy, b.time, b.duration, b.net || 'Net 1', b.ball || '', b.players || '');
+  }
+  window.staffEditBooking = staffEditBooking;
+
+  // ── Edit booking modal ────────────────────────────────────────
+  const ALL_TIMES_EDIT = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
+    "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
+    "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
+    "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
+  const MORNING_E = ALL_TIMES_EDIT.slice(0, ALL_TIMES_EDIT.indexOf('05:00 pm')+1);
+  const EVENING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('05:30 pm'));
+  function applyEditSessionTimes(){
+    const ev = ALL_TIMES_EDIT.indexOf(SESSION_CFG.eveningStart);
+    if(ev > 0){
+      MORNING_E.splice(0, MORNING_E.length, ...ALL_TIMES_EDIT.slice(0, ev));
+      EVENING_E.splice(0, EVENING_E.length, ...ALL_TIMES_EDIT.slice(ev));
+    }
+    const es = document.getElementById('editSession');
+    if(es) Array.from(es.options).forEach(o=>{
+      if(o.value.startsWith('Morning')) o.value = morningLabel();
+      if(o.value.startsWith('Evening')) o.value = eveningLabel();
+    });
+  }
+  window.applyEditSessionTimes = applyEditSessionTimes; // reachable from the booking-form code
+
+  let editCurrentRef = '', editCurrentMobile = '', editCurrentName = '', editCurrentGroupRef = '';
+  let editOriginalStarted = false;
+
+  function openEditModal(ref, mobile, name, groupRef, date, time, duration, net, ball, players){
+    editCurrentRef      = ref;
+    editCurrentMobile   = mobile;
+    editCurrentName     = name;
+    editCurrentGroupRef = groupRef;
+    editCurrentPlayers  = players || '';
+    editOriginalStarted = isSlotPast(ddmmyyToIso(date), time);
+    const isBulk = !!(groupRef && groupRef.startsWith('GRP-'));
+    // Show amount row for all bookings where player count is known
+    document.getElementById('editAmountRow').style.display = players ? 'block' : 'none';
+    document.getElementById('editRefDisplay').textContent = `Ref: ${ref} · Group: ${groupRef||'—'} · ${name} · ${mobile}`;
+    document.getElementById('editMsg').textContent = '';
+    document.getElementById('editMsg').className  = 'edit-msg';
+    document.getElementById('editReceipt').style.display = 'none';
+    document.getElementById('editSummaryBadges').style.display = 'none';
+
+    // Restrict date to today onwards — cannot edit to a past date
+    const editDateEl = document.getElementById('editDate');
+    editDateEl.min = todayStr;
+
+    // Convert dd/mm/yy to yyyy-MM-dd for date input
+    if(date && date.includes('/')){
+      const p = date.split('/');
+      const iso = `20${p[2]}-${p[1]}-${p[0]}`;
+      editDateEl.value = iso < todayStr ? todayStr : iso;
+    }
+
+    // Pre-fill session and time
+    const hour = parseInt(time.split(':')[0],10);
+    const isPM = time.includes('pm');
+    const hour24 = isPM && hour!==12 ? hour+12 : (!isPM && hour===12 ? 0 : hour);
+    const minsOfDay = hour24*60 + (parseInt((time.split(':')[1]||'0'),10) || 0);
+    const isEveningEdit = minsOfDay >= eveningStartMins(); // Evening Start Time (Settings tab)
+    const session = isEveningEdit ? eveningLabel() : morningLabel();
+    document.getElementById('editSession').value = session;
+    populateEditTimes(isEveningEdit ? EVENING_E : MORNING_E);
+    applyEditPastTimeFilter(); // hide past times if today
+    // Normalize to zero-padded form ("2:00 pm" → "02:00 pm") before
+    // pre-selecting — the dropdown's option values are always zero-padded,
+    // so an unpadded source time would otherwise silently fail to select
+    // anything, leaving the field blank.
+    const timeParts = time.trim().split(':');
+    const normalizedTime = timeParts.length === 2
+      ? (timeParts[0].length < 2 ? '0'+timeParts[0] : timeParts[0]) + ':' + timeParts[1]
+      : time;
+    document.getElementById('editTime').value = normalizedTime;
+    document.getElementById('editDuration').value = duration;
+
+    const netCount = (net.match(/Net/g)||[]).length || 1;
+    document.getElementById('editNets').value = netCount;
+    // Remember the original slot so we can add back freed nets in the availability calc
+    editOriginalDate      = document.getElementById('editDate').value;
+    editOriginalTime      = normalizedTime;
+    editCurrentNetsCount  = netCount;
+    editOriginalSession   = session;
+    editOriginalDuration  = duration;
+    editOriginalBall      = ball || '';
+    editOriginalPlayers   = players || '';
+    // Pre-fill ball type
+    if(ball) document.getElementById('editBall').value = ball;
+    updateEditBallTag();
+
+    // Show Players field for ALL bookings (bulk and normal)
+    document.getElementById('editPlayersRow').style.display = 'block';
+    if(players) document.getElementById('editPlayers').value = players;
+
+    // Calculate the amount immediately on open — previously this only ran
+    // when the admin manually changed session/duration/nets/ball, so if
+    // they only touched the date (or made no changes and just re-saved),
+    // Amount silently stayed blank on the receipt.
+    calcEditAmount();
+
+    // Apply nets restriction based on pre-filled players
+    const nSelEdit = document.getElementById('editNets');
+    if(players && players !== 'Team Booking'){
+      nSelEdit.disabled = true; // lock to 1 net for < 5 players
+    } else {
+      nSelEdit.disabled = false;
+    }
+
+    // Session already running: only Duration, Players, Nets and Ball Type
+    // can change — date, session and start time are locked.
+    ['editDate','editSession','editTime'].forEach(id=>{ document.getElementById(id).disabled = editOriginalStarted; });
+    const runNote = document.getElementById('editRunningNote');
+    if(runNote) runNote.style.display = editOriginalStarted ? 'block' : 'none';
+    document.getElementById('editOverlay').classList.add('show');
+    document.getElementById('editModal').classList.add('show');
+    filterEditDurations();
+    calcEditAmount(); // calculate immediately with pre-filled values
+    refreshEditAvailability(); // then update availability labels (async)
+  }
+  window.openEditModal = openEditModal;
+
+  function populateEditTimes(list){
+    const sel = document.getElementById('editTime');
+    sel.innerHTML = '<option value="" disabled selected>Select time</option>';
+    (list||[]).forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o); });
+  }
+
+  function applyEditPastTimeFilter(){
+    const dateVal = document.getElementById('editDate').value;
+    const timeSel = document.getElementById('editTime');
+    if(dateVal !== todayStr){
+      Array.from(timeSel.options).forEach(o=>{
+        if(o.value){ o.disabled=false; o.dataset.past='0';
+          o.textContent = o.value.replace(' — Past',''); }
+      });
+      return;
+    }
+    const now = new Date();
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    Array.from(timeSel.options).forEach(o=>{
+      if(!o.value) return;
+      const base = o.value.replace(' — Past','');
+      const slotMins = parseSlotMinutes(base);
+      if(slotMins <= nowMins){
+        // Label as Past but DO NOT disable — disabled options can't be selected
+        // in browsers, which causes blank Time when original time is past.
+        // Server will reject saving a past time anyway.
+        o.dataset.past = '1';
+        o.textContent = base + ' — Past';
+        o.style.color = '#b3261e';
+      } else {
+        o.dataset.past = '0';
+        o.textContent = base;
+        o.style.color = '';
+      }
+    });
+  }
+
+  let editAvailCache = {};
+  let editOriginalDate = '', editOriginalTime = '', editCurrentNetsCount = 0, editCurrentPlayers = '';
+  let editOriginalSession = '', editOriginalDuration = '', editOriginalBall = '', editOriginalPlayers = '';
+
+  async function refreshEditAvailability(){
+    const dateVal = document.getElementById('editDate').value;
+    const sessionVal = document.getElementById('editSession').value;
+    if(!dateVal || !sessionVal) return;
+    const timeSel = document.getElementById('editTime');
+    const ph = timeSel.querySelector('option[disabled]');
+    if(ph) ph.textContent = '⏳ Checking…';
+    const counts = await fetchAvailability(dateVal);
+    if(ph) ph.textContent = 'Select time';
+    editAvailCache = counts || {};
+    const durVal = document.getElementById('editDuration').value;
+    const sameDate = (dateVal === editOriginalDate);
+
+    Array.from(timeSel.options).forEach(o=>{
+      if(!o.value || o.dataset.past === '1') return;
+      const slots = getSpanSlots(o.value, durVal || '1 hr');
+      const used  = slots.length ? Math.max(...slots.map(s => editAvailCache[s]||0)) : (editAvailCache[o.value]||0);
+      // Add back current booking's nets when checking its own original slot
+      const bonus = (sameDate && o.value === editOriginalTime) ? editCurrentNetsCount : 0;
+      const left  = MAX_NETS - used + bonus;
+      if(left <= 0){
+        o.textContent = o.value + ' — Full';
+        o.style.color = '#b3261e';
+        // DO NOT disable or clear selection — original slot must remain visible
+      } else {
+        o.textContent = left < MAX_NETS ? (o.value + ' (' + left + ' net' + (left>1?'s':'') + ' left)') : o.value;
+        o.style.color = ''; o.disabled = false;
+      }
+    });
+    updateEditNetsLimit();
+    applyEditPastTimeFilter();
+  }
+
+  function updateEditNetsLimit(){
+    const t   = document.getElementById('editTime').value;
+    const dur = document.getElementById('editDuration').value;
+    if(!t || !editAvailCache || Object.keys(editAvailCache).length === 0) return;
+    const slots = getSpanSlots(t, dur || '1 hr');
+    const used  = slots.length ? Math.max(...slots.map(s => editAvailCache[s]||0)) : (editAvailCache[t]||0);
+
+    // When the same original slot is selected, Surya's current nets will be freed —
+    // add them back so the dropdown correctly shows how many nets are available
+    const sameSlot = (t === editOriginalTime && document.getElementById('editDate').value === editOriginalDate);
+    const bonus     = sameSlot ? editCurrentNetsCount : 0;
+
+    const avail = Math.max(0, MAX_NETS - used + bonus);
+    const nSel  = document.getElementById('editNets');
+    const cur   = parseInt(nSel.value)||1;
+    nSel.innerHTML = '';
+    for(let i=1; i<=Math.min(avail, MAX_NETS); i++){
+      const o = document.createElement('option');
+      o.value = i; o.textContent = i; nSel.appendChild(o);
+    }
+    nSel.value = Math.min(cur, avail) || 1;
+    if(avail === 0) nSel.innerHTML = '<option value="0">No nets free</option>';
+  }
+
+  // Amount calculation for edit modal (normal bookings only)
+  const EDIT_DUR_HRS = {'1 hr':1,'1.5 hrs':1.5,'2 hrs':2,'2.5 hrs':2.5,'3 hrs':3};
+
+  function calcEditAmount(){
+    if(!editCurrentPlayers) return; // skip if no player count available
+    const dur  = document.getElementById('editDuration').value;
+    const nets = parseInt(document.getElementById('editNets').value)||1;
+    const ball = document.getElementById('editBall').value;
+    const p    = editCurrentPlayers;
+    const session = document.getElementById('editSession').value;
+    const rate = lookupRate(session, p, ball);
+    const hrs = EDIT_DUR_HRS[dur];
+    let amountText = '—';
+    if(rate && hrs){
+      const amt = rate * hrs * nets;
+      amountText = '₹' + amt.toLocaleString('en-IN');
+      document.getElementById('editAmountVal').textContent  = amountText;
+      document.getElementById('editAmountNote').textContent = `₹${rate}/hr × ${dur}${nets>1?' × '+nets+' Nets':''}`;
+    } else {
+      document.getElementById('editAmountVal').textContent  = '—';
+      document.getElementById('editAmountNote').textContent = '';
+    }
+
+    // Also refresh the quick-glance summary line at the top of the modal
+    // (Duration · Ball Type · Amount), same idea as the group booking badges.
+    const badges = document.getElementById('editSummaryBadges');
+    if (dur || ball || amountText !== '—'){
+      badges.style.display = 'block';
+      document.getElementById('editSumDuration').textContent = dur ? `⏱ ${dur}` : '';
+      document.getElementById('editSumBall').textContent = ball ? `🏏 ${ball}` : '';
+      document.getElementById('editSumAmount').textContent = amountText !== '—' ? `💰 ${amountText}` : '';
+    }
+  }
+
+  ['editSession','editDuration','editNets','editBall'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', calcEditAmount);
+  });
+  document.getElementById('editPlayers').addEventListener('change', ()=>{
+    editCurrentPlayers = document.getElementById('editPlayers').value;
+    const nSel = document.getElementById('editNets');
+    if(editCurrentPlayers && editCurrentPlayers !== 'Team Booking'){
+      // Less than 5 players — lock to 1 net
+      nSel.value = '1';
+      nSel.disabled = true;
+    } else {
+      nSel.disabled = false;
+    }
+    filterEditDurations();
+    calcEditAmount();
+  });
+
+  const EDIT_DUR_MINS = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
+
+  function filterEditDurations(){
+    const sessionVal = document.getElementById('editSession').value;
+    const timeVal    = document.getElementById('editTime').value;
+    const durSel     = document.getElementById('editDuration');
+    if(!sessionVal || !timeVal) return;
+    const sessionEndMins = sessionVal.startsWith('Morning') ? eveningStartMins()+30 : 23*60+30;
+    const timeMins = parseSlotMinutes(timeVal);
+    // Staff rule: small groups (1–4 players) in the Evening must end by Prime
+    // Time Start, unless it's the same day after the Small Group Unlock Time.
+    const edPlayers = document.getElementById('editPlayers').value || editCurrentPlayers;
+    const edDate = document.getElementById('editDate').value;
+    const edNow = new Date().getHours()*60 + new Date().getMinutes();
+    const edPrimeLock = sessionVal.startsWith('Evening') && ['1','2','3','4'].includes(String(edPlayers)) &&
+                        !(edDate === todayStr && edNow >= unlockMins());
+    Array.from(durSel.options).forEach(o=>{
+      if(!o.value) return;
+      const endMins = timeMins + (EDIT_DUR_MINS[o.value]||60);
+      if(endMins > sessionEndMins || (edPrimeLock && endMins > primeStartMins())){
+        o.disabled = true;
+        if(durSel.value === o.value){
+          durSel.value = '';
+          if(edPrimeLock && endMins <= sessionEndMins){
+            const em = document.getElementById('editMsg');
+            em.textContent = '⚠️ ' + primeTimeMsgText(); em.className = 'edit-msg err';
+          }
+        }
+      } else {
+        o.disabled = false;
+      }
+    });
+  }
+
+  document.getElementById('editSession').addEventListener('change', ()=>{
+    const v = document.getElementById('editSession').value;
+    populateEditTimes(v.startsWith('Morning') ? MORNING_E : EVENING_E);
+    applyEditPastTimeFilter();
+    filterEditDurations();
+    refreshEditAvailability();
+    calcEditAmount();
+  });
+  document.getElementById('editDate').addEventListener('change', ()=>{
+    applyEditPastTimeFilter();
+    filterEditDurations();
+    refreshEditAvailability();
+  });
+  document.getElementById('editTime').addEventListener('change', ()=>{
+    filterEditDurations();
+    updateEditNetsLimit();
+  });
+  document.getElementById('editDuration').addEventListener('change', ()=>{
+    refreshEditAvailability();
+    calcEditAmount();
+  });
+
+  function closeEditModal(){
+    ['editDate','editSession','editTime'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = false; });
+    document.getElementById('editOverlay').classList.remove('show');
+    document.getElementById('editModal').classList.remove('show');
+    document.getElementById('editReceipt').style.display = 'none';
+    document.getElementById('editSaveBtn').style.display = '';  // restore button
+    document.getElementById('editMsg').textContent = '';
+    document.getElementById('editMsg').className = 'edit-msg';
+  }
+  window.closeEditModal = closeEditModal;
+
+
+  async function saveEdit(){
+    const ref      = editCurrentRef;
+    const mobile   = editCurrentMobile;
+    const date     = document.getElementById('editDate').value;
+    const session  = document.getElementById('editSession').value;
+    const time     = document.getElementById('editTime').value;
+    const duration = document.getElementById('editDuration').value;
+    const nets     = parseInt(document.getElementById('editNets').value)||1;
+    const ball     = document.getElementById('editBall').value;
+    const players  = document.getElementById('editPlayers').value || editCurrentPlayers;
+    const btn      = document.getElementById('editSaveBtn');
+    const msg      = document.getElementById('editMsg');
+
+    if(!date||!session||!time||!duration){
+      msg.textContent = '⚠️ Please fill Date, Session, Time and Duration.';
+      msg.className = 'edit-msg err'; return;
+    }
+
+    if(!duration || document.getElementById('editDuration').selectedOptions[0]?.disabled){
+      msg.textContent = '⚠️ ' + primeTimeMsgText();
+      msg.className = 'edit-msg err'; return;
+    }
+
+    // If nothing was actually changed, don't submit or show a receipt —
+    // just let the admin know and stop here.
+    const nothingChanged =
+      date === editOriginalDate &&
+      session === editOriginalSession &&
+      time === editOriginalTime &&
+      duration === editOriginalDuration &&
+      nets === editCurrentNetsCount &&
+      ball === editOriginalBall &&
+      players === editOriginalPlayers;
+    if(nothingChanged){
+      msg.textContent = 'ℹ️ No changes were made.';
+      msg.className = 'edit-msg';
+      return;
+    }
+
+    // Block saving to a past time slot (a running session keeps its own start time)
+    if(!editOriginalStarted && isSlotPast(document.getElementById('editDate').value, time)){
+      msg.textContent = '❌ Cannot save — this time slot has already passed. Please choose a future time.';
+      msg.className = 'edit-msg err'; return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    msg.textContent = ''; msg.className = 'edit-msg';
+    try {
+      const amountVal = document.getElementById('editAmountVal').textContent.replace(/[\u20B9,]/g,'').trim();
+      const qs = [
+        `action=editBooking`,
+        `src=staff`,
+        `ref=${encodeURIComponent(ref)}`,
+        `mobile=${encodeURIComponent(mobile)}`,
+        `date=${encodeURIComponent(date)}`,
+        `session=${encodeURIComponent(session)}`,
+        `time=${encodeURIComponent(time)}`,
+        `duration=${encodeURIComponent(duration)}`,
+        `netsRequired=${nets}`,
+        ball ? `ball=${encodeURIComponent(ball)}` : '',
+        players ? `players=${encodeURIComponent(players)}` : '',
+        (amountVal && amountVal !== '—') ? `amount=${encodeURIComponent(amountVal)}` : ''
+      ].filter(Boolean).join('&');
+      const res    = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?${qs}`, null, 25000);
+      const result = await res.json();
+      if(result.status === 'ok'){
+        const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
+        const dp = date.split('-');
+        const dateDisplay = dp[2]+'/'+dp[1]+'/'+dp[0].slice(2);
+        const sessionShort = session.startsWith('Morning') ? 'Morning' : 'Evening';
+
+        msg.textContent = '✅ Booking updated successfully!';
+        msg.className = 'edit-msg ok';
+        document.getElementById('editSaveBtn').style.display = 'none'; // hide after success
+
+
+        // Build receipt
+        document.getElementById('editReceiptDetails').innerHTML = `
+          ${editCurrentGroupRef ? `<dt>Group Ref</dt><dd style="color:var(--leather);font-weight:700;letter-spacing:.5px">${editCurrentGroupRef}</dd>` : ''}
+          <dt>Booking Ref</dt><dd>${ref}</dd>
+          <dt>Name</dt><dd>${editCurrentName}</dd>
+          <dt>Mobile</dt><dd>${mobile}</dd>
+          ${players ? `<dt>Players</dt><dd>${players}</dd>` : ''}
+          <dt>Date</dt><dd>${dateDisplay}</dd>
+          <dt>Session</dt><dd>${sessionShort}</dd>
+          <dt>Time</dt><dd>${time}</dd>
+          <dt>Duration</dt><dd>${duration}</dd>
+          <dt>Nets Required</dt><dd>${nets}</dd>
+          ${ball ? `<dt>Ball Type</dt><dd>${ball}</dd>` : ''}
+          ${(!editCurrentGroupRef && amountVal && amountVal !== '—') ? `<dt>Amount</dt><dd>${amountVal}</dd>` : ''}
+        `;
+
+        const waMsg = `*County Indoor Netz — Booking Updated* 🏏
+
+*Group Ref:* ${editCurrentGroupRef}
+*Booking Ref:* ${ref}
+*Name:* ${editCurrentName}
+*Date:* ${dateDisplay}
+*Session:* ${sessionShort}
+*Time:* ${time}
+*Duration:* ${duration}
+*Nets Required:* ${nets}
+
+⛑️ Helmet compulsory for leather balls.
+🧍🧍🧍 Rate changes if player count exceeds booking.
+🚗 Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494
+
+👉 *Please note:* Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.
+
+*🕐 Punctuality is Mandatory*
+Late arrivals will affect other bookings. Kindly report on time for your slot.
+If a team fails to arrive within 15 minutes of the booking time without prior information, the booking will be treated as cancelled and the slot will be allotted to others.
+
+*📋 Cancellation Policy*
+Cancellation allowed up to 2 hours before the slot.
+⭐ For Prime Time slots (${primeRangeLabel()}), kindly cancel or inform us at least 5 hours prior.
+To inform us, please call:
+📞 Customer Support 1: 9847047462
+📞 Customer Support 2: 9895011774
+
+*📶 Network / Technical Issues*
+In case of any network issues, please contact us directly.
+
+👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
+https://countyindoornetz.com/Client_Booking.html
+
+Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
+
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot. For Prime Time (${primeRangeShort()}) kindly cancel or inform us at least 5 hours prior. To inform us, call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+
+        document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
+        document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
+        document.getElementById('editReceipt').style.display = 'block';
+
+        // Refresh the search results in the background
+        setTimeout(()=> { try { searchNormalBookings(); } catch(e){} }, 500);
+      } else if(result.status === 'prime_rule' || result.status === 'settings_changed' || result.status === 'locked'){
+        msg.textContent = '⚠️ ' + (result.message || 'This change does not match the current booking rules.');
+        msg.className = 'edit-msg err';
+      } else if(result.status === 'busy'){
+        msg.textContent = '⏳ The server is busy. Please try again in a few seconds.';
+        msg.className = 'edit-msg err';
+      } else if(result.status === 'full'){
+        msg.textContent = '❌ No nets available at that slot. Choose a different time.';
+        msg.className = 'edit-msg err';
+      } else if(result.status === 'too_late'){
+        msg.textContent = '❌ This slot time has already passed — it cannot be edited.';
+        msg.className = 'edit-msg err';
+      } else if(result.status === 'not_found'){
+        msg.textContent = '❌ Booking not found or already cancelled.';
+        msg.className = 'edit-msg err';
+      } else {
+        msg.textContent = '❌ Could not update. Please try again.';
+        msg.className = 'edit-msg err';
+      }
+    } catch(e){
+      msg.textContent = '❌ Connection error. Try again.';
+      msg.className = 'edit-msg err';
+    }
+    btn.disabled = false; btn.textContent = '💾 Save Changes';
+  }
+  window.saveEdit = saveEdit;
 
   // ── Name Search (autocomplete + custom date range history) ─────
   let selectedPersonMobile = '';
