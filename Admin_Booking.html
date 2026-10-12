@@ -2997,6 +2997,21 @@ https://countyindoornetz.com/Client_Booking.html`;
     calcEditAmount();
   });
 
+  // Clear an old error message as soon as any booking / edit field is changed.
+  // (Runs before the field's own checks, so a rule that still applies — e.g. the
+  // Prime Time rule — simply shows its message again.)
+  document.addEventListener('change', function(ev){
+    const id = ev.target && ev.target.id;
+    if(['aDate','aSession','aTime','aDuration','aPlayers','aBall','aNets'].includes(id)){
+      const m = document.getElementById('adminMsg');
+      if(m && /\berr\b/.test(m.className)){ m.textContent = ''; m.className = 'admin-msg'; }
+    }
+    if(['editDate','editSession','editTime','editDuration','editPlayers','editBall','editNets'].includes(id)){
+      const em = document.getElementById('editMsg');
+      if(em && /\berr\b/.test(em.className)){ em.textContent = ''; em.className = 'edit-msg'; }
+    }
+  }, true);
+
   function closeEditModal(){
     ['editDate','editSession','editTime'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = false; });
     document.getElementById('editOverlay').classList.remove('show');

@@ -1721,6 +1721,12 @@
   }
 
   const form = document.getElementById('bookingForm');
+  // Hide an old booking error as soon as the customer changes any field
+  form.addEventListener('change', ()=>{
+    const eb = document.getElementById('bookingErrorBox');
+    if(eb) eb.classList.remove('show');
+  }, true);
+
   // Tracks whether the CURRENT booking attempt is a retry of an earlier
   // one that already failed — set to true only when an error is shown,
   // and reset to false after any successful booking. A normal, first-time

@@ -2247,6 +2247,15 @@ https://countyindoornetz.com/Client_Booking.html`;
     const edNow = new Date().getHours()*60 + new Date().getMinutes();
     const edPrimeLock = sessionVal.startsWith('Evening') && ['1','2','3','4'].includes(String(edPlayers)) &&
                         !(edDate === todayStr && edNow >= unlockMins());
+    // Show the Prime Time message while it applies, and remove it as soon as
+    // it doesn't (e.g. the time is changed to 5:30 pm).
+    const edMsgEl = document.getElementById('editMsg');
+    const edPrimeText = '⚠️ ' + primeTimeMsgText();
+    if(edPrimeLock && timeMins + 60 > primeStartMins()){
+      edMsgEl.textContent = edPrimeText; edMsgEl.className = 'edit-msg err';
+    } else if(edMsgEl.textContent === edPrimeText){
+      edMsgEl.textContent = ''; edMsgEl.className = 'edit-msg';
+    }
     Array.from(durSel.options).forEach(o=>{
       if(!o.value) return;
       const endMins = timeMins + (EDIT_DUR_MINS[o.value]||60);
@@ -2254,10 +2263,6 @@ https://countyindoornetz.com/Client_Booking.html`;
         o.disabled = true;
         if(durSel.value === o.value){
           durSel.value = '';
-          if(edPrimeLock && endMins <= sessionEndMins){
-            const em = document.getElementById('editMsg');
-            em.textContent = '⚠️ ' + primeTimeMsgText(); em.className = 'edit-msg err';
-          }
         }
       } else {
         o.disabled = false;
@@ -2286,6 +2291,21 @@ https://countyindoornetz.com/Client_Booking.html`;
     refreshEditAvailability();
     calcEditAmount();
   });
+
+  // Clear an old error message as soon as any booking / edit field is changed.
+  // (Runs before the field's own checks, so a rule that still applies — e.g. the
+  // Prime Time rule — simply shows its message again.)
+  document.addEventListener('change', function(ev){
+    const id = ev.target && ev.target.id;
+    if(['aDate','aSession','aTime','aDuration','aPlayers','aBall','aNets'].includes(id)){
+      const m = document.getElementById('adminMsg');
+      if(m && /\berr\b/.test(m.className)){ m.textContent = ''; m.className = 'admin-msg'; }
+    }
+    if(['editDate','editSession','editTime','editDuration','editPlayers','editBall','editNets'].includes(id)){
+      const em = document.getElementById('editMsg');
+      if(em && /\berr\b/.test(em.className)){ em.textContent = ''; em.className = 'edit-msg'; }
+    }
+  }, true);
 
   function closeEditModal(){
     ['editDate','editSession','editTime'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = false; });
