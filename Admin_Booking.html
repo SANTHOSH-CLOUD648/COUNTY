@@ -2368,8 +2368,41 @@ Thank you for your cooperation! See you at the nets! 🏏`;
   }
   window.toggleNormalResult = toggleNormalResult;
 
+  // ── Cancellation: confirmation text + result messages (shared) ──
+  let lastAdminNormalResults = [];
+  function cancelConfirmText(o){
+    // o: { name, mobile, date, time, duration, ref, groupRef }
+    const running = isSlotPast(o.date, o.time);
+    return `Cancel this booking?\n\n${o.name}${o.mobile ? ' (' + o.mobile + ')' : ''}\n` +
+      `${o.date} at ${o.time}${o.duration ? ' · ' + o.duration : ''}\nRef: ${o.ref}` +
+      (o.groupRef && String(o.groupRef).toUpperCase().startsWith('GRP-')
+        ? `\n\nNote: this is one slot of group ${o.groupRef}. Only this slot will be cancelled.` : '') +
+      (running ? `\n\n⏱ This session is in progress — the remaining time will become free for others.` : '');
+  }
+  function cancelResultText(status){
+    return ({
+      too_late:          '⚠️ This session has already ended, so it cannot be cancelled.',
+      already_cancelled: 'ℹ️ This booking was already cancelled.',
+      not_found:         '❌ Booking not found — please refresh the list.',
+      busy:              '⏳ The server is busy. Please try again in a few seconds.'
+    })[status] || '❌ Could not cancel. Please try again.';
+  }
+
   async function cancelBulkGroup(groupRef, mobile, name, gi){
     const btn = document.querySelector(`#grpCard${gi} .bulk-cancel-all`);
+    const g = lastBulkGroups[gi] || { slots: [] };
+    const live = (g.slots || []).filter(s => s.status !== 'Cancelled' && !isSlotEnded(s.date, s.time, s.duration));
+    const runningN = live.filter(s => isSlotPast(s.date, s.time)).length;
+    if(!live.length){
+      document.getElementById('cancelTabMsg').textContent = 'ℹ️ No slots left to cancel in this group (all are cancelled or already ended).';
+      return;
+    }
+    const okG = confirm(
+      `Cancel the WHOLE group?\n\n${name} (${mobile})\nGroup: ${groupRef}\n\n` +
+      `${live.length} slot${live.length>1?'s':''} will be cancelled:\n` +
+      live.map(s => `• ${s.date} ${s.time}${s.duration ? ' · ' + s.duration : ''} (Ref ${s.ref})`).join('\n') +
+      (runningN ? `\n\n⏱ ${runningN} of these ${runningN>1?'are':'is'} in progress — the remaining time will become free for others.` : ''));
+    if(!okG) return;
     btn.disabled = true; btn.textContent = 'Cancelling…';
     try {
       const res  = await fetchWithTimeout(
@@ -2391,10 +2424,10 @@ Thank you for your cooperation! See you at the nets! 🏏`;
         setTimeout(() => { loadBulkList(); }, 6000);
       } else if(data.status === 'too_late'){
         btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
-        document.getElementById('cancelTabMsg').textContent = '⚠️ Some or all slots are in the past and cannot be cancelled.';
+        document.getElementById('cancelTabMsg').textContent = '⚠️ All remaining slots of this group have already ended, so nothing was cancelled.';
       } else {
         btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
-        document.getElementById('cancelTabMsg').textContent = '❌ Cancellation failed. Try again.';
+        document.getElementById('cancelTabMsg').textContent = cancelResultText(data.status);
       }
     } catch(e){
       btn.disabled = false; btn.textContent = '🚫 Cancel Entire Group';
@@ -2406,6 +2439,8 @@ Thank you for your cooperation! See you at the nets! 🏏`;
   async function cancelSingleSlot(ref, mobile, name, groupRef, date, time, gi, si){
     const rowEl = document.getElementById(`slot_${gi}_${si}`);
     const btn = rowEl.querySelector('.bulk-slot-cancel');
+    const slotInfo = (lastBulkGroups[gi] && lastBulkGroups[gi].slots[si]) || {};
+    if(!confirm(cancelConfirmText({ name, mobile, date, time, duration: slotInfo.duration, ref, groupRef }))) return;
     btn.disabled = true; btn.textContent = '…';
     try {
       const res  = await fetchWithTimeout(
@@ -2425,14 +2460,17 @@ Thank you for your cooperation! See you at the nets! 🏏`;
         }
       } else if(data.status === 'too_late'){
         btn.disabled = true; btn.textContent = 'Past';
+        document.getElementById('cancelTabMsg').textContent = cancelResultText('too_late');
       } else if(data.status === 'already_cancelled'){
         btn.disabled = true; btn.textContent = 'Already cancelled';
+        document.getElementById('cancelTabMsg').textContent = cancelResultText('already_cancelled');
       } else {
-        btn.disabled = false; btn.textContent = 'Cancel';
-        document.getElementById('cancelTabMsg').textContent = '❌ Could not cancel. Try again.';
+        btn.disabled = false; btn.textContent = '🚫 Cancel';
+        document.getElementById('cancelTabMsg').textContent = cancelResultText(data.status);
       }
     } catch(e){
-      btn.disabled = false; btn.textContent = 'Cancel';
+      btn.disabled = false; btn.textContent = '🚫 Cancel';
+      document.getElementById('cancelTabMsg').textContent = '❌ Connection error. Please try again.';
     }
   }
   window.cancelSingleSlot = cancelSingleSlot;
@@ -2545,6 +2583,7 @@ https://countyindoornetz.com/Client_Booking.html`;
       msg.style.color = 'var(--navy)';
       document.getElementById('normalRefreshBtn').style.display = 'inline-flex';
 
+      lastAdminNormalResults = data.results;
       results.innerHTML = data.results.map((b,i)=>{
         const isCancelled = b.status === 'Cancelled';
         const isPast = isSlotPast(b.date, b.time);
@@ -2595,7 +2634,14 @@ https://countyindoornetz.com/Client_Booking.html`;
   async function cancelNormalBooking(ref, mobile, name, date, time, idx){
     const rowEl = document.getElementById(`nslot_${idx}`);
     const btn = rowEl.querySelector('.bulk-slot-cancel');
+    const nInfo = lastAdminNormalResults[idx] || {};
+    if(!confirm(cancelConfirmText({ name, mobile, date, time, duration: nInfo.duration, ref, groupRef: nInfo.groupCode }))) return;
     btn.disabled = true; btn.textContent = '…';
+    let nMsg = rowEl.querySelector('.admin-cancel-msg');
+    if(!nMsg){ nMsg = document.createElement('div'); nMsg.className = 'admin-cancel-msg';
+      nMsg.style.cssText = 'margin-top:8px;font-size:13px;font-weight:600;color:#8b1c1c;';
+      (btn.parentElement || rowEl).insertAdjacentElement('afterend', nMsg); }
+    nMsg.textContent = '';
     try {
       const res  = await fetchWithTimeout(
         `${SHEET_SCRIPT_URL}?action=cancel&ref=${encodeURIComponent(ref)}&mobile=${encodeURIComponent(mobile)}&admin=true`,
@@ -2606,12 +2652,14 @@ https://countyindoornetz.com/Client_Booking.html`;
           `<div class="bulk-slot-cancelled" style="padding:10px;">✅ Booking ${ref} cancelled.</div>
            <div id="normalCancelShare_${idx}" style="margin-top:8px;"></div>`;
         showCancelShareButtons(`normalCancelShare_${idx}`, null, buildSingleCancelMessage(name, mobile, ref, '', date, time));
-      } else if(data.status === 'too_late'){
-        btn.disabled = true; btn.textContent = 'Past';
+      } else if(data.status === 'too_late' || data.status === 'already_cancelled'){
+        btn.disabled = true; btn.textContent = data.status === 'too_late' ? 'Past' : 'Already cancelled';
+        nMsg.textContent = cancelResultText(data.status);
       } else {
         btn.disabled = false; btn.textContent = '🚫 Cancel';
+        nMsg.textContent = cancelResultText(data.status);
       }
-    } catch(e){ btn.disabled = false; btn.textContent = '🚫 Cancel'; }
+    } catch(e){ btn.disabled = false; btn.textContent = '🚫 Cancel'; nMsg.textContent = '❌ Connection error. Please try again.'; }
   }
   window.cancelNormalBooking = cancelNormalBooking;
 
