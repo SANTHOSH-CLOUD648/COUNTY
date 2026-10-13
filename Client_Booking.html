@@ -922,7 +922,7 @@
   // when the page opens (Evening Start Time, Prime Time Start, Small Group
   // Unlock Time) and are applied by applySessionTimes() further below.
   const SESSION_CFG = { eveningStart:'05:30 pm', primeStart:'07:00 pm', unlockTime:'05:00 pm',
-                        earlyStart:'06:00 am', earlyClient:false, earlyStaff:false, earlyAdmin:false };
+                        earlyStart:'06:00 am', earlyClient:false, earlyStaff:false, earlyAdmin:false, earlyClientDays:'All' };
   function cfgMins(label){
     const m = String(label||'').trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
     if(!m) return -1;
@@ -971,6 +971,9 @@
     ['earlyClient','earlyStaff','earlyAdmin'].forEach(k=>{
       if(typeof st[k] === 'boolean' && st[k] !== SESSION_CFG[k]){ SESSION_CFG[k] = st[k]; changed = true; }
     });
+    if(typeof st.earlyClientDays === 'string' && st.earlyClientDays !== SESSION_CFG.earlyClientDays){
+      SESSION_CFG.earlyClientDays = st.earlyClientDays; changed = true;
+    }
     return changed;
   }
   const EARLY_ROLE_KEY = 'earlyClient';
@@ -981,7 +984,30 @@
   function isEarlySession(v){ return String(v||'').startsWith('Early'); }
   function sessShort(v){ return isEarlySession(v) ? 'Early Morning' : (String(v||'').startsWith('Morning') ? 'Morning' : 'Evening'); }
   function earlyLabel(){ return `Early Morning (${SESSION_CFG.earlyStart} to 09:00 am)`; }
-  function earlyOn(){ return !!SESSION_CFG[EARLY_ROLE_KEY]; }
+  // Customers: Early Morning only on the days / dates in "Early Morning - Client Days"
+  function earlyDayAllowed(iso){
+    const s = String(SESSION_CFG.earlyClientDays || '').trim();
+    if(!s || /^all$/i.test(s)) return true;
+    const dp = String(iso || '').split('-');
+    if(dp.length !== 3) return true; // no date chosen yet — decided once a date is picked
+    const y = +dp[0], m = +dp[1], d = +dp[2];
+    const dow = ['sun','mon','tue','wed','thu','fri','sat'][new Date(Date.UTC(y, m-1, d)).getUTCDay()];
+    return s.split(/[,;\n]+/).some(tok=>{
+      const t = tok.trim().toLowerCase();
+      if(!t) return false;
+      if(t === 'all') return true;
+      let mm = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+      if(mm){ let yy = +mm[3]; if(yy < 100) yy += 2000; return +mm[1] === d && +mm[2] === m && yy === y; }
+      mm = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if(mm) return +mm[1] === y && +mm[2] === m && +mm[3] === d;
+      return t.slice(0,3) === dow;
+    });
+  }
+  function earlyOn(){
+    if(!SESSION_CFG[EARLY_ROLE_KEY]) return false;
+    const di = document.getElementById('date');
+    return earlyDayAllowed(di ? di.value : '');
+  }
   function earlyTimesNow(){
     const i = EARLY_BASE.indexOf(SESSION_CFG.earlyStart);
     return (earlyOn() && i >= 0) ? EARLY_BASE.slice(i) : [];
@@ -1232,7 +1258,7 @@
       MORNING_TIMES.splice(0, MORNING_TIMES.length, ...ALL_TIMES.slice(ALL_TIMES.indexOf('09:00 am'), ev));
       EVENING_TIMES.splice(0, EVENING_TIMES.length, ...ALL_TIMES.slice(ev));
     }
-    EARLY_TIMES.splice(0, EARLY_TIMES.length, ...earlyTimesNow());
+    EARLY_TIMES.splice(0, EARLY_TIMES.length, ...(SESSION_CFG.earlyClient ? EARLY_BASE.slice(Math.max(0, EARLY_BASE.indexOf(SESSION_CFG.earlyStart))) : []));
     syncEarlyOption(sessionSel);
     Array.from(sessionSel.options).forEach(o=>{
       if(o.value.startsWith('Morning')){ o.value = morningLabel(); o.textContent = morningLabel().replace(' to ', ' – '); }
@@ -1785,6 +1811,12 @@
   sessionSel.addEventListener('change', refreshPrimeTimeCheck);
   playersSel.addEventListener('change', refreshPrimeTimeCheck);
   dateInput.addEventListener('change', refreshPrimeTimeCheck);
+  // Early Morning is offered only on the allowed days / dates (Settings tab)
+  dateInput.addEventListener('change', ()=>{
+    const wasEarly = isEarlySession(sessionSel.value);
+    syncEarlyOption(sessionSel, EDIT_MODE && isEarlySession(sessionSel.value));
+    if(wasEarly && !isEarlySession(sessionSel.value)) sessionSel.dispatchEvent(new Event('change'));
+  });
   timeSel.addEventListener('change', refreshPrimeTimeCheck);
   playersSel.addEventListener('change', refreshDurationLimit); // 1.5 hr cap at 5:30 PM depends on players
   setInterval(()=>{ refreshPrimeTimeCheck(); refreshDurationLimit(); }, 30000); // auto-unlocks the moment it turns 5pm, no refresh needed
@@ -2173,6 +2205,7 @@ Thank you for your cooperation! See you at the nets!`;
 
     form.reset();
     dateInput.value = todayStr;
+    syncEarlyOption(sessionSel); // Early Morning only on allowed days
     nameInput.value = name;
     mobileInput.value = mobile;
     if(teamInput) teamInput.value = keptTeam;
@@ -2408,6 +2441,7 @@ Thank you for your cooperation! See you at the nets!`;
     if(resetForm){
       form.reset();
       dateInput.value = todayStr;
+      syncEarlyOption(sessionSel); // Early Morning only on allowed days
       loadRememberedCustomer();
       populateTimes(null);
       netsReqSel.disabled = true;
