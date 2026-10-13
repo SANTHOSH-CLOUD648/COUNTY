@@ -1169,8 +1169,14 @@
   // with the availability display (which uses ?action=availability).
   (async function initSettings(){
     try{
-      const res  = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=settings`);
-      if(!res.ok) return;
+      // The server can take a while to wake up (cold start). Give it time and
+      // try again, so Early Morning / session times / rates always arrive.
+      let res = null;
+      for(const t of [15000, 25000, 30000]){
+        try{ res = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=settings`, null, t); if(res.ok) break; }
+        catch(e){ res = null; }
+      }
+      if(!res || !res.ok) return;
       const data = await res.json();
       if(data && typeof data.maxNets === 'number' && data.maxNets >= 0) MAX_NETS = data.maxNets;
       if(data && typeof data.maxNetsPerBooking === 'number') MAX_NETS_PER_BOOKING = data.maxNetsPerBooking;
