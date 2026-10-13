@@ -1088,7 +1088,8 @@
   // These are the defaults; the real values arrive with ?action=settings
   // when the page opens (Evening Start Time, Prime Time Start, Small Group
   // Unlock Time) and are applied by applySessionTimes() further below.
-  const SESSION_CFG = { eveningStart:'05:30 pm', primeStart:'07:00 pm', unlockTime:'05:00 pm' };
+  const SESSION_CFG = { eveningStart:'05:30 pm', primeStart:'07:00 pm', unlockTime:'05:00 pm',
+                        earlyStart:'06:00 am', earlyClient:false, earlyStaff:false, earlyAdmin:false };
   function cfgMins(label){
     const m = String(label||'').trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
     if(!m) return -1;
@@ -1130,12 +1131,69 @@
   function setSessionCfg(st){
     if(!st || typeof st !== 'object') return false;
     let changed = false;
-    ['eveningStart','primeStart','unlockTime'].forEach(k=>{
+    ['eveningStart','primeStart','unlockTime','earlyStart'].forEach(k=>{
       const v = String(st[k]||'').trim().toLowerCase();
       if(cfgMins(v) >= 0 && v !== SESSION_CFG[k]){ SESSION_CFG[k] = cfgLabel(cfgMins(v)); changed = true; }
     });
+    ['earlyClient','earlyStaff','earlyAdmin'].forEach(k=>{
+      if(typeof st[k] === 'boolean' && st[k] !== SESSION_CFG[k]){ SESSION_CFG[k] = st[k]; changed = true; }
+    });
     return changed;
   }
+  const EARLY_ROLE_KEY = 'earlyAdmin';
+  // ── Early Morning session (Settings tab: start time + on/off for each page) ──
+  // Slots from the Early Morning Start Time up to 8:30 am, 1 to 3 hrs.
+  // Amount: Evening rate before 8:00 am, Morning rate from 8:00 am.
+  const EARLY_BASE = ["05:00 am","05:30 am","06:00 am","06:30 am","07:00 am","07:30 am","08:00 am","08:30 am"];
+  function isEarlySession(v){ return String(v||'').startsWith('Early'); }
+  function sessShort(v){ return isEarlySession(v) ? 'Early Morning' : (String(v||'').startsWith('Morning') ? 'Morning' : 'Evening'); }
+  function earlyLabel(){ return `Early Morning (${SESSION_CFG.earlyStart} to 09:00 am)`; }
+  function earlyOn(){ return !!SESSION_CFG[EARLY_ROLE_KEY]; }
+  function earlyTimesNow(){
+    const i = EARLY_BASE.indexOf(SESSION_CFG.earlyStart);
+    return (earlyOn() && i >= 0) ? EARLY_BASE.slice(i) : [];
+  }
+  // Adds / removes / relabels the Early Morning option in a Session dropdown.
+  // force = show it even when switched off (to edit an existing Early booking).
+  function syncEarlyOption(sel, force){
+    if(!sel) return;
+    let opt = Array.from(sel.options).find(o => isEarlySession(o.value));
+    if(earlyOn() || force){
+      if(!opt){
+        opt = document.createElement('option');
+        const first = Array.from(sel.options).find(o => o.value);
+        sel.insertBefore(opt, first || null);
+      }
+      const wasSel = sel.value === opt.value;
+      opt.value = earlyLabel();
+      opt.textContent = earlyLabel().replace(' to ', ' – ');
+      if(wasSel) sel.value = opt.value;
+    } else if(opt){
+      if(sel.value === opt.value) sel.value = '';
+      opt.remove();
+    }
+  }
+  // Early Morning amount: Evening rate before 8:00 am, Morning rate from 8:00 am.
+  // Returns { amt, note } or null if something is missing.
+  function earlyAmount(players, ball, time, durLabel, nets){
+    const start = cfgMins(time);
+    const durM  = ({'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180})[durLabel];
+    if(start < 0 || !durM || !players) return null;
+    const eveM  = Math.max(0, Math.min(start + durM, 8*60) - start);
+    const mornM = durM - eveM;
+    const lr = (typeof lookupRate === 'function') ? lookupRate : window.lookupRate; // rate lookup may live in another script block
+    if(typeof lr !== 'function') return null;
+    const re = eveM  ? lr(eveningLabel(), players, ball) : 0;
+    const rm = mornM ? lr(morningLabel(), players, ball) : 0;
+    if(re == null || rm == null) return null;
+    const n = nets || 1;
+    const hrsTxt = m => (m === 30 ? '30 min' : m === 60 ? '1 hr' : (m/60) + ' hrs');
+    const parts = [];
+    if(eveM)  parts.push(`₹${re}/hr × ${hrsTxt(eveM)}${mornM ? ' (before 8 am)' : ''}`);
+    if(mornM) parts.push(`₹${rm}/hr × ${hrsTxt(mornM)}${eveM ? ' (from 8 am)' : ''}`);
+    return { amt: (re*eveM/60 + rm*mornM/60) * n, note: parts.join(' + ') + (n > 1 ? ` × ${n} Nets` : '') };
+  }
+
   function refreshPrimeRangeText(){
     document.querySelectorAll('.prime-range').forEach(el => { el.textContent = primeRangeLabel(); });
   }
@@ -1244,6 +1302,7 @@
     }
     return null;
   }
+  window.lookupRate = lookupRate; // used by the Early Morning amount
 
   function isSlotPast(dateStr, timeStr){
     const sp = dateStr.split('/');
@@ -1297,11 +1356,13 @@
   })();
 
 
-  const ALL_TIMES_ADMIN = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
+  const ALL_TIMES_ADMIN = ["05:00 am","05:30 am","06:00 am","06:30 am","07:00 am","07:30 am","08:00 am","08:30 am",
+    "09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
     "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
-  const MORNING_A = ALL_TIMES_ADMIN.slice(0, ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
+  const MORNING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("09:00 am"), ALL_TIMES_ADMIN.indexOf("05:00 pm")+1);
+  const EARLY_A = [];
   const EVENING_A = ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf("05:30 pm"));
 
   // Applies session times from the Settings tab to the booking form and
@@ -1310,9 +1371,11 @@
     if(!setSessionCfg(st)) return;
     const ev = ALL_TIMES_ADMIN.indexOf(SESSION_CFG.eveningStart);
     if(ev > 0){
-      MORNING_A.splice(0, MORNING_A.length, ...ALL_TIMES_ADMIN.slice(0, ev));
+      MORNING_A.splice(0, MORNING_A.length, ...ALL_TIMES_ADMIN.slice(ALL_TIMES_ADMIN.indexOf('09:00 am'), ev));
       EVENING_A.splice(0, EVENING_A.length, ...ALL_TIMES_ADMIN.slice(ev));
     }
+    EARLY_A.splice(0, EARLY_A.length, ...earlyTimesNow());
+    syncEarlyOption(document.getElementById('aSession'));
     const as = document.getElementById('aSession');
     if(as) Array.from(as.options).forEach(o=>{
       if(o.value.startsWith('Morning')) o.value = morningLabel();
@@ -1393,6 +1456,12 @@
   function calcAdminAmount(){
     const d    = aDuration.value;
     const nets = parseInt(aNetsEl.value)||1;
+    if(isEarlySession(aSession.value)){
+      const ea = earlyAmount(aPlayers.value, aBall.value, aTime.value, d, nets);
+      if(ea){ aAmtVal.textContent = '₹' + ea.amt.toLocaleString('en-IN'); aAmtNote.textContent = ea.note; }
+      else  { aAmtVal.textContent = '— Pending —'; aAmtNote.textContent = 'Select time, players & duration'; }
+      return;
+    }
     const rate = lookupRate(aSession.value, aPlayers.value, aBall.value);
     const hrs = ADMIN_DUR_HRS[d];
     if(rate && hrs){
@@ -1487,17 +1556,18 @@
 
     document.getElementById('aDate').value = prefDate;
 
+    const isEarly   = EARLY_A.includes(prefTime);
     const isMorning = MORNING_A.includes(prefTime);
     const isEvening = EVENING_A.includes(prefTime);
-    if(!isMorning && !isEvening) return; // unrecognised time — leave form blank rather than guess
+    if(!isEarly && !isMorning && !isEvening) return; // unrecognised time — leave form blank rather than guess
 
-    aSession.value = isMorning
+    aSession.value = isEarly ? earlyLabel() : isMorning
       ? morningLabel()
       : eveningLabel();
 
     // Mirrors aSession's own change handler: populate the time list for
     // this session, then apply the specific pre-filled time on top of it.
-    populateAdminTimes(isMorning ? MORNING_A : EVENING_A);
+    populateAdminTimes(isEarly ? EARLY_A : isMorning ? MORNING_A : EVENING_A);
     aTime.value = prefTime;
     applyAdminPastTimeFilter();
     filterAdminDurations();
@@ -1547,7 +1617,7 @@
   }
 
   aSession.addEventListener('change', ()=>{
-    populateAdminTimes(aSession.value.startsWith('Morning') ? MORNING_A : EVENING_A);
+    populateAdminTimes(isEarlySession(aSession.value) ? EARLY_A : aSession.value.startsWith('Morning') ? MORNING_A : EVENING_A);
     applyAdminPastTimeFilter();
     filterAdminDurations();
     refreshAdminAvailability();
@@ -1561,6 +1631,7 @@
     refreshAdminAvailability();
     calcAdminAmount();
   });
+  aTime.addEventListener('change', ()=>{ if(isEarlySession(aSession.value)) calcAdminAmount(); });
   aTime.addEventListener('change', ()=>{
     filterAdminDurations();
     updateAdminNetsLimit(availabilityCache, aDuration.value);
@@ -2605,7 +2676,7 @@ https://countyindoornetz.com/Client_Booking.html`;
             <div class="normal-slot-info">
               📱 ${b.mobile}<br>
               ⏱ ${b.duration} &nbsp; 🎾 ${b.net}<br>
-              ${b.session.startsWith('Morning')?'Morning':'Evening'} &nbsp; ${b.ball} &nbsp; ${b.amount}
+              ${sessShort(b.session)} &nbsp; ${b.ball} &nbsp; ${b.amount}
             </div>
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
@@ -2688,18 +2759,22 @@ https://countyindoornetz.com/Client_Booking.html`;
   window.addMoreToGroup = addMoreToGroup;
 
   // ── Edit booking modal ────────────────────────────────────────
-  const ALL_TIMES_EDIT = ["09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
+  const ALL_TIMES_EDIT = ["05:00 am","05:30 am","06:00 am","06:30 am","07:00 am","07:30 am","08:00 am","08:30 am",
+    "09:00 am","09:30 am","10:00 am","10:30 am","11:00 am","11:30 am",
     "12:00 pm","12:30 pm","01:00 pm","01:30 pm","02:00 pm","02:30 pm","03:00 pm","03:30 pm",
     "04:00 pm","04:30 pm","05:00 pm","05:30 pm","06:00 pm","06:30 pm","07:00 pm","07:30 pm",
     "08:00 pm","08:30 pm","09:00 pm","09:30 pm","10:00 pm","10:30 pm"];
-  const MORNING_E = ALL_TIMES_EDIT.slice(0, ALL_TIMES_EDIT.indexOf('05:00 pm')+1);
+  const MORNING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('09:00 am'), ALL_TIMES_EDIT.indexOf('05:00 pm')+1);
+  const EARLY_E = [];
   const EVENING_E = ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('05:30 pm'));
   function applyEditSessionTimes(){
     const ev = ALL_TIMES_EDIT.indexOf(SESSION_CFG.eveningStart);
     if(ev > 0){
-      MORNING_E.splice(0, MORNING_E.length, ...ALL_TIMES_EDIT.slice(0, ev));
+      MORNING_E.splice(0, MORNING_E.length, ...ALL_TIMES_EDIT.slice(ALL_TIMES_EDIT.indexOf('09:00 am'), ev));
       EVENING_E.splice(0, EVENING_E.length, ...ALL_TIMES_EDIT.slice(ev));
     }
+    EARLY_E.splice(0, EARLY_E.length, ...earlyTimesNow());
+    syncEarlyOption(document.getElementById('editSession'));
     const es = document.getElementById('editSession');
     if(es) Array.from(es.options).forEach(o=>{
       if(o.value.startsWith('Morning')) o.value = morningLabel();
@@ -2744,10 +2819,13 @@ https://countyindoornetz.com/Client_Booking.html`;
     const isPM = time.includes('pm');
     const hour24 = isPM && hour!==12 ? hour+12 : (!isPM && hour===12 ? 0 : hour);
     const minsOfDay = hour24*60 + (parseInt((time.split(':')[1]||'0'),10) || 0);
-    const isEveningEdit = minsOfDay >= eveningStartMins(); // Evening Start Time (Settings tab)
-    const session = isEveningEdit ? eveningLabel() : morningLabel();
+    const isEarlyEdit   = minsOfDay < 9*60;            // Early Morning slot (before 9:00 am)
+    const isEveningEdit = !isEarlyEdit && minsOfDay >= eveningStartMins(); // Evening Start Time (Settings tab)
+    syncEarlyOption(document.getElementById('editSession'), isEarlyEdit); // show Early Morning for an Early booking
+    const session = isEarlyEdit ? earlyLabel() : isEveningEdit ? eveningLabel() : morningLabel();
     document.getElementById('editSession').value = session;
-    populateEditTimes(isEveningEdit ? EVENING_E : MORNING_E);
+    const tPad = time.trim().replace(/^(\d):/, '0$1:');
+    populateEditTimes(isEarlyEdit ? (EARLY_E.includes(tPad) ? EARLY_E : EARLY_BASE) : isEveningEdit ? EVENING_E : MORNING_E);
     applyEditPastTimeFilter(); // hide past times if today
     // Normalize to zero-padded form ("2:00 pm" → "02:00 pm") before
     // pre-selecting — the dropdown's option values are always zero-padded,
@@ -2913,10 +2991,15 @@ https://countyindoornetz.com/Client_Booking.html`;
     const ball = document.getElementById('editBall').value;
     const p    = editCurrentPlayers;
     const session = document.getElementById('editSession').value;
-    const rate = lookupRate(session, p, ball);
+    const ea   = isEarlySession(session) ? earlyAmount(p, ball, document.getElementById('editTime').value, dur, nets) : null;
+    const rate = isEarlySession(session) ? null : lookupRate(session, p, ball);
     const hrs = EDIT_DUR_HRS[dur];
     let amountText = '—';
-    if(rate && hrs){
+    if(ea){
+      amountText = '₹' + ea.amt.toLocaleString('en-IN');
+      document.getElementById('editAmountVal').textContent  = amountText;
+      document.getElementById('editAmountNote').textContent = ea.note;
+    } else if(rate && hrs){
       const amt = rate * hrs * nets;
       amountText = '₹' + amt.toLocaleString('en-IN');
       document.getElementById('editAmountVal').textContent  = amountText;
@@ -2937,7 +3020,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     }
   }
 
-  ['editSession','editDuration','editNets','editBall'].forEach(id=>{
+  ['editSession','editTime','editDuration','editNets','editBall'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.addEventListener('change', calcEditAmount);
   });
@@ -2977,7 +3060,7 @@ https://countyindoornetz.com/Client_Booking.html`;
 
   document.getElementById('editSession').addEventListener('change', ()=>{
     const v = document.getElementById('editSession').value;
-    populateEditTimes(v.startsWith('Morning') ? MORNING_E : EVENING_E);
+    populateEditTimes(isEarlySession(v) ? (EARLY_E.length ? EARLY_E : EARLY_BASE) : v.startsWith('Morning') ? MORNING_E : EVENING_E);
     applyEditPastTimeFilter();
     filterEditDurations();
     refreshEditAvailability();
@@ -3013,6 +3096,7 @@ https://countyindoornetz.com/Client_Booking.html`;
   }, true);
 
   function closeEditModal(){
+    syncEarlyOption(document.getElementById('editSession')); // drop a forced Early Morning option
     ['editDate','editSession','editTime'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = false; });
     document.getElementById('editOverlay').classList.remove('show');
     document.getElementById('editModal').classList.remove('show');
@@ -3123,7 +3207,7 @@ https://countyindoornetz.com/Client_Booking.html`;
         const netLabel = Array.isArray(result.nets) ? result.nets.map(n=>'Net '+n).join(', ') : '';
         const dp = date.split('-');
         const dateDisplay = dp[2]+'/'+dp[1]+'/'+dp[0].slice(2);
-        const sessionShort = session.startsWith('Morning') ? 'Morning' : 'Evening';
+        const sessionShort = sessShort(session);
 
         msg.textContent = '✅ Booking updated successfully!';
         msg.className = 'edit-msg ok';
