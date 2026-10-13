@@ -1159,12 +1159,16 @@
     if(!sel) return;
     let opt = Array.from(sel.options).find(o => isEarlySession(o.value));
     if(earlyOn() || force){
+      // Remember if Early Morning was already the chosen session (a NEW option is never chosen)
+      const wasSel = !!opt && sel.value !== '' && sel.value === opt.value;
       if(!opt){
+        const keep = sel.value;
         opt = document.createElement('option');
+        opt.value = earlyLabel();
         const first = Array.from(sel.options).find(o => o.value);
         sel.insertBefore(opt, first || null);
+        sel.value = keep; // adding the option must not change the current choice
       }
-      const wasSel = sel.value === opt.value;
       opt.value = earlyLabel();
       opt.textContent = earlyLabel().replace(' to ', ' – ');
       if(wasSel) sel.value = opt.value;
