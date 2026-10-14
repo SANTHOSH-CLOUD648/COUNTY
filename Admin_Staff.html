@@ -292,10 +292,14 @@
   .wk-card.big .lbl{color:#cfdcd3;}
   .wk-card.big .val{font-family:Georgia,serif;font-size:26px;color:#e8c766;}
   .wk-card.pending{background:#fff4e0;border-color:#f0d7a8;}
-  .wk-row{border:1px solid #e3e0d4;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;background:#fff;}
+  .wk-row{border:1px solid #e3e0d4;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;background:#fff;}
   .wk-net{width:44px;height:44px;border-radius:10px;background:#e3ebe5;color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;}
   .wk-net small{font-size:9.5px;font-weight:700;}
   .wk-net b{font-size:17px;}
+  .wk-nets{display:flex;flex-direction:column;gap:4px;width:64px;}
+  .wk-nets .wk-net{width:64px;height:auto;min-height:44px;padding:5px 2px;box-sizing:border-box;gap:2px;text-align:center;}
+  .wk-nets .wk-net b{font-size:15px;}
+  .wk-nets .wk-net i{font-style:normal;font-size:10.5px;font-weight:700;color:#2f6b45;line-height:1.15;}
   .wk-row .nm{font-weight:700;font-size:15px;}
   .wk-row .sub{font-size:12.5px;color:#5a6152;}
   .wk-row .amt{font-weight:700;font-size:15px;text-align:right;}
@@ -3025,6 +3029,11 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       payNetTimes[n] = { start: r.querySelector('.wkn-start').value, end: r.querySelector('.wkn-end').value };
     });
   }
+  // Left-side boxes: one per net, with the time actually played on it
+  function netBoxes(list){
+    if(!list || !list.length) return `<div class="wk-nets"><div class="wk-net"><small>NET</small><b>–</b></div></div>`;
+    return `<div class="wk-nets">${list.map(x => `<div class="wk-net"><small>NET</small><b>${esc(String(x.net))}</b>${x.mins ? `<i>${hrsText(x.mins)}</i>` : ''}</div>`).join('')}</div>`;
+  }
   function renderPayNetTimes(){
     const el = $('wkPayNetTimes'); if(!el) return;
     el.innerHTML = payNets.map(n => {
@@ -3110,13 +3119,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       else right = `${rupees(num(b.amount))}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${esc(b.ref)}')">Record Payment</button>`;
       const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras)}</div>` : '';
       const endTxt = esc(bookingEnd(b));
-      const played = (p && p.netTimes && p.netTimes.length)
-        ? `<div class="sub">⏱ Played: ${p.netTimes.map(t => `Net ${t.net} ${esc(t.start)} – ${esc(t.end)} (${hrsText(t.mins)})`).join(' · ')}</div>` : '';
+      const leftNets = (p && p.netTimes && p.netTimes.length) ? p.netTimes.map(t => ({net:t.net, mins:t.mins}))
+        : (p && p.nets && p.nets.length) ? p.nets.map(n => ({net:n})) : [];
       return `<div class="wk-row${cancelled?' cancelled':''}">
-        <div class="wk-net"><small>NET</small><b>${esc(p && p.net ? p.net : '–')}</b></div>
+        ${netBoxes(leftNets)}
         <div><div class="nm">${esc(b.name)}${b.teamName ? ' <span class="sub">('+esc(b.teamName)+')</span>' : ''}</div>
           <div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>
-          ${played}${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
+          ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
         <div class="amt">${right}</div>
         ${openRef === b.ref ? payPanelHtml(b) : ''}
       </div>`;
@@ -3135,7 +3144,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     $('wkList').innerHTML = list.length ? list.map(e => {
       const extraTotal = e.extras.reduce((a,x)=>a+x.amount,0);
       return `<div class="wk-row">
-        <div class="wk-net"><small>NET</small><b>${e.net}</b></div>
+        ${netBoxes(((e.nets && e.nets.length) ? e.nets : String(e.net||'').split(/\D+/).filter(Boolean).map(Number)).map(n => ({net:n, mins:e.mins})))}
         <div><div class="nm">${esc(e.name)}</div>
           <div class="sub">${e.start} – ${e.end} · ${hrsText(e.mins)}${e.ref?' · Ref '+esc(e.ref):''}</div>
           <div class="sub wk-detail">${detailLine(e.netAmount, e.mode, e.extras)}</div>
