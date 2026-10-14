@@ -355,9 +355,13 @@
 
   .wk-total-lbl{font-size:11.5px;font-weight:700;color:#5a6152;text-transform:uppercase;letter-spacing:.6px;}
   .wk-detail{color:#2c4535;font-weight:600;}
-  .wk-nt{display:grid;grid-template-columns:56px 1fr 1fr 70px;gap:8px;align-items:end;margin-top:8px;}
-  .wk-nt-net{font-weight:800;color:var(--navy);padding-bottom:12px;}
-  .wk-nt-tot{font-weight:700;padding:11px 0;font-size:14px;}
+  .wk-nt{margin-top:10px;padding:10px;border:1px solid #dfe7e1;border-radius:10px;background:#fafcfb;}
+  .wk-nt-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+  .wk-nt-net{font-weight:800;color:var(--navy);}
+  .wk-nt-tot{font-weight:700;font-size:14px;}
+  .wk-nt-times{display:flex;flex-wrap:wrap;gap:8px 14px;}
+  .dt{display:flex;gap:4px;}
+  .dt select{width:auto;min-width:0;padding:9px 6px;font-size:15px;}
   .wk-nethours{margin:6px 0 12px;}
   .wk-nh-title{font-size:13px;font-weight:700;color:#2c4535;margin-bottom:6px;}
   .wk-nh-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
@@ -636,8 +640,8 @@
         <div class="wk-block-title">Net No. <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
         <div class="wk-chips" id="wkNets"></div>
         <div class="admin-grid" style="margin-top:12px;">
-          <div><label class="admin-lbl" for="wkStart">Start Time</label><input type="time" id="wkStart"></div>
-          <div><label class="admin-lbl" for="wkEnd">End Time</label><input type="time" id="wkEnd"></div>
+          <div><label class="admin-lbl" for="wkStart">Start Time</label><input type="hidden" id="wkStart"></div>
+          <div><label class="admin-lbl" for="wkEnd">End Time</label><input type="hidden" id="wkEnd"></div>
         </div>
         <div class="wk-total-time"><span>Total Time (auto)</span><strong id="wkTotalTime">—</strong></div>
       </div>
@@ -2800,7 +2804,41 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   function labelToMins(l){ const m=String(l||'').match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i); if(!m) return null; let h=parseInt(m[1],10)%12; if(m[3].toLowerCase()==='pm') h+=12; return h*60+parseInt(m[2],10); }
   function minsToLabel(t){ let h=Math.floor(t/60)%24, m=t%60; const ap=h>=12?'pm':'am'; h=h%12||12; return `${pad(h)}:${pad(m)} ${ap}`; }
   function to12(t){ if(!t) return ''; const [h,m]=t.split(':').map(Number); return minsToLabel(h*60+m); }
-  function hrsText(mins){ const h=mins/60; return h===1 ? '1 hr' : (Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,'')) + ' hrs'; }
+  function hrsText(mins){
+    mins = Math.round(mins||0); const h = Math.floor(mins/60), m = mins%60;
+    const hp = h ? h + (h===1 ? ' hr' : ' hrs') : '', mp = m ? m + ' min' : '';
+    return (hp && mp) ? hp + ' ' + mp : (hp || mp || '0 min');
+  }
+  // Digital time picker: Hour / Minute / AM-PM drop-downs that fill a hidden HH:MM input
+  function digiParts(v){
+    if(!v) return {h:'',m:'',ap:''};
+    let [H,M] = v.split(':').map(Number);
+    return { h: String(H%12===0 ? 12 : H%12), m: String(M).padStart(2,'0'), ap: H>=12 ? 'pm' : 'am' };
+  }
+  function mountDigi(hid){
+    let box = hid.nextElementSibling;
+    if(!box || !box.classList.contains('dt')){
+      box = document.createElement('span'); box.className = 'dt';
+      let hO='<option value="">Hr</option>'; for(let i=1;i<=12;i++) hO+=`<option value="${i}">${i}</option>`;
+      let mO='<option value="">Min</option>'; for(let i=0;i<60;i++){ const t=String(i).padStart(2,'0'); mO+=`<option value="${t}">${t}</option>`; }
+      box.innerHTML = `<select class="dt-h" aria-label="Hour">${hO}</select><select class="dt-m" aria-label="Minute">${mO}</select><select class="dt-ap" aria-label="AM or PM"><option value="">–</option><option value="am">am</option><option value="pm">pm</option></select>`;
+      hid.after(box);
+      box.querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => {
+        const h = box.querySelector('.dt-h').value, m = box.querySelector('.dt-m').value, ap = box.querySelector('.dt-ap').value;
+        let val = '';
+        if(h && m && ap){ let H = (+h)%12 + (ap==='pm' ? 12 : 0); val = String(H).padStart(2,'0') + ':' + m; }
+        hid.value = val;
+        hid.dispatchEvent(new Event('input', {bubbles:true}));
+        hid.dispatchEvent(new Event('change', {bubbles:true}));
+      }));
+    }
+    syncDigi(hid);
+  }
+  function syncDigi(hid){
+    const box = hid.nextElementSibling; if(!box || !box.classList.contains('dt')) return;
+    const p = digiParts(hid.value);
+    box.querySelector('.dt-h').value = p.h; box.querySelector('.dt-m').value = p.m; box.querySelector('.dt-ap').value = p.ap;
+  }
 
   /* ---------- extras rows (shared by walk-in form and Record Payment) ---------- */
   function modeOptions(sel){
@@ -2885,6 +2923,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     });
     showMsg(`✅ Added to Today's Register (preview only — not saved to Google Sheets).`, true);
     ['wkRef','wkName','wkMobile','wkStart','wkEnd','wkNetAmt','wkNote'].forEach(id => $(id).value='');
+    syncDigi($('wkStart')); syncDigi($('wkEnd'));
     $('wkExtras').innerHTML=''; wkNets=[]; wkMode='cash'; renderNets(); renderModes(); updateEntryTotals();
     renderRegister();
   };
@@ -2993,13 +3032,14 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const s = hhmmMins(t.start), e = hhmmMins(t.end);
       const tot = (s!==null && e!==null) ? (e > s ? hrsText(e - s) : 'End after Start') : '—';
       return `<div class="wk-nt" data-net="${n}">
-        <div class="wk-nt-net">Net ${n}</div>
-        <div><label class="admin-lbl">Start</label><input type="time" class="wkn-start" value="${t.start||''}"></div>
-        <div><label class="admin-lbl">End</label><input type="time" class="wkn-end" value="${t.end||''}"></div>
-        <div><label class="admin-lbl">Total</label><div class="wk-nt-tot">${tot}</div></div>
+        <div class="wk-nt-head"><span class="wk-nt-net">Net ${n}</span><span class="wk-nt-tot">Total: ${tot}</span></div>
+        <div class="wk-nt-times">
+          <div><label class="admin-lbl">Start</label><input type="hidden" class="wkn-start" value="${t.start||''}"></div>
+          <div><label class="admin-lbl">End</label><input type="hidden" class="wkn-end" value="${t.end||''}"></div>
+        </div>
       </div>`;
     }).join('');
-    el.querySelectorAll('input').forEach(i => i.addEventListener('change', () => { readNetTimeInputs(); renderPayNetTimes(); }));
+    el.querySelectorAll('input[type=hidden]').forEach(i => { mountDigi(i); i.addEventListener('change', () => { readNetTimeInputs(); renderPayNetTimes(); }); });
   }
   window.wkPayNet = n => {
     readNetTimeInputs();
@@ -3169,6 +3209,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
   $('wkDate').value = todayISO();
   $('wkRegDate').value = todayISO();
+  mountDigi($('wkStart')); mountDigi($('wkEnd'));
   ['wkStart','wkEnd','wkNetAmt'].forEach(id => $(id).addEventListener('input', updateEntryTotals));
   $('wkRegDate').addEventListener('change', wkLoadBookings);
   renderNets(); renderModes(); updateEntryTotals(); renderRegister();
