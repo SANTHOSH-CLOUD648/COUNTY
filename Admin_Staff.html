@@ -367,6 +367,17 @@
   .dt{display:flex;gap:4px;}
   .dt select{width:auto;min-width:0;padding:9px 6px;font-size:15px;}
   .wk-nethours{margin:6px 0 12px;}
+  .wk-split{margin-top:10px;padding:10px;border:1px dashed #c9d6cc;border-radius:10px;background:#fafcfb;}
+  .wk-split-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .wk-split-row label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;}
+  .wk-split-row input{width:100%;box-sizing:border-box;}
+  .wk-split-msg{font-size:12.5px;font-weight:700;margin-top:6px;min-height:16px;}
+  .wk-split-msg.ok{color:#1a5c38;} .wk-split-msg.err{color:#b3261e;}
+  .wk-adv{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:3px;background:#e3ecf7;color:#1d4f86;}
+  .wk-adv-info{background:#eef3fb;border:1px solid #cfdcf0;color:#1d4f86;border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:600;margin-bottom:10px;}
+  .wk-adv-btn{font-family:inherit;font-size:12.5px;font-weight:700;min-height:36px;padding:0 10px;border-radius:10px;border:1.5px solid #cfdcf0;background:#fff;color:#1d4f86;cursor:pointer;margin-top:6px;}
+  .wk-adv-q{font-size:12px;font-weight:700;color:#1d4f86;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center;}
+  .wk-adv-q button{margin-top:0;}
   .wk-nh-title{font-size:13px;font-weight:700;color:#2c4535;margin-bottom:6px;}
   .wk-nh-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
   .wk-nh{background:#fff;border:1px solid #dfe7e1;border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;gap:2px;}
@@ -655,6 +666,7 @@
         <div><label class="admin-lbl" for="wkNetAmt">Amount (₹)</label><input type="number" id="wkNetAmt" placeholder="0" min="0" inputmode="numeric"></div>
         <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
         <div class="wk-chips two" id="wkModes"></div>
+        <div id="wkSplitBox"></div>
       </div>
 
       <div class="wk-block">
@@ -2778,6 +2790,16 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     { key:'free',    label:'No Charge (Club)' }
   ];
   const MODE_LABEL = Object.fromEntries(MODES.map(m => [m.key, m.label]));
+  // Nets payment choices (Split = part Cash, part UPI, part Pending)
+  const PAY_MODES = [
+    { key:'cash',    label:'Cash' },
+    { key:'upi',     label:'Paytm / UPI' },
+    { key:'split',   label:'Split (Cash + UPI)' },
+    { key:'pending', label:'Pending' }
+  ];
+  const advances = {};   // ref -> { amount, mode, date, status:'held'|'refunded'|'kept', refundDate, name, forDate }
+  let openAdv = null;    // booking whose Advance panel is open
+  let advMode = 'upi';
   const EXTRA_ITEMS = [
     { key:'Accessories – AP',       group:'Accessories' },
     { key:'Accessories – Grip',     group:'Accessories' },
@@ -2874,13 +2896,60 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   // Short payment-mode names for the detail line
   const MODE_SHORT = { cash:'Cash', upi:'PTM', pending:'Pending', free:'Club' };
   const ITEM_SHORT = it => String(it).replace('Accessories – ','').replace('Throwers Charge','Thrower').replace('Coaching Charges','Coaching');
-  // "Nets 400 (Cash), Ball 500 (PTM), 2 AP 300 (Cash)"
-  function detailLine(netAmt, netMode, xs){
+  // "Adv 200 (PTM), Nets 400 (Cash) + 200 (PTM), Ball 500 (PTM), 2 AP 300 (Cash)"
+  const n2 = v => Number(v||0).toLocaleString('en-IN');
+  function detailLine(netAmt, netMode, xs, split, adv){
     const md = k => `<span class="wkm-${k}">(${MODE_SHORT[k]||k})</span>`;
-    const parts = [`Nets ${netMode==='free' ? '0' : Number(netAmt||0).toLocaleString('en-IN')} ${md(netMode)}`];
+    const parts = [];
+    if(adv && adv.amount) parts.push(`Adv ${n2(adv.amount)} ${md(adv.mode)}${adv.status==='refunded' ? ' refunded' : ''}`);
+    if(netMode === 'split' && split){
+      const sp = ['cash','upi','pending'].filter(k => split[k] > 0).map(k => `${n2(split[k])} ${md(k)}`);
+      parts.push(`Nets ${sp.length ? sp.join(' + ') : '0'}`);
+    } else parts.push(`Nets ${netMode==='free' ? '0' : n2(netAmt)} ${md(netMode)}`);
     (xs||[]).forEach(x => parts.push(`${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} ${md(x.mode)}`));
     return parts.join(', ');
   }
+
+  /* ---------- Split payment boxes (shared) ---------- */
+  function splitHtml(pre, sp, show){
+    sp = sp || {};
+    const v = k => (sp[k] || sp[k] === 0) ? sp[k] : '';
+    return `<div class="wk-split" id="${pre}Split" style="display:${show ? 'block' : 'none'};">
+      <div class="wk-split-row">
+        <label><span class="wkm-cash">Cash ₹</span><input type="number" id="${pre}SpCash" value="${v('cash')}" min="0" inputmode="numeric" placeholder="0"></label>
+        <label><span class="wkm-upi">UPI ₹</span><input type="number" id="${pre}SpUpi" value="${v('upi')}" min="0" inputmode="numeric" placeholder="0"></label>
+        <label><span class="wkm-pending">Pending ₹</span><input type="number" id="${pre}SpPend" value="${v('pending')}" min="0" inputmode="numeric" placeholder="0"></label>
+      </div>
+      <div class="wk-split-msg" id="${pre}SpMsg"></div>
+    </div>`;
+  }
+  const readSplit = pre => ({ cash: num(($(pre+'SpCash')||{}).value), upi: num(($(pre+'SpUpi')||{}).value), pending: num(($(pre+'SpPend')||{}).value) });
+  function splitDiff(pre, amt){ const s = readSplit(pre); return amt - (s.cash + s.upi + s.pending); }
+  function splitCheck(pre, amt){
+    const el = $(pre+'SpMsg'); if(!el) return;
+    const d = splitDiff(pre, amt);
+    el.className = 'wk-split-msg ' + (d === 0 ? 'ok' : 'err');
+    el.textContent = d === 0 ? `✓ Adds up to ${rupees(amt)}` : (d > 0 ? `${rupees(d)} short of ${rupees(amt)}` : `${rupees(-d)} more than ${rupees(amt)}`);
+  }
+  // Typing Cash or Pending fills the UPI box with the balance
+  function splitFill(pre, amt){
+    const s = readSplit(pre), u = $(pre+'SpUpi'); if(!u) return;
+    u.value = Math.max(0, amt - s.cash - s.pending);
+    splitCheck(pre, amt);
+  }
+  function wireSplit(pre, getAmt, onChange){
+    const c = $(pre+'SpCash'), u = $(pre+'SpUpi'), pd = $(pre+'SpPend'); if(!c) return;
+    c.addEventListener('input', () => { splitFill(pre, getAmt()); onChange && onChange(); });
+    pd.addEventListener('input', () => { splitFill(pre, getAmt()); onChange && onChange(); });
+    u.addEventListener('input', () => { splitCheck(pre, getAmt()); onChange && onChange(); });
+  }
+  // Add a nets payment into the day's totals
+  function addNetPay(tot, amt, mode, split){
+    if(mode === 'split' && split){ tot.cash += split.cash||0; tot.upi += split.upi||0; tot.pending += split.pending||0; }
+    else if(mode === 'free') tot.free++;
+    else if(tot[mode] !== undefined) tot[mode] += amt;
+  }
+  const fmtD = iso => { const d = String(iso||'').split('-'); return d.length===3 ? `${d[2]}/${d[1]}/${d[0].slice(2)}` : ''; };
 
   /* ---------- Walk-in Entry form ---------- */
   function renderNets(){
@@ -2889,13 +2958,15 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${wkNets.includes(i)?' active':''}" onclick="wkPickNet(${i})">${i}</button>`;
     $('wkNets').innerHTML = html;
   }
+  const WK_MODES = [MODES[0], MODES[1], { key:'split', label:'Split (Cash + UPI)' }, MODES[2], MODES[3]];
   function renderModes(){
-    $('wkModes').innerHTML = MODES.map(m =>
-      `<button type="button" class="wk-chip${wkMode===m.key?' active':''}" onclick="wkPickMode('${m.key}')">${m.label}</button>`).join('');
+    $('wkModes').innerHTML = WK_MODES.map(m =>
+      `<button type="button" class="wk-chip${wkMode===m.key?' active':''}" onclick="wkPickMode('${m.key}')"${m.key==='free'?' style="grid-column:span 2;"':''}>${m.label}</button>`).join('');
+    const sb = $('wkSplit'); if(sb) sb.style.display = wkMode==='split' ? 'block' : 'none';
   }
   const toggleIn = (arr, n) => { const i = arr.indexOf(n); if(i > -1) arr.splice(i,1); else arr.push(n); arr.sort((a,b)=>a-b); };
   window.wkPickNet  = n => { toggleIn(wkNets, n); renderNets(); };
-  window.wkPickMode = k => { wkMode = k; if(k==='free') $('wkNetAmt').value = 0; renderModes(); updateEntryTotals(); };
+  window.wkPickMode = k => { wkMode = k; if(k==='free') $('wkNetAmt').value = 0; renderModes(); if(k==='split') splitFill('wk', num($('wkNetAmt').value)); updateEntryTotals(); };
   window.wkAddExtra = () => addExtraRow('wkExtras', wkMode, updateEntryTotals);
 
   function entryMins(){
@@ -2919,15 +2990,18 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     if(!name){ showMsg('Please enter the name.', false); return; }
     if(!wkNets.length){ showMsg('Please choose the net number(s).', false); return; }
     if(m===null || m<=0){ showMsg('Please enter a valid Start and End time.', false); return; }
+    if(wkMode==='split' && splitDiff('wk', num($('wkNetAmt').value)) !== 0){ showMsg('Split amounts must add up to the Net Charges amount.', false); return; }
     walkins.push({
       date: $('wkDate').value || todayISO(), ref: $('wkRef').value.trim().toUpperCase(),
       name, net: wkNets.join(', '), nets: wkNets.slice(), start: to12($('wkStart').value), end: to12($('wkEnd').value), mins: m,
       netAmount: wkMode==='free' ? 0 : num($('wkNetAmt').value), mode: wkMode,
+      split: wkMode==='split' ? readSplit('wk') : null,
       extras: readExtras('wkExtras'), note: $('wkNote').value.trim()
     });
     showMsg(`✅ Added to Today's Register (preview only — not saved to Google Sheets).`, true);
     ['wkRef','wkName','wkMobile','wkStart','wkEnd','wkNetAmt','wkNote'].forEach(id => $(id).value='');
     syncDigi($('wkStart')); syncDigi($('wkEnd'));
+    ['wkSpCash','wkSpUpi','wkSpPend'].forEach(id => $(id).value=''); $('wkSpMsg').textContent='';
     $('wkExtras').innerHTML=''; wkNets=[]; wkMode='cash'; renderNets(); renderModes(); updateEntryTotals();
     renderRegister();
   };
@@ -2957,28 +3031,34 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       { ref:'C5F64N', name:'Arunkumar V', teamName:'', time:'08:00 pm', duration:'2 hrs', amount:'2000', net:'Net 3', status:'Confirmed', players:'Team Booking' },
       { ref:'Z3OSAM', name:'Rohith', teamName:'', time:'09:00 pm', duration:'1 hr', amount:'500', net:'Net 1', status:'Cancelled', players:'1' }
     ];
-    $('wkBkStatus').textContent = '· sample bookings';
+    const y = new Date(Date.now() - 864e5), yISO = `${y.getFullYear()}-${pad(y.getMonth()+1)}-${pad(y.getDate())}`;
+    if(!advances['UR2PAQ']) advances['UR2PAQ'] = { amount:200, mode:'upi', date:yISO, status:'held', refundDate:'', name:'Bibin', forDate: $('wkRegDate').value || todayISO() };
+    $('wkBkStatus').textContent = '· sample bookings (Bibin paid ₹200 advance yesterday)';
     renderRegister();
   };
 
   function bookingNets(b){ const m=String(b.net||'').match(/\d+/g); return m ? m.join(', ') : '–'; }
   function bookingEnd(b){ const s=labelToMins(b.time); return s===null ? '' : minsToLabel(s + (DUR_MIN[b.duration]||60)); }
 
-  window.wkOpenPay = function(ref){ openRef = (openRef===ref) ? null : ref; renderRegister(); };
+  window.wkOpenPay = function(ref){ openRef = (openRef===ref) ? null : ref; openAdv = null; renderRegister(); };
   window.wkPayMode = function(k){
     payMode = k;
     document.querySelectorAll('#wkPayModes .wk-chip').forEach(btn => btn.classList.toggle('active', btn.dataset.mode===k));
+    const sb = $('wkPaySplit'); if(sb) sb.style.display = k==='split' ? 'block' : 'none';
+    if(k==='split' && $('wkPayAmt')) splitFill('wkPay', num($('wkPayAmt').value));
   };
   // Live total inside the Record Payment panel: net amount + all extras
   function updatePayTotal(){
     const el = $('wkPayTotal'); if(!el) return;
     const noShow = $('wkPayNoShow') && $('wkPayNoShow').checked;
     const xs = readExtras('wkPayExtras');
-    const total = noShow ? 0 : num($('wkPayAmt').value) + xs.reduce((a,x)=>a+x.amount,0);
+    const a = openRef && advances[openRef], advAmt = (a && a.status !== 'refunded') ? a.amount : 0;
+    const total = noShow ? advAmt : advAmt + num($('wkPayAmt').value) + xs.reduce((a,x)=>a+x.amount,0);
     el.textContent = rupees(total);
     const br = $('wkPayBreak');
-    if(br) br.textContent = noShow ? 'No-show — nothing collected'
-      : (xs.length ? `Nets ${rupees(num($('wkPayAmt').value))} + extras ${rupees(xs.reduce((a,x)=>a+x.amount,0))}` : 'Nets only');
+    const advTxt = advAmt ? `Advance ${rupees(advAmt)} + ` : '';
+    if(br) br.textContent = noShow ? (advAmt ? `No-show — advance ${rupees(advAmt)} kept` : 'No-show — nothing collected')
+      : advTxt + (xs.length ? `Nets ${rupees(num($('wkPayAmt').value))} + extras ${rupees(xs.reduce((a,x)=>a+x.amount,0))}` : `Nets ${rupees(num($('wkPayAmt').value))}`);
   }
   window.wkPayAddExtra = () => addExtraRow('wkPayExtras', payMode, updatePayTotal);
   window.wkPaySave = function(){
@@ -2996,8 +3076,14 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       if(el){ el.insertAdjacentHTML('afterend', '<div class="admin-msg err" id="wkPayNetErr">Please tap the Net No. used.</div>'); setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 3000); }
       return;
     }
+    if(!noShow && payMode==='split' && splitDiff('wkPay', num($('wkPayAmt').value)) !== 0){
+      const el = $('wkPaySplit');
+      if(el){ el.insertAdjacentHTML('afterend', '<div class="admin-msg err" id="wkPayNetErr">Split amounts must add up to the amount received.</div>'); setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 3500); }
+      return;
+    }
     payments[b.ref] = {
       received: noShow ? 0 : num($('wkPayAmt').value), mode: noShow ? 'pending' : payMode,
+      split: (!noShow && payMode==='split') ? readSplit('wkPay') : null,
       extras: noShow ? [] : readExtras('wkPayExtras'),
       actualEnd: '',
       netTimes: noShow ? [] : payNets.map(n => { const t = payNetTimes[n]; const mins = hhmmMins(t.end) - hhmmMins(t.start);
@@ -3065,17 +3151,21 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     payBooking = b;
     payNetTimes = {};
     (p && p.netTimes || []).forEach(t => { payNetTimes[t.net] = { start: toHHMM(t.start), end: toHHMM(t.end) }; });
+    const adv = advances[b.ref], advAmt = (adv && adv.status !== 'refunded') ? adv.amount : 0;
+    const balance = Math.max(0, num(b.amount) - advAmt);
     return `<div class="wk-pay">
+      ${advAmt ? `<div class="wk-adv-info">Advance paid ${rupees(advAmt)} (${MODE_SHORT[adv.mode]} on ${fmtD(adv.date)}) · Balance ${rupees(balance)}</div>` : ''}
       <div class="admin-grid">
-        <div><label class="admin-lbl" for="wkPayAmt">Amount received (₹)</label><input type="number" id="wkPayAmt" value="${p ? p.received : num(b.amount)}" min="0" inputmode="numeric"></div>
+        <div><label class="admin-lbl" for="wkPayAmt">${advAmt ? 'Balance received (₹)' : 'Amount received (₹)'}</label><input type="number" id="wkPayAmt" value="${p ? p.received : balance}" min="0" inputmode="numeric"></div>
       </div>
       <div class="admin-lbl" style="margin-top:10px;">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
       <div class="wk-chips" id="wkPayNets"></div>
       <div id="wkPayNetTimes"></div>
       <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
-      <div class="wk-chips" id="wkPayModes" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-        ${MODES.filter(m=>m.key!=='free').map(m => `<button type="button" class="wk-chip${payMode===m.key?' active':''}" data-mode="${m.key}" onclick="wkPayMode('${m.key}')">${m.label}</button>`).join('')}
+      <div class="wk-chips two" id="wkPayModes">
+        ${PAY_MODES.map(m => `<button type="button" class="wk-chip${payMode===m.key?' active':''}" data-mode="${m.key}" onclick="wkPayMode('${m.key}')">${m.label}</button>`).join('')}
       </div>
+      ${splitHtml('wkPay', p && p.split, payMode==='split')}
       <div class="wk-block-title" style="margin-top:12px;">Additional Payments <button type="button" class="wk-link" onclick="wkPayAddExtra()">+ Add</button></div>
       <div id="wkPayExtras"></div>
       <button type="button" class="wk-link" onclick="wkPayAddExtra()">+ Add another item</button>
@@ -3085,6 +3175,48 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button type="button" class="add-btn" style="flex:2;" onclick="wkPaySave()">Save Payment (preview)</button>
         <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;" onclick="wkOpenPay('${esc(b.ref)}')">Close</button>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- Advance ---------- */
+  window.wkOpenAdv = function(ref){ openAdv = (openAdv===ref) ? null : ref; openRef = null; renderRegister(); };
+  window.wkAdvMode = function(k){
+    advMode = k;
+    document.querySelectorAll('#wkAdvModes .wk-chip').forEach(btn => btn.classList.toggle('active', btn.dataset.mode===k));
+  };
+  window.wkAdvSave = function(){
+    const b = bookings.find(x => x.ref === openAdv); if(!b) return;
+    const amt = num($('wkAdvAmt').value), date = $('wkAdvDate').value || todayISO();
+    if(amt <= 0){ const m=$('wkAdvMsg'); m.textContent='Please enter the advance amount.'; m.className='admin-msg err'; return; }
+    advances[b.ref] = { amount: amt, mode: advMode, date, status:'held', refundDate:'', name: b.name, forDate: $('wkRegDate').value || todayISO() };
+    openAdv = null; renderRegister();
+  };
+  window.wkAdvRemove = function(){ if(openAdv){ delete advances[openAdv]; openAdv = null; renderRegister(); } };
+  window.wkAdvStatus = function(ref, st){
+    const a = advances[ref]; if(!a) return;
+    a.status = st; a.refundDate = st === 'refunded' ? todayISO() : '';
+    renderRegister();
+  };
+  function advPanelHtml(b){
+    const a = advances[b.ref];
+    advMode = a ? a.mode : 'upi';
+    return `<div class="wk-pay">
+      <div class="wk-block-title" style="margin-bottom:8px;">💵 Advance for Ref ${esc(b.ref)} <span style="font-weight:500;font-size:12px;color:#5a6152;">Booking ${rupees(num(b.amount))}</span></div>
+      <div class="admin-grid">
+        <div><label class="admin-lbl" for="wkAdvAmt">Advance amount (₹)</label><input type="number" id="wkAdvAmt" value="${a ? a.amount : ''}" min="0" inputmode="numeric" placeholder="e.g. 200"></div>
+        <div><label class="admin-lbl" for="wkAdvDate">Date received</label><input type="date" id="wkAdvDate" value="${a ? a.date : todayISO()}"></div>
+      </div>
+      <div class="admin-lbl" style="margin-top:10px;">Paid by</div>
+      <div class="wk-chips two" id="wkAdvModes">
+        <button type="button" class="wk-chip${advMode==='cash'?' active':''}" data-mode="cash" onclick="wkAdvMode('cash')">Cash</button>
+        <button type="button" class="wk-chip${advMode==='upi'?' active':''}" data-mode="upi" onclick="wkAdvMode('upi')">Paytm / UPI</button>
+      </div>
+      <div class="admin-msg" id="wkAdvMsg"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button type="button" class="add-btn" style="flex:2;" onclick="wkAdvSave()">Save Advance (preview)</button>
+        ${a ? `<button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;color:#8b1c1c;" onclick="wkAdvRemove()">Remove</button>` : ''}
+        <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;" onclick="wkOpenAdv('${esc(b.ref)}')">Close</button>
       </div>
     </div>`;
   }
@@ -3106,18 +3238,26 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const mins = DUR_MIN[b.duration] || 60;
       if(!cancelled){
         if(p && !p.noShow){
-          tot.sessions++; tot[p.mode] += p.received; addExtras(p.extras);
+          tot.sessions++; addNetPay(tot, p.received, p.mode, p.split); addExtras(p.extras);
           if(p.netTimes && p.netTimes.length){ p.netTimes.forEach(t => { addNetMins(t.net, t.mins); tot.mins += t.mins; }); }
           else tot.mins += mins;
         }
         else if(!p) notRecorded++;
       }
+      const adv = advances[b.ref], advAmt = (adv && adv.status !== 'refunded') ? adv.amount : 0;
+      const R = esc(b.ref);
+      const advBtn = `<button type="button" class="wk-adv-btn" onclick="wkOpenAdv('${R}')">${adv ? 'Edit Advance' : '+ Advance'}</button>`;
       let right;
-      if(cancelled) right = `<span class="wk-noshow">Cancelled</span>`;
-      else if(p && p.noShow) right = `<span class="wk-noshow">No-show</span><br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
-      else if(p) right = `<span class="wk-total-lbl">Total</span><br>${rupees(p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
-      else right = `${rupees(num(b.amount))}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${esc(b.ref)}')">Record Payment</button>`;
-      const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras)}</div>` : '';
+      if(cancelled){
+        right = `<span class="wk-noshow">Cancelled</span>`;
+        if(adv && adv.status === 'held') right += `<div class="wk-adv-q">Advance ${rupees(adv.amount)}: <button type="button" class="wk-adv-btn" onclick="wkAdvStatus('${R}','refunded')">Refunded</button><button type="button" class="wk-adv-btn" onclick="wkAdvStatus('${R}','kept')">Kept</button></div>`;
+        else if(adv) right += `<div class="wk-adv-q">Advance ${rupees(adv.amount)} ${adv.status === 'refunded' ? 'refunded' : 'kept'} <button type="button" class="wk-link" style="min-height:0;padding:0;font-size:12px;" onclick="wkAdvStatus('${R}','held')">Undo</button></div>`;
+      }
+      else if(p && p.noShow) right = `<span class="wk-noshow">No-show</span>${advAmt ? `<br><span class="wk-adv">Adv ${rupees(advAmt)} kept</span>` : ''}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${R}')">Edit</button>`;
+      else if(p) right = `<span class="wk-total-lbl">Total</span><br>${rupees(advAmt + p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${R}')">Edit</button>`;
+      else right = `${rupees(num(b.amount))}${advAmt ? `<br><span class="wk-adv">Adv ${rupees(advAmt)} · Bal ${rupees(Math.max(0, num(b.amount) - advAmt))}</span>` : ''}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${R}')">Record Payment</button><br>${advBtn}`;
+      const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras, p.split, adv)}</div>`
+        : (adv && !p && !cancelled) ? `<div class="sub wk-detail">${detailLine(0, 'cash', [], null, adv).replace(/, Nets.*$/, '')}</div>` : '';
       const endTxt = esc(bookingEnd(b));
       const leftNets = (p && p.netTimes && p.netTimes.length) ? p.netTimes.map(t => ({net:t.net, mins:t.mins}))
         : (p && p.nets && p.nets.length) ? p.nets.map(n => ({net:n})) : [];
@@ -3127,7 +3267,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
           <div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>
           ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
         <div class="amt">${right}</div>
-        ${openRef === b.ref ? payPanelHtml(b) : ''}
+        ${openRef === b.ref ? payPanelHtml(b) : ''}${openAdv === b.ref ? advPanelHtml(b) : ''}
       </div>`;
     }).join('') : `<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No bookings loaded for this date. <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadSampleBookings()">Show sample bookings</button></div>`;
 
@@ -3138,7 +3278,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const eNets = (e.nets && e.nets.length) ? e.nets : String(e.net||'').split(/\D+/).filter(Boolean).map(Number);
       eNets.forEach(n => addNetMins(n, e.mins));
       tot.mins += e.mins * Math.max(1, eNets.length);
-      if(e.mode==='free') tot.free++; else tot[e.mode] += e.netAmount;
+      addNetPay(tot, e.netAmount, e.mode, e.split);
       addExtras(e.extras);
     });
     $('wkList').innerHTML = list.length ? list.map(e => {
@@ -3147,11 +3287,19 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         ${netBoxes(((e.nets && e.nets.length) ? e.nets : String(e.net||'').split(/\D+/).filter(Boolean).map(Number)).map(n => ({net:n, mins:e.mins})))}
         <div><div class="nm">${esc(e.name)}</div>
           <div class="sub">${e.start} – ${e.end} · ${hrsText(e.mins)}${e.ref?' · Ref '+esc(e.ref):''}</div>
-          <div class="sub wk-detail">${detailLine(e.netAmount, e.mode, e.extras)}</div>
+          <div class="sub wk-detail">${detailLine(e.netAmount, e.mode, e.extras, e.split)}</div>
           ${e.note?`<div class="sub">📝 ${esc(e.note)}</div>`:''}</div>
         <div class="amt"><span class="wk-total-lbl">Total</span><br>${rupees((e.mode==='free'?0:e.netAmount)+extraTotal)}</div>
       </div>`;}).join('')
       : '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No walk-in entries for this date.</div>';
+
+    // advances received / refunded on this date (counted on the day the money moved)
+    const advIn = [], advOut = [];
+    Object.keys(advances).forEach(ref => {
+      const a = advances[ref];
+      if(a.date === day){ tot[a.mode] += a.amount; advIn.push({ref, a}); }
+      if(a.status === 'refunded' && a.refundDate === day){ tot[a.mode] -= a.amount; advOut.push({ref, a}); }
+    });
 
     // hours actually played on each net
     const nMax = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
@@ -3169,7 +3317,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div class="wk-card${notRecorded ? ' pending' : ''}"><div class="lbl">Bookings not recorded</div><div class="val">${notRecorded}</div></div>`;
     const g = Object.keys(groups);
     $('wkBreakdown').innerHTML = (g.length ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ') : '')
-      + (tot.free ? `${g.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '');
+      + (tot.free ? `${g.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '')
+      + (advIn.length ? `${(g.length||tot.free)?'<br>':''}<strong>Advances received:</strong> ` + advIn.map(x => `${esc(x.a.name)} ${rupees(x.a.amount)} <span class="wkm-${x.a.mode}">(${MODE_SHORT[x.a.mode]})</span> for ${fmtD(x.a.forDate)}`).join(' · ') : '')
+      + (advOut.length ? `<br><strong>Advances refunded:</strong> ` + advOut.map(x => `${esc(x.a.name)} −${rupees(x.a.amount)} <span class="wkm-${x.a.mode}">(${MODE_SHORT[x.a.mode]})</span>`).join(' · ') : '');
 
     // restore the open payment panel's extras (kept across re-render)
     if(openRef && payments[openRef] && $('wkPayExtras') && !$('wkPayExtras').children.length){
@@ -3182,6 +3332,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     }
     if(openRef && $('wkPayAmt')){
       renderPayNets();
+      wireSplit('wkPay', () => num($('wkPayAmt').value), updatePayTotal);
+      if(payMode === 'split') splitCheck('wkPay', num($('wkPayAmt').value));
+      $('wkPayAmt').addEventListener('input', () => { if(payMode === 'split') splitFill('wkPay', num($('wkPayAmt').value)); });
       $('wkPayAmt').addEventListener('input', updatePayTotal);
       $('wkPayNoShow').addEventListener('change', updatePayTotal);
       updatePayTotal();
@@ -3219,6 +3372,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   $('wkDate').value = todayISO();
   $('wkRegDate').value = todayISO();
   mountDigi($('wkStart')); mountDigi($('wkEnd'));
+  $('wkSplitBox').innerHTML = splitHtml('wk', null, false);
+  wireSplit('wk', () => num($('wkNetAmt').value), updateEntryTotals);
+  $('wkNetAmt').addEventListener('input', () => { if(wkMode === 'split') splitFill('wk', num($('wkNetAmt').value)); });
   ['wkStart','wkEnd','wkNetAmt'].forEach(id => $(id).addEventListener('input', updateEntryTotals));
   $('wkRegDate').addEventListener('change', wkLoadBookings);
   renderNets(); renderModes(); updateEntryTotals(); renderRegister();
