@@ -2931,13 +2931,18 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   window.wkPaySave = function(){
     const b = bookings.find(x => x.ref === openRef); if(!b) return;
     const noShow = $('wkPayNoShow').checked;
+    if(!noShow && !payNets.length){
+      const el = $('wkPayNets');
+      if(el){ el.insertAdjacentHTML('afterend', '<div class="admin-msg err" id="wkPayNetErr">Please tap the Net No. used.</div>'); setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 3000); }
+      return;
+    }
     payments[b.ref] = {
       received: noShow ? 0 : num($('wkPayAmt').value), mode: noShow ? 'pending' : payMode,
       extras: noShow ? [] : readExtras('wkPayExtras'),
       actualEnd: $('wkPayEnd').value ? to12($('wkPayEnd').value) : '',
       noShow, note: $('wkPayNote').value.trim(),
-      nets: payNets.length ? payNets.slice() : allottedNets(b),
-      net: (payNets.length ? payNets : allottedNets(b)).join(', ')
+      nets: payNets.slice(),
+      net: payNets.join(', ')
     };
     openRef = null;
     renderRegister();
@@ -2955,13 +2960,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   function payPanelHtml(b){
     const p = payments[b.ref];
     payMode = p ? p.mode : 'cash';
-    payNets = (p && p.nets && p.nets.length) ? p.nets.slice() : allottedNets(b);
+    payNets = (p && p.nets && p.nets.length) ? p.nets.slice() : [];   // staff enter the nets actually used
     return `<div class="wk-pay">
       <div class="admin-grid">
         <div><label class="admin-lbl" for="wkPayAmt">Amount received (₹)</label><input type="number" id="wkPayAmt" value="${p ? p.received : num(b.amount)}" min="0" inputmode="numeric"></div>
         <div><label class="admin-lbl" for="wkPayEnd">Actual end time (if different)</label><input type="time" id="wkPayEnd"></div>
       </div>
-      <div class="admin-lbl" style="margin-top:10px;">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(allotted: ${esc(bookingNets(b))} — tap to change, one or more)</span></div>
+      <div class="admin-lbl" style="margin-top:10px;">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
       <div class="wk-chips" id="wkPayNets"></div>
       <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
       <div class="wk-chips" id="wkPayModes" style="grid-template-columns:repeat(3,minmax(0,1fr));">
@@ -3005,10 +3010,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras)}</div>` : '';
       const endTxt = p && p.actualEnd ? `${esc(p.actualEnd)} (actual)` : esc(bookingEnd(b));
       return `<div class="wk-row${cancelled?' cancelled':''}">
-        <div class="wk-net"><small>NET</small><b>${esc(p && p.net ? p.net : bookingNets(b))}</b></div>
+        <div class="wk-net"><small>NET</small><b>${esc(p && p.net ? p.net : '–')}</b></div>
         <div><div class="nm">${esc(b.name)}${b.teamName ? ' <span class="sub">('+esc(b.teamName)+')</span>' : ''}</div>
           <div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>
-          ${p && p.net && p.net !== bookingNets(b) ? `<div class="sub">🔁 Net changed (allotted ${esc(bookingNets(b))}, used ${esc(p.net)})</div>` : ''}
           ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
         <div class="amt">${right}</div>
         ${openRef === b.ref ? payPanelHtml(b) : ''}
