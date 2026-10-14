@@ -355,6 +355,10 @@
 
   .wk-total-lbl{font-size:11.5px;font-weight:700;color:#5a6152;text-transform:uppercase;letter-spacing:.6px;}
   .wk-detail{color:#2c4535;font-weight:600;}
+  .wkm-cash{color:#1e7b34 !important;font-weight:700;}
+  .wkm-upi{color:#1d5fb8 !important;font-weight:700;}
+  .wkm-pending{color:#c0271d !important;font-weight:700;}
+  .wkm-free{color:#6b6b6b !important;font-weight:700;}
 </style>
 </head>
 <body>
@@ -2819,8 +2823,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   const ITEM_SHORT = it => String(it).replace('Accessories – ','').replace('Throwers Charge','Thrower').replace('Coaching Charges','Coaching');
   // "Nets 400 (Cash), Ball 500 (PTM), 2 AP 300 (Cash)"
   function detailLine(netAmt, netMode, xs){
-    const parts = [`Nets ${netMode==='free' ? '0' : Number(netAmt||0).toLocaleString('en-IN')} (${MODE_SHORT[netMode]||netMode})`];
-    (xs||[]).forEach(x => parts.push(`${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} (${MODE_SHORT[x.mode]||x.mode})`));
+    const md = k => `<span class="wkm-${k}">(${MODE_SHORT[k]||k})</span>`;
+    const parts = [`Nets ${netMode==='free' ? '0' : Number(netAmt||0).toLocaleString('en-IN')} ${md(netMode)}`];
+    (xs||[]).forEach(x => parts.push(`${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} ${md(x.mode)}`));
     return parts.join(', ');
   }
 
@@ -3016,9 +3021,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const dp = day.split('-');
     $('wkCards').innerHTML = `
       <div class="wk-card big"><div class="lbl">Collected on ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.cash + tot.upi)}</div><div class="lbl">${tot.sessions} session${tot.sessions===1?'':'s'} recorded · ${hrsText(tot.mins)} of nets</div></div>
-      <div class="wk-card"><div class="lbl">Cash</div><div class="val">${rupees(tot.cash)}</div></div>
-      <div class="wk-card"><div class="lbl">Paytm / UPI</div><div class="val">${rupees(tot.upi)}</div></div>
-      <div class="wk-card pending"><div class="lbl">Pending</div><div class="val">${rupees(tot.pending)}</div></div>
+      <div class="wk-card"><div class="lbl wkm-cash">Cash</div><div class="val wkm-cash">${rupees(tot.cash)}</div></div>
+      <div class="wk-card"><div class="lbl wkm-upi">Paytm / UPI</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
+      <div class="wk-card pending"><div class="lbl wkm-pending">Pending</div><div class="val wkm-pending">${rupees(tot.pending)}</div></div>
       <div class="wk-card${notRecorded ? ' pending' : ''}"><div class="lbl">Bookings not recorded</div><div class="val">${notRecorded}</div></div>`;
     const g = Object.keys(groups);
     $('wkBreakdown').innerHTML = (g.length ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ') : '')
