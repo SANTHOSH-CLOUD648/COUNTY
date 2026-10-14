@@ -624,7 +624,7 @@
       </div>
 
       <div class="wk-block">
-        <div class="wk-block-title">Net No.</div>
+        <div class="wk-block-title">Net No. <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
         <div class="wk-chips" id="wkNets"></div>
         <div class="admin-grid" style="margin-top:12px;">
           <div><label class="admin-lbl" for="wkStart">Start Time</label><input type="time" id="wkStart"></div>
@@ -2778,7 +2778,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   let bookings = [];     // bookings for the register date
   let openRef = null;    // booking whose Record Payment panel is open
   let payMode = 'cash';
-  let wkNet = null, wkMode = 'cash';
+  let wkNets = [], wkMode = 'cash';   // walk-in: one or more nets
+  let payNets = [];                    // Record Payment: nets actually used
 
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2,'0');
@@ -2833,14 +2834,15 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   function renderNets(){
     const n = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
     let html='';
-    for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${wkNet===i?' active':''}" onclick="wkPickNet(${i})">${i}</button>`;
+    for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${wkNets.includes(i)?' active':''}" onclick="wkPickNet(${i})">${i}</button>`;
     $('wkNets').innerHTML = html;
   }
   function renderModes(){
     $('wkModes').innerHTML = MODES.map(m =>
       `<button type="button" class="wk-chip${wkMode===m.key?' active':''}" onclick="wkPickMode('${m.key}')">${m.label}</button>`).join('');
   }
-  window.wkPickNet  = n => { wkNet = n; renderNets(); };
+  const toggleIn = (arr, n) => { const i = arr.indexOf(n); if(i > -1) arr.splice(i,1); else arr.push(n); arr.sort((a,b)=>a-b); };
+  window.wkPickNet  = n => { toggleIn(wkNets, n); renderNets(); };
   window.wkPickMode = k => { wkMode = k; if(k==='free') $('wkNetAmt').value = 0; renderModes(); updateEntryTotals(); };
   window.wkAddExtra = () => addExtraRow('wkExtras', wkMode, updateEntryTotals);
 
@@ -2863,17 +2865,17 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   window.wkSave = function(){
     const name = $('wkName').value.trim(), m = entryMins();
     if(!name){ showMsg('Please enter the name.', false); return; }
-    if(!wkNet){ showMsg('Please choose the net number.', false); return; }
+    if(!wkNets.length){ showMsg('Please choose the net number(s).', false); return; }
     if(m===null || m<=0){ showMsg('Please enter a valid Start and End time.', false); return; }
     walkins.push({
       date: $('wkDate').value || todayISO(), ref: $('wkRef').value.trim().toUpperCase(),
-      name, net: wkNet, start: to12($('wkStart').value), end: to12($('wkEnd').value), mins: m,
+      name, net: wkNets.join(', '), nets: wkNets.slice(), start: to12($('wkStart').value), end: to12($('wkEnd').value), mins: m,
       netAmount: wkMode==='free' ? 0 : num($('wkNetAmt').value), mode: wkMode,
       extras: readExtras('wkExtras'), note: $('wkNote').value.trim()
     });
     showMsg(`✅ Added to Today's Register (preview only — not saved to Google Sheets).`, true);
     ['wkRef','wkName','wkMobile','wkStart','wkEnd','wkNetAmt','wkNote'].forEach(id => $(id).value='');
-    $('wkExtras').innerHTML=''; wkNet=null; wkMode='cash'; renderNets(); renderModes(); updateEntryTotals();
+    $('wkExtras').innerHTML=''; wkNets=[]; wkMode='cash'; renderNets(); renderModes(); updateEntryTotals();
     renderRegister();
   };
 
@@ -2933,20 +2935,34 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       received: noShow ? 0 : num($('wkPayAmt').value), mode: noShow ? 'pending' : payMode,
       extras: noShow ? [] : readExtras('wkPayExtras'),
       actualEnd: $('wkPayEnd').value ? to12($('wkPayEnd').value) : '',
-      noShow, note: $('wkPayNote').value.trim(), net: bookingNets(b)
+      noShow, note: $('wkPayNote').value.trim(),
+      nets: payNets.length ? payNets.slice() : allottedNets(b),
+      net: (payNets.length ? payNets : allottedNets(b)).join(', ')
     };
     openRef = null;
     renderRegister();
   };
 
+  function allottedNets(b){ const m = String(b.net||'').match(/\d+/g); return m ? m.map(Number) : []; }
+  function renderPayNets(){
+    const el = $('wkPayNets'); if(!el) return;
+    const n = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
+    let html = '';
+    for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${payNets.includes(i)?' active':''}" onclick="wkPayNet(${i})">${i}</button>`;
+    el.innerHTML = html;
+  }
+  window.wkPayNet = n => { toggleIn(payNets, n); renderPayNets(); };
   function payPanelHtml(b){
     const p = payments[b.ref];
     payMode = p ? p.mode : 'cash';
+    payNets = (p && p.nets && p.nets.length) ? p.nets.slice() : allottedNets(b);
     return `<div class="wk-pay">
       <div class="admin-grid">
         <div><label class="admin-lbl" for="wkPayAmt">Amount received (₹)</label><input type="number" id="wkPayAmt" value="${p ? p.received : num(b.amount)}" min="0" inputmode="numeric"></div>
         <div><label class="admin-lbl" for="wkPayEnd">Actual end time (if different)</label><input type="time" id="wkPayEnd"></div>
       </div>
+      <div class="admin-lbl" style="margin-top:10px;">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(allotted: ${esc(bookingNets(b))} — tap to change, one or more)</span></div>
+      <div class="wk-chips" id="wkPayNets"></div>
       <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
       <div class="wk-chips" id="wkPayModes" style="grid-template-columns:repeat(3,minmax(0,1fr));">
         ${MODES.filter(m=>m.key!=='free').map(m => `<button type="button" class="wk-chip${payMode===m.key?' active':''}" data-mode="${m.key}" onclick="wkPayMode('${m.key}')">${m.label}</button>`).join('')}
@@ -2989,9 +3005,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras)}</div>` : '';
       const endTxt = p && p.actualEnd ? `${esc(p.actualEnd)} (actual)` : esc(bookingEnd(b));
       return `<div class="wk-row${cancelled?' cancelled':''}">
-        <div class="wk-net"><small>NET</small><b>${esc(bookingNets(b))}</b></div>
+        <div class="wk-net"><small>NET</small><b>${esc(p && p.net ? p.net : bookingNets(b))}</b></div>
         <div><div class="nm">${esc(b.name)}${b.teamName ? ' <span class="sub">('+esc(b.teamName)+')</span>' : ''}</div>
           <div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>
+          ${p && p.net && p.net !== bookingNets(b) ? `<div class="sub">🔁 Net changed (allotted ${esc(bookingNets(b))}, used ${esc(p.net)})</div>` : ''}
           ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
         <div class="amt">${right}</div>
         ${openRef === b.ref ? payPanelHtml(b) : ''}
@@ -3039,6 +3056,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       });
     }
     if(openRef && $('wkPayAmt')){
+      renderPayNets();
       $('wkPayAmt').addEventListener('input', updatePayTotal);
       $('wkPayNoShow').addEventListener('change', updatePayTotal);
       updatePayTotal();
