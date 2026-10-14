@@ -353,6 +353,8 @@
   .edit-receipt dt{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;}
   .edit-receipt dd{font-size:13px;color:var(--ink);margin:0;font-weight:600;}
 
+  .wk-total-lbl{font-size:11.5px;font-weight:700;color:#5a6152;text-transform:uppercase;letter-spacing:.6px;}
+  .wk-detail{color:#2c4535;font-weight:600;}
 </style>
 </head>
 <body>
@@ -2812,6 +2814,15 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     }));
   }
   const extrasText = xs => xs.map(x => `${esc(x.item.replace('Accessories – ',''))}${x.qty>1?' ×'+x.qty:''} ${rupees(x.amount)}`).join(', ');
+  // Short payment-mode names for the detail line
+  const MODE_SHORT = { cash:'Cash', upi:'PTM', pending:'Pending', free:'Club' };
+  const ITEM_SHORT = it => String(it).replace('Accessories – ','').replace('Throwers Charge','Thrower').replace('Coaching Charges','Coaching');
+  // "Nets 400 (Cash), Ball 500 (PTM), 2 AP 300 (Cash)"
+  function detailLine(netAmt, netMode, xs){
+    const parts = [`Nets ${netMode==='free' ? '0' : Number(netAmt||0).toLocaleString('en-IN')} (${MODE_SHORT[netMode]||netMode})`];
+    (xs||[]).forEach(x => parts.push(`${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} (${MODE_SHORT[x.mode]||x.mode})`));
+    return parts.join(', ');
+  }
 
   /* ---------- Walk-in Entry form ---------- */
   function renderNets(){
@@ -2968,9 +2979,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       let right;
       if(cancelled) right = `<span class="wk-noshow">Cancelled</span>`;
       else if(p && p.noShow) right = `<span class="wk-noshow">No-show</span><br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
-      else if(p) right = `${rupees(p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><span class="wk-tag ${p.mode}">${MODE_LABEL[p.mode]}</span><br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
+      else if(p) right = `<span class="wk-total-lbl">Total</span><br>${rupees(p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
       else right = `${rupees(num(b.amount))}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${esc(b.ref)}')">Record Payment</button>`;
-      const extras = p && p.extras.length ? `<div class="sub">+ ${extrasText(p.extras)}</div>` : '';
+      const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras)}</div>` : '';
       const endTxt = p && p.actualEnd ? `${esc(p.actualEnd)} (actual)` : esc(bookingEnd(b));
       return `<div class="wk-row${cancelled?' cancelled':''}">
         <div class="wk-net"><small>NET</small><b>${esc(bookingNets(b))}</b></div>
@@ -2995,9 +3006,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         <div class="wk-net"><small>NET</small><b>${e.net}</b></div>
         <div><div class="nm">${esc(e.name)}</div>
           <div class="sub">${e.start} – ${e.end} · ${hrsText(e.mins)}${e.ref?' · Ref '+esc(e.ref):''}</div>
-          ${e.extras.length?`<div class="sub">+ ${extrasText(e.extras)}</div>`:''}
+          <div class="sub wk-detail">${detailLine(e.netAmount, e.mode, e.extras)}</div>
           ${e.note?`<div class="sub">📝 ${esc(e.note)}</div>`:''}</div>
-        <div class="amt">${e.mode==='free'?'—':rupees(e.netAmount+extraTotal)}<br><span class="wk-tag ${e.mode}">${MODE_LABEL[e.mode]}</span></div>
+        <div class="amt"><span class="wk-total-lbl">Total</span><br>${rupees((e.mode==='free'?0:e.netAmount)+extraTotal)}</div>
       </div>`;}).join('')
       : '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No walk-in entries for this date.</div>';
 
