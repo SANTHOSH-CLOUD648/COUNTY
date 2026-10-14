@@ -355,6 +355,15 @@
 
   .wk-total-lbl{font-size:11.5px;font-weight:700;color:#5a6152;text-transform:uppercase;letter-spacing:.6px;}
   .wk-detail{color:#2c4535;font-weight:600;}
+  .wk-nt{display:grid;grid-template-columns:56px 1fr 1fr 70px;gap:8px;align-items:end;margin-top:8px;}
+  .wk-nt-net{font-weight:800;color:var(--navy);padding-bottom:12px;}
+  .wk-nt-tot{font-weight:700;padding:11px 0;font-size:14px;}
+  .wk-nethours{margin:6px 0 12px;}
+  .wk-nh-title{font-size:13px;font-weight:700;color:#2c4535;margin-bottom:6px;}
+  .wk-nh-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+  .wk-nh{background:#fff;border:1px solid #dfe7e1;border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;gap:2px;}
+  .wk-nh small{font-size:11px;font-weight:700;color:#5a6152;letter-spacing:.6px;}
+  .wk-nh b{font-size:16px;color:var(--navy);}
   .wkm-cash{color:#1e7b34 !important;font-weight:700;}
   .wkm-upi{color:#1d5fb8 !important;font-weight:700;}
   .wkm-pending{color:#c0271d !important;font-weight:700;}
@@ -663,6 +672,7 @@
       <div class="wk-cards" id="wkCards"></div>
       <div class="wk-breakdown" id="wkBreakdown"></div>
 
+      <div class="wk-nethours" id="wkNetHours"></div>
       <div class="wk-block-title" style="margin-top:4px;">Bookings <span id="wkBkStatus" style="font-weight:500;color:#5a6152;font-size:12.5px;"></span></div>
       <div id="wkBkList"></div>
 
@@ -2931,6 +2941,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   window.wkPaySave = function(){
     const b = bookings.find(x => x.ref === openRef); if(!b) return;
     const noShow = $('wkPayNoShow').checked;
+    readNetTimeInputs();
+    const badTime = !noShow && payNets.some(n => { const t = payNetTimes[n]||{}; const s=hhmmMins(t.start), e=hhmmMins(t.end); return s===null || e===null || e <= s; });
+    if(badTime){
+      const el = $('wkPayNetTimes');
+      if(el){ el.insertAdjacentHTML('afterend', '<div class="admin-msg err" id="wkPayNetErr">Please enter a Start and End time for each net (End after Start).</div>'); setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 3500); }
+      return;
+    }
     if(!noShow && !payNets.length){
       const el = $('wkPayNets');
       if(el){ el.insertAdjacentHTML('afterend', '<div class="admin-msg err" id="wkPayNetErr">Please tap the Net No. used.</div>'); setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 3000); }
@@ -2939,7 +2956,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     payments[b.ref] = {
       received: noShow ? 0 : num($('wkPayAmt').value), mode: noShow ? 'pending' : payMode,
       extras: noShow ? [] : readExtras('wkPayExtras'),
-      actualEnd: $('wkPayEnd').value ? to12($('wkPayEnd').value) : '',
+      actualEnd: '',
+      netTimes: noShow ? [] : payNets.map(n => { const t = payNetTimes[n]; const mins = hhmmMins(t.end) - hhmmMins(t.start);
+        return { net: n, start: to12(t.start), end: to12(t.end), mins }; }),
       noShow, note: $('wkPayNote').value.trim(),
       nets: payNets.slice(),
       net: payNets.join(', ')
@@ -2956,18 +2975,54 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${payNets.includes(i)?' active':''}" onclick="wkPayNet(${i})">${i}</button>`;
     el.innerHTML = html;
   }
-  window.wkPayNet = n => { toggleIn(payNets, n); renderPayNets(); };
+  // Start / End / Total for each net used (start defaults to the booked time)
+  let payNetTimes = {};          // net -> { start:'HH:MM', end:'HH:MM' }
+  let payBooking = null;         // booking whose panel is open
+  const toHHMM = label => { const m = labelToMins(label); return m===null ? '' : `${pad(Math.floor(m/60)%24)}:${pad(m%60)}`; };
+  const hhmmMins = v => { if(!v) return null; const [a,b] = v.split(':').map(Number); return a*60+b; };
+  function readNetTimeInputs(){
+    document.querySelectorAll('#wkPayNetTimes .wk-nt').forEach(r => {
+      const n = +r.dataset.net;
+      payNetTimes[n] = { start: r.querySelector('.wkn-start').value, end: r.querySelector('.wkn-end').value };
+    });
+  }
+  function renderPayNetTimes(){
+    const el = $('wkPayNetTimes'); if(!el) return;
+    el.innerHTML = payNets.map(n => {
+      const t = payNetTimes[n] || {};
+      const s = hhmmMins(t.start), e = hhmmMins(t.end);
+      const tot = (s!==null && e!==null) ? (e > s ? hrsText(e - s) : 'End after Start') : '—';
+      return `<div class="wk-nt" data-net="${n}">
+        <div class="wk-nt-net">Net ${n}</div>
+        <div><label class="admin-lbl">Start</label><input type="time" class="wkn-start" value="${t.start||''}"></div>
+        <div><label class="admin-lbl">End</label><input type="time" class="wkn-end" value="${t.end||''}"></div>
+        <div><label class="admin-lbl">Total</label><div class="wk-nt-tot">${tot}</div></div>
+      </div>`;
+    }).join('');
+    el.querySelectorAll('input').forEach(i => i.addEventListener('change', () => { readNetTimeInputs(); renderPayNetTimes(); }));
+  }
+  window.wkPayNet = n => {
+    readNetTimeInputs();
+    toggleIn(payNets, n);
+    if(payNets.includes(n) && !payNetTimes[n] && payBooking){
+      payNetTimes[n] = { start: toHHMM(payBooking.time), end: toHHMM(bookingEnd(payBooking)) }; // default = booked time
+    }
+    renderPayNets(); renderPayNetTimes();
+  };
   function payPanelHtml(b){
     const p = payments[b.ref];
     payMode = p ? p.mode : 'cash';
     payNets = (p && p.nets && p.nets.length) ? p.nets.slice() : [];   // staff enter the nets actually used
+    payBooking = b;
+    payNetTimes = {};
+    (p && p.netTimes || []).forEach(t => { payNetTimes[t.net] = { start: toHHMM(t.start), end: toHHMM(t.end) }; });
     return `<div class="wk-pay">
       <div class="admin-grid">
         <div><label class="admin-lbl" for="wkPayAmt">Amount received (₹)</label><input type="number" id="wkPayAmt" value="${p ? p.received : num(b.amount)}" min="0" inputmode="numeric"></div>
-        <div><label class="admin-lbl" for="wkPayEnd">Actual end time (if different)</label><input type="time" id="wkPayEnd"></div>
       </div>
       <div class="admin-lbl" style="margin-top:10px;">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
       <div class="wk-chips" id="wkPayNets"></div>
+      <div id="wkPayNetTimes"></div>
       <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
       <div class="wk-chips" id="wkPayModes" style="grid-template-columns:repeat(3,minmax(0,1fr));">
         ${MODES.filter(m=>m.key!=='free').map(m => `<button type="button" class="wk-chip${payMode===m.key?' active':''}" data-mode="${m.key}" onclick="wkPayMode('${m.key}')">${m.label}</button>`).join('')}
@@ -2989,6 +3044,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   function renderRegister(){
     const day = $('wkRegDate').value || todayISO();
     const tot = { cash:0, upi:0, pending:0, free:0, mins:0, sessions:0 };
+    const netMins = {};   // net -> minutes actually played (recorded bookings + walk-ins)
+    const addNetMins = (n, m) => { if(n && m > 0) netMins[n] = (netMins[n]||0) + m; };
     const groups = {};
     const addExtras = xs => xs.forEach(x => { tot[x.mode] += x.amount; const g=GROUP_OF[x.item]||'Other'; groups[g]=(groups[g]||0)+x.amount; });
 
@@ -2999,7 +3056,11 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const p = payments[b.ref], cancelled = b.status === 'Cancelled';
       const mins = DUR_MIN[b.duration] || 60;
       if(!cancelled){
-        if(p && !p.noShow){ tot.sessions++; tot.mins += mins; tot[p.mode] += p.received; addExtras(p.extras); }
+        if(p && !p.noShow){
+          tot.sessions++; tot[p.mode] += p.received; addExtras(p.extras);
+          if(p.netTimes && p.netTimes.length){ p.netTimes.forEach(t => { addNetMins(t.net, t.mins); tot.mins += t.mins; }); }
+          else tot.mins += mins;
+        }
         else if(!p) notRecorded++;
       }
       let right;
@@ -3008,12 +3069,14 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       else if(p) right = `<span class="wk-total-lbl">Total</span><br>${rupees(p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${esc(b.ref)}')">Edit</button>`;
       else right = `${rupees(num(b.amount))}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${esc(b.ref)}')">Record Payment</button>`;
       const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras)}</div>` : '';
-      const endTxt = p && p.actualEnd ? `${esc(p.actualEnd)} (actual)` : esc(bookingEnd(b));
+      const endTxt = esc(bookingEnd(b));
+      const played = (p && p.netTimes && p.netTimes.length)
+        ? `<div class="sub">⏱ Played: ${p.netTimes.map(t => `Net ${t.net} ${esc(t.start)} – ${esc(t.end)} (${hrsText(t.mins)})`).join(' · ')}</div>` : '';
       return `<div class="wk-row${cancelled?' cancelled':''}">
         <div class="wk-net"><small>NET</small><b>${esc(p && p.net ? p.net : '–')}</b></div>
         <div><div class="nm">${esc(b.name)}${b.teamName ? ' <span class="sub">('+esc(b.teamName)+')</span>' : ''}</div>
           <div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>
-          ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
+          ${played}${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
         <div class="amt">${right}</div>
         ${openRef === b.ref ? payPanelHtml(b) : ''}
       </div>`;
@@ -3022,7 +3085,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     // walk-ins
     const list = walkins.filter(e => e.date === day);
     list.forEach(e => {
-      tot.sessions++; tot.mins += e.mins;
+      tot.sessions++;
+      const eNets = (e.nets && e.nets.length) ? e.nets : String(e.net||'').split(/\D+/).filter(Boolean).map(Number);
+      eNets.forEach(n => addNetMins(n, e.mins));
+      tot.mins += e.mins * Math.max(1, eNets.length);
       if(e.mode==='free') tot.free++; else tot[e.mode] += e.netAmount;
       addExtras(e.extras);
     });
@@ -3037,6 +3103,12 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         <div class="amt"><span class="wk-total-lbl">Total</span><br>${rupees((e.mode==='free'?0:e.netAmount)+extraTotal)}</div>
       </div>`;}).join('')
       : '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No walk-in entries for this date.</div>';
+
+    // hours actually played on each net
+    const nMax = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
+    let nh = '';
+    for(let n=1; n<=nMax; n++) nh += `<div class="wk-nh"><small>NET ${n}</small><b>${netMins[n] ? hrsText(netMins[n]) : '0'}</b></div>`;
+    $('wkNetHours').innerHTML = `<div class="wk-nh-title">Hours played on each net</div><div class="wk-nh-row">${nh}</div>`;
 
     // summary
     const dp = day.split('-');
