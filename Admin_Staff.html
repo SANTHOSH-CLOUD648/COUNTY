@@ -2977,9 +2977,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   }
   // Add a nets payment into the day's totals
   function addNetPay(tot, amt, mode, split){
-    if(mode === 'split' && split){ tot.cash += split.cash||0; tot.upi += split.upi||0; tot.pending += split.pending||0; }
+    const ns = tot.nets || (tot.nets = { count:0, amt:0, modes:{} });
+    const addM = (k, v) => { if(!(v > 0)) return; ns.modes[k] = (ns.modes[k]||0) + v; ns.amt += v; };
+    if(mode !== 'free') ns.count++;
+    if(mode === 'split' && split){ tot.cash += split.cash||0; tot.upi += split.upi||0; tot.pending += split.pending||0;
+      addM('cash', split.cash||0); addM('upi', split.upi||0); addM('pending', split.pending||0); }
     else if(mode === 'free') tot.free++;
-    else if(tot[mode] !== undefined) tot[mode] += amt;
+    else if(tot[mode] !== undefined){ tot[mode] += amt; addM(mode, amt); }
   }
   const fmtD = iso => { const d = String(iso||'').split('-'); return d.length===3 ? `${d[2]}/${d[1]}/${d[0].slice(2)}` : ''; };
 
@@ -3148,6 +3152,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   // Start / End / Total for each net used (start defaults to the booked time)
   let payNetTimes = {};          // net -> { start:'HH:MM', end:'HH:MM' }
   let payBooking = null;         // booking whose panel is open
+  let lastNetTimes = null;       // times last entered for a net (copied to a newly chosen net)
   const toHHMM = label => { const m = labelToMins(label); return m===null ? '' : `${pad(Math.floor(m/60)%24)}:${pad(m%60)}`; };
   const hhmmMins = v => { if(!v) return null; const [a,b] = v.split(':').map(Number); return a*60+b; };
   function readNetTimeInputs(){
@@ -3175,13 +3180,21 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         </div>
       </div>`;
     }).join('');
-    el.querySelectorAll('input[type=hidden]').forEach(i => { mountDigi(i); i.addEventListener('change', () => { readNetTimeInputs(); renderPayNetTimes(); }); });
+    el.querySelectorAll('input[type=hidden]').forEach(i => { mountDigi(i); i.addEventListener('change', () => {
+      readNetTimeInputs();
+      const n = +i.closest('.wk-nt').dataset.net; if(payNetTimes[n]) lastNetTimes = Object.assign({}, payNetTimes[n]);
+      renderPayNetTimes(); }); });
   }
   window.wkPayNet = n => {
     readNetTimeInputs();
+    // times of a net already chosen (the one last edited, else the first one)
+    const other = payNets.find(x => x !== n && payNetTimes[x] && payNetTimes[x].start);
+    if(!lastNetTimes && other) lastNetTimes = Object.assign({}, payNetTimes[other]);
     toggleIn(payNets, n);
-    if(payNets.includes(n) && !payNetTimes[n] && payBooking){
-      payNetTimes[n] = { start: toHHMM(payBooking.time), end: toHHMM(bookingEnd(payBooking)) }; // default = booked time
+    if(payNets.includes(n) && payBooking){
+      // New net: copy the times entered for the other net; if none, the booked time
+      payNetTimes[n] = lastNetTimes ? Object.assign({}, lastNetTimes)
+        : { start: toHHMM(payBooking.time), end: toHHMM(bookingEnd(payBooking)) };
     }
     renderPayNets(); renderPayNetTimes();
   };
@@ -3192,6 +3205,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     payBooking = b;
     payNetTimes = {};
     (p && p.netTimes || []).forEach(t => { payNetTimes[t.net] = { start: toHHMM(t.start), end: toHHMM(t.end) }; });
+    lastNetTimes = (p && p.netTimes && p.netTimes.length) ? Object.assign({}, payNetTimes[p.netTimes[p.netTimes.length-1].net]) : null;
     const adv = advances[b.ref], advAmt = (adv && adv.status !== 'refunded') ? adv.amount : 0;
     const balance = Math.max(0, num(b.amount) - advAmt);
     return `<div class="wk-pay">
@@ -3367,12 +3381,19 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div class="wk-card${notRecorded ? ' pending' : ''}"><div class="lbl">Bookings not recorded</div><div class="val">${notRecorded}</div></div>`;
     // Item sales (accessories, drinks…) — count and amount, by payment mode
     const order = EXTRA_ITEMS.map(i => i.key).filter(k => itemSales[k]);
-    $('wkItemSales').style.display = order.length ? 'block' : 'none';
-    $('wkItemSales').innerHTML = order.length ? `<div class="wk-is-title">Item Sales · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div>` + order.map(k => {
-      const st = itemSales[k], nm = esc(ITEM_SHORT(k));
+    const NO_COUNT = ['Drinks'];   // shown with amount only (no number in front)
+    const ns = tot.nets;
+    const netsHtml = (ns && ns.count) ? `<div class="wk-is-item">` +
+      ['cash','upi','pending'].filter(md => ns.modes[md]).map(md =>
+        `<div class="wk-is-line"><span>Nets</span><span>${rupees(ns.modes[md])} <span class="wkm-${md}">(${MODE_SHORT[md]})</span></span></div>`).join('') +
+      `<div class="wk-is-tot"><span>Total Nets: ${ns.count} session${ns.count===1?'':'s'}</span><span>Amount ${rupees(ns.amt)}</span></div></div>` : '';
+    const has = order.length || netsHtml;
+    $('wkItemSales').style.display = has ? 'block' : 'none';
+    $('wkItemSales').innerHTML = has ? `<div class="wk-is-title">Sales · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div>` + netsHtml + order.map(k => {
+      const st = itemSales[k], nm = esc(ITEM_SHORT(k)), noCount = NO_COUNT.includes(k);
       const lines = ['cash','upi','pending'].filter(md => st.modes[md]).map(md =>
-        `<div class="wk-is-line"><span>${st.modes[md].qty} ${nm}</span><span>${rupees(st.modes[md].amt)} <span class="wkm-${md}">(${MODE_SHORT[md]})</span></span></div>`).join('');
-      return `<div class="wk-is-item">${lines}<div class="wk-is-tot"><span>Total ${nm}: ${st.qty}</span><span>Amount ${rupees(st.amt)}</span></div></div>`;
+        `<div class="wk-is-line"><span>${noCount ? '' : st.modes[md].qty + ' '}${nm}</span><span>${rupees(st.modes[md].amt)} <span class="wkm-${md}">(${MODE_SHORT[md]})</span></span></div>`).join('');
+      return `<div class="wk-is-item">${lines}<div class="wk-is-tot"><span>Total ${nm}${noCount ? '' : ': ' + st.qty}</span><span>Amount ${rupees(st.amt)}</span></div></div>`;
     }).join('') : '';
 
     // Day's total collection (bottom of the register)
