@@ -382,6 +382,13 @@
   .wkm-advnext{color:#6b2fa3;font-weight:800;}
   .wk-balmsg{font-size:12.5px;font-weight:700;margin-top:4px;min-height:0;}
   .wk-balmsg.more{color:#b35c00;} .wk-balmsg.less{color:#b3261e;}
+  .wk-daytot{margin-top:16px;border:1.5px solid #d9d3c0;border-radius:12px;padding:4px 14px;background:#fff;}
+  .wk-dt-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid #eee9da;font-size:15px;font-weight:600;}
+  .wk-dt-row:first-child{border-top:none;}
+  .wk-dt-row b{font-size:16px;}
+  .wk-dt-strong{border-top:2px solid #17251c;font-weight:800;}
+  .wk-dt-strong + .wk-dt-strong{border-top:1px solid #eee9da;}
+  .wk-dt-strong b{font-size:18px;color:var(--navy);}
   .wk-nh-title{font-size:13px;font-weight:700;color:#2c4535;margin-bottom:6px;}
   .wk-nh-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
   .wk-nh{background:#fff;border:1px solid #dfe7e1;border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;gap:2px;}
@@ -703,6 +710,8 @@
       <div class="wk-block-title" style="margin-top:14px;">Walk-ins &amp; Club <button type="button" class="wk-link" onclick="wkShowSub('entry')">+ Walk-in Entry</button></div>
       <div id="wkList"></div>
       <button type="button" class="wk-link" onclick="wkLoadSample()">Load sample walk-ins (from your register page)</button>
+
+      <div class="wk-daytot" id="wkDayTotal"></div>
     </div>
   </div>
   </div>
@@ -3347,6 +3356,14 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div class="wk-card"><div class="lbl wkm-upi">Paytm / UPI</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
       <div class="wk-card pending"><div class="lbl wkm-pending">Pending</div><div class="val wkm-pending">${rupees(tot.pending)}</div></div>
       <div class="wk-card${notRecorded ? ' pending' : ''}"><div class="lbl">Bookings not recorded</div><div class="val">${notRecorded}</div></div>`;
+    // Day's total collection (bottom of the register)
+    $('wkDayTotal').innerHTML = `
+      <div class="wk-dt-row"><span>Date</span><b>${dp[2]}/${dp[1]}/${dp[0].slice(2)}</b></div>
+      <div class="wk-dt-row"><span class="wkm-cash">Cash</span><b class="wkm-cash">${rupees(tot.cash)}</b></div>
+      <div class="wk-dt-row"><span class="wkm-upi">Paytm</span><b class="wkm-upi">${rupees(tot.upi)}</b></div>
+      <div class="wk-dt-row"><span class="wkm-pending">Pending</span><b class="wkm-pending">${rupees(tot.pending)}</b></div>
+      <div class="wk-dt-row wk-dt-strong"><span>Total Amount</span><b>${rupees(tot.cash + tot.upi + tot.pending)}</b></div>
+      <div class="wk-dt-row wk-dt-strong"><span>Total Received</span><b>${rupees(tot.cash + tot.upi)}</b></div>`;
     const g = Object.keys(groups);
     $('wkBreakdown').innerHTML = (g.length ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ') : '')
       + (tot.free ? `${g.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '')
