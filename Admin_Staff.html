@@ -291,6 +291,8 @@
   .wk-card.big{grid-column:span 2;background:#17251c;border-color:#17251c;}
   .wk-card.big .lbl{color:#cfdcd3;}
   .wk-card.big .val{font-family:Georgia,serif;font-size:26px;color:#e8c766;}
+  .wk-card.total{background:#eef4ef;border-color:#c9d6cc;}
+  .wk-card.total .val{color:var(--navy);}
   .wk-card.pending{background:#fff4e0;border-color:#f0d7a8;}
   .wk-row{border:1px solid #e3e0d4;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;background:#fff;}
   .wk-net{width:44px;height:44px;border-radius:10px;background:#e3ebe5;color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;}
@@ -716,7 +718,6 @@
       <button type="button" class="wk-link" onclick="wkLoadSample()">Load sample walk-ins (from your register page)</button>
 
       <div class="wk-daytot" id="wkItemSales"></div>
-      <div class="wk-daytot" id="wkDayTotal"></div>
     </div>
   </div>
   </div>
@@ -3373,12 +3374,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
     // summary
     const dp = day.split('-');
+    const bkTotal = bookings.filter(b => b.status !== 'Cancelled').length;   // bookings for the day (not cancelled)
     $('wkCards').innerHTML = `
-      <div class="wk-card big"><div class="lbl">Collected on ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.cash + tot.upi)}</div><div class="lbl">${tot.sessions} session${tot.sessions===1?'':'s'} recorded · ${hrsText(tot.mins)} of nets</div></div>
+      <div class="wk-card big"><div class="lbl">Total Amount Received · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.cash + tot.upi)}</div><div class="lbl">${bkTotal - notRecorded}/${bkTotal} booking${bkTotal===1?'':'s'} recorded : ${hrsText(tot.mins)} of nets</div></div>
       <div class="wk-card"><div class="lbl wkm-cash">Cash</div><div class="val wkm-cash">${rupees(tot.cash)}</div></div>
-      <div class="wk-card"><div class="lbl wkm-upi">Paytm / UPI</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
+      <div class="wk-card"><div class="lbl wkm-upi">Paytm</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
       <div class="wk-card pending"><div class="lbl wkm-pending">Pending</div><div class="val wkm-pending">${rupees(tot.pending)}</div></div>
-      <div class="wk-card${notRecorded ? ' pending' : ''}"><div class="lbl">Bookings not recorded</div><div class="val">${notRecorded}</div></div>`;
+      <div class="wk-card total"><div class="lbl">Total Amount</div><div class="val">${rupees(tot.cash + tot.upi + tot.pending)}</div></div>`;
     // Item sales (accessories, drinks…) — count and amount, by payment mode
     const order = EXTRA_ITEMS.map(i => i.key).filter(k => itemSales[k]);
     const NO_COUNT = ['Drinks'];   // shown with amount only (no number in front)
@@ -3396,17 +3398,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       return `<div class="wk-is-item">${lines}<div class="wk-is-tot"><span>Total ${nm}${noCount ? '' : ': ' + st.qty}</span><span>Amount ${rupees(st.amt)}</span></div></div>`;
     }).join('') : '';
 
-    // Day's total collection (bottom of the register)
-    $('wkDayTotal').innerHTML = `
-      <div class="wk-dt-row"><span>Date</span><b>${dp[2]}/${dp[1]}/${dp[0].slice(2)}</b></div>
-      <div class="wk-dt-row"><span class="wkm-cash">Cash</span><b class="wkm-cash">${rupees(tot.cash)}</b></div>
-      <div class="wk-dt-row"><span class="wkm-upi">Paytm</span><b class="wkm-upi">${rupees(tot.upi)}</b></div>
-      <div class="wk-dt-row"><span class="wkm-pending">Pending</span><b class="wkm-pending">${rupees(tot.pending)}</b></div>
-      <div class="wk-dt-row wk-dt-strong"><span>Total Amount</span><b>${rupees(tot.cash + tot.upi + tot.pending)}</b></div>
-      <div class="wk-dt-row wk-dt-strong"><span>Total Received</span><b>${rupees(tot.cash + tot.upi)}</b></div>`;
     const g = Object.keys(groups);
-    $('wkBreakdown').innerHTML = (g.length ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ') : '')
-      + (tot.free ? `${g.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '')
+    const pd = ((tot.nets && tot.nets.amt) ? [`Nets ${rupees(tot.nets.amt)}`] : []).concat(g.map(k => `${esc(k)} ${rupees(groups[k])}`));
+    $('wkBreakdown').innerHTML = (pd.length ? '<strong>Payment Details:</strong> ' + pd.join(' · ') : '')
+      + (tot.free ? `${pd.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '')
       + (advIn.length ? `<br><strong>Advances received for bookings:</strong> ` + advIn.map(a => `${esc(a.name)} ${rupees(a.amount)} <span class="wkm-${a.mode}">(${MODE_SHORT[a.mode]})</span> for ${fmtD(a.forDate)}`).join(' · ') : '')
       + (advOut.length ? `<br><strong>Advances refunded:</strong> ` + advOut.map(a => `${esc(a.name)} −${rupees(a.amount)} <span class="wkm-${a.mode}">(${MODE_SHORT[a.mode]})</span>`).join(' · ') : '')
       + (advNext.length ? `<br><strong>Advances for next booking:</strong> ` + advNext.map(x => `${esc(x.name)} ${rupees(x.amount)} <span class="wkm-${x.mode}">(${MODE_SHORT[x.mode]})</span>`).join(' · ') : '');
