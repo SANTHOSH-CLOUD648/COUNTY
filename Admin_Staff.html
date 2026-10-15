@@ -378,6 +378,10 @@
   .wk-adv-btn{font-family:inherit;font-size:12.5px;font-weight:700;min-height:36px;padding:0 10px;border-radius:10px;border:1.5px solid #cfdcf0;background:#fff;color:#1d4f86;cursor:pointer;margin-top:6px;}
   .wk-adv-q{font-size:12px;font-weight:700;color:#1d4f86;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center;}
   .wk-adv-q button{margin-top:0;}
+  .wkm-advpaid{color:#1d4f86;font-weight:800;}
+  .wkm-advnext{color:#6b2fa3;font-weight:800;}
+  .wk-balmsg{font-size:12.5px;font-weight:700;margin-top:4px;min-height:0;}
+  .wk-balmsg.more{color:#b35c00;} .wk-balmsg.less{color:#b3261e;}
   .wk-nh-title{font-size:13px;font-weight:700;color:#2c4535;margin-bottom:6px;}
   .wk-nh-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
   .wk-nh{background:#fff;border:1px solid #dfe7e1;border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;gap:2px;}
@@ -2805,9 +2809,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     { key:'split',   label:'Split (Cash + UPI)' },
     { key:'pending', label:'Pending' }
   ];
-  const advances = {};   // ref -> { amount, mode, date, status:'held'|'refunded'|'kept', refundDate, name, forDate }
-  let openAdv = null;    // booking whose Advance panel is open
-  let advMode = 'upi';
+
   const EXTRA_ITEMS = [
     { key:'Accessories – AP',       group:'Accessories' },
     { key:'Accessories – Grip',     group:'Accessories' },
@@ -2816,9 +2818,15 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     { key:'Drinks',                 group:'Drinks' },
     { key:'Throwers Charge',        group:'Throwers' },
     { key:'Coaching Charges',       group:'Coaching' },
-    { key:'Other',                  group:'Other' }
+    { key:'Other',                  group:'Other' },
+    { key:'Advance – Next Booking', group:'Advance (Next)' }
   ];
+  const ADV_NEXT = 'Advance – Next Booking';   // paid after playing, adjusted in the next booking
   const GROUP_OF = Object.fromEntries(EXTRA_ITEMS.map(i => [i.key, i.group]));
+  // Advance paid at booking time (before playing), for THAT booking
+  const advances = {};   // ref -> { amount, mode, date, status:'held'|'refunded'|'kept', refundDate, name, forDate }
+  let openAdv = null;    // booking whose + Advance panel is open
+  let advMode = 'upi';
   const DUR_MIN = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
 
   const walkins  = [];   // walk-in / club entries (this screen only)
@@ -2909,12 +2917,14 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   function detailLine(netAmt, netMode, xs, split, adv){
     const md = k => `<span class="wkm-${k}">(${MODE_SHORT[k]||k})</span>`;
     const parts = [];
-    if(adv && adv.amount) parts.push(`Adv ${n2(adv.amount)} ${md(adv.mode)}${adv.status==='refunded' ? ' refunded' : ''}`);
+    if(adv && adv.amount) parts.push(`<span class="wkm-advpaid">Adv paid</span> ${n2(adv.amount)} ${md(adv.mode)}${adv.status==='refunded' ? ' refunded' : ''}`);
     if(netMode === 'split' && split){
       const sp = ['cash','upi','pending'].filter(k => split[k] > 0).map(k => `${n2(split[k])} ${md(k)}`);
       parts.push(`Nets ${sp.length ? sp.join(' + ') : '0'}`);
     } else parts.push(`Nets ${netMode==='free' ? '0' : n2(netAmt)} ${md(netMode)}`);
-    (xs||[]).forEach(x => parts.push(`${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} ${md(x.mode)}`));
+    (xs||[]).forEach(x => parts.push(x.item === ADV_NEXT
+      ? `<span class="wkm-advnext">Adv-Next</span> ${n2(x.amount)} ${md(x.mode)}`
+      : `${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} ${md(x.mode)}`));
     return parts.join(', ');
   }
 
@@ -3039,9 +3049,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       { ref:'C5F64N', name:'Arunkumar V', teamName:'', time:'08:00 pm', duration:'2 hrs', amount:'2000', net:'Net 3', status:'Confirmed', players:'Team Booking' },
       { ref:'Z3OSAM', name:'Rohith', teamName:'', time:'09:00 pm', duration:'1 hr', amount:'500', net:'Net 1', status:'Cancelled', players:'1' }
     ];
-    const y = new Date(Date.now() - 864e5), yISO = `${y.getFullYear()}-${pad(y.getMonth()+1)}-${pad(y.getDate())}`;
-    if(!advances['UR2PAQ']) advances['UR2PAQ'] = { amount:200, mode:'upi', date:yISO, status:'held', refundDate:'', name:'Bibin', forDate: $('wkRegDate').value || todayISO() };
-    $('wkBkStatus').textContent = '· sample bookings (Bibin paid ₹200 advance yesterday)';
+    $('wkBkStatus').textContent = '· sample bookings';
     renderRegister();
   };
 
@@ -3061,12 +3069,23 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const noShow = $('wkPayNoShow') && $('wkPayNoShow').checked;
     const xs = readExtras('wkPayExtras');
     const a = openRef && advances[openRef], advAmt = (a && a.status !== 'refunded') ? a.amount : 0;
-    const total = noShow ? advAmt : advAmt + num($('wkPayAmt').value) + xs.reduce((a,x)=>a+x.amount,0);
+    const exAmt = xs.reduce((a,x)=>a+x.amount,0);
+    const recv = num($('wkPayAmt').value);
+    const total = noShow ? advAmt : advAmt + recv + exAmt;
     el.textContent = rupees(total);
     const br = $('wkPayBreak');
-    const advTxt = advAmt ? `Advance ${rupees(advAmt)} + ` : '';
     if(br) br.textContent = noShow ? (advAmt ? `No-show — advance ${rupees(advAmt)} kept` : 'No-show — nothing collected')
-      : advTxt + (xs.length ? `Nets ${rupees(num($('wkPayAmt').value))} + extras ${rupees(xs.reduce((a,x)=>a+x.amount,0))}` : `Nets ${rupees(num($('wkPayAmt').value))}`);
+      : (advAmt ? `Adv paid ${rupees(advAmt)} + ` : '') + `Nets ${rupees(recv)}` + (exAmt ? ` + extras ${rupees(exAmt)}` : '');
+    // Warn (not block) when the amount differs from the balance after the advance
+    const bm = $('wkPayBalMsg');
+    if(bm){
+      const b = bookings.find(x => x.ref === openRef);
+      const bal = b ? Math.max(0, num(b.amount) - advAmt) : 0;
+      const d = recv - bal;
+      if(!advAmt || noShow || d === 0){ bm.textContent = ''; bm.className = 'wk-balmsg'; }
+      else { bm.textContent = d > 0 ? `${rupees(d)} more than balance (${rupees(bal)})` : `${rupees(-d)} less than balance (${rupees(bal)})`;
+             bm.className = 'wk-balmsg ' + (d > 0 ? 'more' : 'less'); }
+    }
   }
   window.wkPayAddExtra = () => addExtraRow('wkPayExtras', payMode, updatePayTotal);
   window.wkPaySave = function(){
@@ -3164,7 +3183,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     return `<div class="wk-pay">
       ${advAmt ? `<div class="wk-adv-info">Advance paid ${rupees(advAmt)} (${MODE_SHORT[adv.mode]} on ${fmtD(adv.date)}) · Balance ${rupees(balance)}</div>` : ''}
       <div class="admin-grid">
-        <div><label class="admin-lbl" for="wkPayAmt">${advAmt ? 'Balance received (₹)' : 'Amount received (₹)'}</label><input type="number" id="wkPayAmt" value="${p ? p.received : balance}" min="0" inputmode="numeric"></div>
+        <div><label class="admin-lbl" for="wkPayAmt">${advAmt ? 'Balance received (₹)' : 'Amount received (₹)'}</label><input type="number" id="wkPayAmt" value="${p ? p.received : balance}" min="0" inputmode="numeric"><div class="wk-balmsg" id="wkPayBalMsg"></div></div>
       </div>
       <div class="admin-lbl" style="margin-top:10px;">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
       <div class="wk-chips" id="wkPayNets"></div>
@@ -3187,7 +3206,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     </div>`;
   }
 
-  /* ---------- Advance ---------- */
+  /* ---------- + Advance (paid at booking time, before playing) ---------- */
   window.wkOpenAdv = function(ref){ openAdv = (openAdv===ref) ? null : ref; openRef = null; renderRegister(); };
   window.wkAdvMode = function(k){
     advMode = k;
@@ -3212,7 +3231,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     return `<div class="wk-pay">
       <div class="wk-block-title" style="margin-bottom:8px;">💵 Advance for Ref ${esc(b.ref)} <span style="font-weight:500;font-size:12px;color:#5a6152;">Booking ${rupees(num(b.amount))}</span></div>
       <div class="admin-grid">
-        <div><label class="admin-lbl" for="wkAdvAmt">Advance amount (₹)</label><input type="number" id="wkAdvAmt" value="${a ? a.amount : ''}" min="0" inputmode="numeric" placeholder="e.g. 200"></div>
+        <div><label class="admin-lbl" for="wkAdvAmt">Advance amount (₹)</label><input type="number" id="wkAdvAmt" value="${a ? a.amount : ''}" min="0" inputmode="numeric" placeholder="e.g. 500"></div>
         <div><label class="admin-lbl" for="wkAdvDate">Date received</label><input type="date" id="wkAdvDate" value="${a ? a.date : todayISO()}"></div>
       </div>
       <div class="admin-lbl" style="margin-top:10px;">Paid by</div>
@@ -3236,7 +3255,12 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const netMins = {};   // net -> minutes actually played (recorded bookings + walk-ins)
     const addNetMins = (n, m) => { if(n && m > 0) netMins[n] = (netMins[n]||0) + m; };
     const groups = {};
-    const addExtras = xs => xs.forEach(x => { tot[x.mode] += x.amount; const g=GROUP_OF[x.item]||'Other'; groups[g]=(groups[g]||0)+x.amount; });
+    const advNext = [];   // "Advance – Next Booking" items taken today
+    const addExtras = (xs, who) => xs.forEach(x => {
+      tot[x.mode] += x.amount;
+      if(x.item === ADV_NEXT){ advNext.push({ name: who, amount: x.amount, mode: x.mode }); return; }
+      const g = GROUP_OF[x.item]||'Other'; groups[g] = (groups[g]||0) + x.amount;
+    });
 
     // bookings
     const live = bookings.slice().sort((a,b)=>(labelToMins(a.time)||0)-(labelToMins(b.time)||0));
@@ -3246,14 +3270,14 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const mins = DUR_MIN[b.duration] || 60;
       if(!cancelled){
         if(p && !p.noShow){
-          tot.sessions++; addNetPay(tot, p.received, p.mode, p.split); addExtras(p.extras);
+          tot.sessions++; addNetPay(tot, p.received, p.mode, p.split); addExtras(p.extras, b.name);
           if(p.netTimes && p.netTimes.length){ p.netTimes.forEach(t => { addNetMins(t.net, t.mins); tot.mins += t.mins; }); }
           else tot.mins += mins;
         }
         else if(!p) notRecorded++;
       }
-      const adv = advances[b.ref], advAmt = (adv && adv.status !== 'refunded') ? adv.amount : 0;
       const R = esc(b.ref);
+      const adv = advances[b.ref], advAmt = (adv && adv.status !== 'refunded') ? adv.amount : 0;
       const advBtn = `<button type="button" class="wk-adv-btn" onclick="wkOpenAdv('${R}')">${adv ? 'Edit Advance' : '+ Advance'}</button>`;
       let right;
       if(cancelled){
@@ -3265,7 +3289,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       else if(p) right = `<span class="wk-total-lbl">Total</span><br>${rupees(advAmt + p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${R}')">Edit</button>`;
       else right = `${rupees(num(b.amount))}${advAmt ? `<br><span class="wk-adv">Adv ${rupees(advAmt)} · Bal ${rupees(Math.max(0, num(b.amount) - advAmt))}</span>` : ''}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${R}')">Record Payment</button><br>${advBtn}`;
       const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras, p.split, adv)}</div>`
-        : (adv && !p && !cancelled) ? `<div class="sub wk-detail">${detailLine(0, 'cash', [], null, adv).replace(/, Nets.*$/, '')}</div>` : '';
+        : (adv && !p && !cancelled) ? `<div class="sub wk-detail"><span class="wkm-advpaid">Adv paid</span> ${n2(adv.amount)} <span class="wkm-${adv.mode}">(${MODE_SHORT[adv.mode]})</span></div>` : '';
       const endTxt = esc(bookingEnd(b));
       const leftNets = (p && p.netTimes && p.netTimes.length) ? p.netTimes.map(t => ({net:t.net, mins:t.mins}))
         : (p && p.nets && p.nets.length) ? p.nets.map(n => ({net:n})) : [];
@@ -3287,7 +3311,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       eNets.forEach(n => addNetMins(n, e.mins));
       tot.mins += e.mins * Math.max(1, eNets.length);
       addNetPay(tot, e.netAmount, e.mode, e.split);
-      addExtras(e.extras);
+      addExtras(e.extras, e.name);
     });
     $('wkList').innerHTML = list.length ? list.map(e => {
       const extraTotal = e.extras.reduce((a,x)=>a+x.amount,0);
@@ -3301,12 +3325,12 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       </div>`;}).join('')
       : '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No walk-in entries for this date.</div>';
 
-    // advances received / refunded on this date (counted on the day the money moved)
+    // + Advance money: counted on the day it was received (refunds on the day refunded)
     const advIn = [], advOut = [];
     Object.keys(advances).forEach(ref => {
       const a = advances[ref];
-      if(a.date === day){ tot[a.mode] += a.amount; advIn.push({ref, a}); }
-      if(a.status === 'refunded' && a.refundDate === day){ tot[a.mode] -= a.amount; advOut.push({ref, a}); }
+      if(a.date === day){ tot[a.mode] += a.amount; advIn.push(a); }
+      if(a.status === 'refunded' && a.refundDate === day){ tot[a.mode] -= a.amount; advOut.push(a); }
     });
 
     // hours actually played on each net
@@ -3326,8 +3350,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const g = Object.keys(groups);
     $('wkBreakdown').innerHTML = (g.length ? '<strong>Additional payments:</strong> ' + g.map(k => `${esc(k)} ${rupees(groups[k])}`).join(' · ') : '')
       + (tot.free ? `${g.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '')
-      + (advIn.length ? `${(g.length||tot.free)?'<br>':''}<strong>Advances received:</strong> ` + advIn.map(x => `${esc(x.a.name)} ${rupees(x.a.amount)} <span class="wkm-${x.a.mode}">(${MODE_SHORT[x.a.mode]})</span> for ${fmtD(x.a.forDate)}`).join(' · ') : '')
-      + (advOut.length ? `<br><strong>Advances refunded:</strong> ` + advOut.map(x => `${esc(x.a.name)} −${rupees(x.a.amount)} <span class="wkm-${x.a.mode}">(${MODE_SHORT[x.a.mode]})</span>`).join(' · ') : '');
+      + (advIn.length ? `<br><strong>Advances received for bookings:</strong> ` + advIn.map(a => `${esc(a.name)} ${rupees(a.amount)} <span class="wkm-${a.mode}">(${MODE_SHORT[a.mode]})</span> for ${fmtD(a.forDate)}`).join(' · ') : '')
+      + (advOut.length ? `<br><strong>Advances refunded:</strong> ` + advOut.map(a => `${esc(a.name)} −${rupees(a.amount)} <span class="wkm-${a.mode}">(${MODE_SHORT[a.mode]})</span>`).join(' · ') : '')
+      + (advNext.length ? `<br><strong>Advances for next booking:</strong> ` + advNext.map(x => `${esc(x.name)} ${rupees(x.amount)} <span class="wkm-${x.mode}">(${MODE_SHORT[x.mode]})</span>`).join(' · ') : '');
+    $('wkBreakdown').innerHTML = $('wkBreakdown').innerHTML.replace(/^<br>/, '');
 
     // restore the open payment panel's extras (kept across re-render)
     if(openRef && payments[openRef] && $('wkPayExtras') && !$('wkPayExtras').children.length){
