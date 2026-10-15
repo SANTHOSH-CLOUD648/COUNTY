@@ -389,6 +389,10 @@
   .wk-dt-strong{border-top:2px solid #17251c;font-weight:800;}
   .wk-dt-strong + .wk-dt-strong{border-top:1px solid #eee9da;}
   .wk-dt-strong b{font-size:18px;color:var(--navy);}
+  .wk-is-title{font-family:Georgia,serif;font-size:15.5px;font-weight:700;color:var(--navy);padding:9px 0 4px;}
+  .wk-is-item{border-top:1px solid #eee9da;padding:6px 0;}
+  .wk-is-line{display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:2px 0;color:#3d4436;}
+  .wk-is-tot{display:flex;justify-content:space-between;font-size:14.5px;font-weight:800;color:var(--navy);padding-top:3px;}
   .wk-nh-title{font-size:13px;font-weight:700;color:#2c4535;margin-bottom:6px;}
   .wk-nh-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
   .wk-nh{background:#fff;border:1px solid #dfe7e1;border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;gap:2px;}
@@ -711,6 +715,7 @@
       <div id="wkList"></div>
       <button type="button" class="wk-link" onclick="wkLoadSample()">Load sample walk-ins (from your register page)</button>
 
+      <div class="wk-daytot" id="wkItemSales"></div>
       <div class="wk-daytot" id="wkDayTotal"></div>
     </div>
   </div>
@@ -3265,9 +3270,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const addNetMins = (n, m) => { if(n && m > 0) netMins[n] = (netMins[n]||0) + m; };
     const groups = {};
     const advNext = [];   // "Advance – Next Booking" items taken today
+    const itemSales = {}; // item -> { qty, amt, modes:{cash|upi|pending:{qty,amt}} }
     const addExtras = (xs, who) => xs.forEach(x => {
       tot[x.mode] += x.amount;
       if(x.item === ADV_NEXT){ advNext.push({ name: who, amount: x.amount, mode: x.mode }); return; }
+      const st = itemSales[x.item] = itemSales[x.item] || { qty:0, amt:0, modes:{} };
+      const m = st.modes[x.mode] = st.modes[x.mode] || { qty:0, amt:0 };
+      st.qty += x.qty||1; st.amt += x.amount; m.qty += x.qty||1; m.amt += x.amount;
       const g = GROUP_OF[x.item]||'Other'; groups[g] = (groups[g]||0) + x.amount;
     });
 
@@ -3356,6 +3365,16 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div class="wk-card"><div class="lbl wkm-upi">Paytm / UPI</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
       <div class="wk-card pending"><div class="lbl wkm-pending">Pending</div><div class="val wkm-pending">${rupees(tot.pending)}</div></div>
       <div class="wk-card${notRecorded ? ' pending' : ''}"><div class="lbl">Bookings not recorded</div><div class="val">${notRecorded}</div></div>`;
+    // Item sales (accessories, drinks…) — count and amount, by payment mode
+    const order = EXTRA_ITEMS.map(i => i.key).filter(k => itemSales[k]);
+    $('wkItemSales').style.display = order.length ? 'block' : 'none';
+    $('wkItemSales').innerHTML = order.length ? `<div class="wk-is-title">Item Sales · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div>` + order.map(k => {
+      const st = itemSales[k], nm = esc(ITEM_SHORT(k));
+      const lines = ['cash','upi','pending'].filter(md => st.modes[md]).map(md =>
+        `<div class="wk-is-line"><span>${st.modes[md].qty} ${nm}</span><span>${rupees(st.modes[md].amt)} <span class="wkm-${md}">(${MODE_SHORT[md]})</span></span></div>`).join('');
+      return `<div class="wk-is-item">${lines}<div class="wk-is-tot"><span>Total ${nm}: ${st.qty}</span><span>Amount ${rupees(st.amt)}</span></div></div>`;
+    }).join('') : '';
+
     // Day's total collection (bottom of the register)
     $('wkDayTotal').innerHTML = `
       <div class="wk-dt-row"><span>Date</span><b>${dp[2]}/${dp[1]}/${dp[0].slice(2)}</b></div>
