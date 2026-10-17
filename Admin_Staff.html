@@ -1169,7 +1169,6 @@
 
   aDateEl.min = todayStr;
   aDateEl.value = todayStr;
-  document.getElementById('searchDate').min = todayStr;
   document.getElementById('freeSlotsDate').min = todayStr;
   aDateEl.addEventListener('change', ()=>{
     if (aDateEl.value && aDateEl.value < todayStr) {
@@ -1908,12 +1907,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
       msg.className = 'admin-msg err';
       return;
     }
-    if(dateVal && dateVal < todayStr){
-      msg.textContent = '⚠️ Cannot search a past date.';
-      msg.className = 'admin-msg err';
-      document.getElementById('searchDate').value = todayStr;
-      return;
-    }
+    // Past dates are allowed (to cancel a booking that was never played)
     lastSearchDate = dateVal; lastSearchRef = refVal;
 
     msg.textContent = '⏳ Searching…';
@@ -1963,7 +1957,7 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
             </div>
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:#b3261e;">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
-                : isSlotEnded(b.dateISO || b.date, b.time, b.duration) ? '<span class="bulk-slot-past">Past</span>'
+                : isSlotEnded(b.dateISO || b.date, b.time, b.duration) ? `<span class="bulk-slot-past">Past</span><button type="button" class="bulk-slot-cancel staff-cancel-btn" onclick="event.stopPropagation();staffCancelBooking(${i})">🚫 Cancel Booking</button>`
                 : `${isPast ? '<span class="bulk-slot-past">In progress</span>' : ''}<button type="button" class="bulk-slot-edit staff-edit-btn" onclick="event.stopPropagation();staffEditBooking(${i})">✏️ Edit</button><button type="button" class="bulk-slot-cancel staff-cancel-btn" onclick="event.stopPropagation();staffCancelBooking(${i})">🚫 Cancel Booking</button>`}
             </div>
             <div class="staff-cancel-msg" id="ncancelmsg${i}" style="margin-top:8px;font-size:13px;font-weight:600;"></div>
@@ -1990,12 +1984,11 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
     const msg = document.getElementById('ncancelmsg' + i);
     const btn = document.querySelector('#nslot_' + i + ' .staff-cancel-btn');
     if(!b || !btn) return;
-    if(isSlotEnded(b.dateISO || b.date, b.time, b.duration)){
-      msg.style.color = '#b3261e';
-      msg.textContent = "This session has already ended, so it can't be cancelled.";
-      return;
-    }
-    const ok = confirm(
+    const ended = isSlotEnded(b.dateISO || b.date, b.time, b.duration);
+    const ok = ended
+      ? confirm(`This session has already ended.\n\nMark it as CANCELLED (not played)?\n\n${b.name}${b.mobile ? ' (' + b.mobile + ')' : ''}\n` +
+          `${b.date} at ${b.time} · ${b.duration}\nRef: ${b.ref}\n\nIt will no longer count in that day's bookings and totals.`)
+      : confirm(
       `Cancel this booking?\n\n${b.name}${b.mobile ? ' (' + b.mobile + ')' : ''}\n` +
       `${b.date} at ${b.time} · ${b.duration}\nRef: ${b.ref}` +
       (b.groupCode ? `\n\nNote: this is one slot of group ${b.groupCode}. Only this slot will be cancelled.` : '') +
@@ -2012,6 +2005,12 @@ Location: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
         b.status = 'Cancelled';
         btn.remove();
         msg.style.color = '#1c4a22';
+        if(ended){
+          msg.textContent = `✅ Booking ${b.ref} marked as cancelled (not played).`;
+          const nm0 = document.querySelector('#nslot_' + i + ' .bulk-group-name');
+          if(nm0) nm0.style.textDecoration = 'line-through';
+          return;
+        }
         msg.textContent = `✅ Booking ${b.ref} cancelled. The net is free again.`;
         // Send the cancellation to the customer (same message as Main Admin)
         const shareHost = document.createElement('div');

@@ -1647,9 +1647,8 @@
   });
 
 
-  // Set search date min to today — no point searching past dates for edit/cancel
-  const searchDateEl = document.getElementById('searchDate');
-  if(searchDateEl) searchDateEl.min = todayStr;
+  // Past dates CAN be searched — so a booking that was never played (and
+  // never cancelled) can still be cancelled later, keeping that day's totals right.
 
   // Auto-clear the other field when one is used — prevents conflicting searches
   document.getElementById('searchDate').addEventListener('input', ()=>{
@@ -2312,7 +2311,8 @@
                     <span class="bulk-slot-past">In progress</span>
                     <button class="bulk-slot-edit" onclick="openEditModal('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}','${s.duration}','${s.net}','${s.ball||''}','${s.players||''}')">✏️ Edit</button>
                     <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>
-                  ` : '<span class="bulk-slot-past">Past</span>'}
+                  ` : `<span class="bulk-slot-past">Past</span>
+                    <button class="bulk-slot-cancel" onclick="cancelSingleSlot('${s.ref}','${g.mobile}','${g.name}','${g.groupRef}','${s.date}','${s.time}',${gi},${si})">🚫 Cancel</button>`}
                 </div>
               </div>`;
             }).join('')}
@@ -2452,7 +2452,10 @@ Thank you for your cooperation! See you at the nets! 🏏`;
   let lastAdminNormalResults = [];
   function cancelConfirmText(o){
     // o: { name, mobile, date, time, duration, ref, groupRef }
-    const running = isSlotPast(o.date, o.time);
+    const ended   = o.duration ? isSlotEnded(o.date, o.time, o.duration) : false;
+    const running = !ended && isSlotPast(o.date, o.time);
+    if(ended) return `This session has already ended.\n\nMark it as CANCELLED (not played)?\n\n${o.name}${o.mobile ? ' (' + o.mobile + ')' : ''}\n` +
+      `${o.date} at ${o.time} · ${o.duration}\nRef: ${o.ref}\n\nIt will no longer count in that day's bookings and totals.`;
     return `Cancel this booking?\n\n${o.name}${o.mobile ? ' (' + o.mobile + ')' : ''}\n` +
       `${o.date} at ${o.time}${o.duration ? ' · ' + o.duration : ''}\nRef: ${o.ref}` +
       (o.groupRef && String(o.groupRef).toUpperCase().startsWith('GRP-')
@@ -2528,9 +2531,12 @@ Thank you for your cooperation! See you at the nets! 🏏`;
         null, 20000);
       const data = await res.json();
       if(data.status === 'cancelled'){
-        rowEl.innerHTML = `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>
+        const wasEnded = slotInfo.duration && isSlotEnded(date, time, slotInfo.duration);
+        rowEl.innerHTML = wasEnded
+          ? `<div class="bulk-slot-cancelled">✅ Slot ${ref} marked as cancelled (not played)</div>`
+          : `<div class="bulk-slot-cancelled">✅ Slot ${ref} cancelled</div>
           <div id="slotCancelShare_${gi}_${si}" style="margin-top:8px;"></div>`;
-        showCancelShareButtons(`slotCancelShare_${gi}_${si}`, null, buildSingleCancelMessage(name, mobile, ref, groupRef, date, time));
+        if(!wasEnded) showCancelShareButtons(`slotCancelShare_${gi}_${si}`, null, buildSingleCancelMessage(name, mobile, ref, groupRef, date, time));
         // Update local state and recalculate this group's "N bookings - ₹Total"
         // badge immediately, without needing a full list reload (which would
         // collapse the currently-expanded group and disrupt the view).
@@ -2690,7 +2696,7 @@ https://countyindoornetz.com/Client_Booking.html`;
             <div class="normal-slot-btns" style="margin-top:10px;">
               ${isCancelled ? '<span class="bulk-slot-past" style="color:var(--error);">🚫 Cancelled' + (b.cancelledAt ? ' — ' + b.cancelledAt : '') + '</span>'
                 : (isPast && !isSlotEnded(b.date, b.time, b.duration)) ? '<span class="bulk-slot-past">In progress</span><button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'
-                : isPast ? '<span class="bulk-slot-past">Past</span>'
+                : isPast ? '<span class="bulk-slot-past">Past</span><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'
                 : '<button class=\"bulk-slot-edit\" onclick=\"openEditModal(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'\',\'' + b.date + '\',\'' + b.time + '\',\'' + b.duration + '\',\'' + b.net + '\',\'' + (b.ball||'') + '\',\'' + (b.players||'') + '\')\">✏️ Edit</button><button class=\"bulk-slot-cancel\" onclick=\"cancelNormalBooking(\'' + b.ref + '\',\'' + b.mobile + '\',\'' + b.name + '\',\'' + b.date + '\',\'' + b.time + '\',' + i + ')\">🚫 Cancel</button>'}
             </div>
           </div>
@@ -2728,10 +2734,12 @@ https://countyindoornetz.com/Client_Booking.html`;
         null, 20000);
       const data = await res.json();
       if(data.status === 'cancelled'){
-        rowEl.innerHTML =
-          `<div class="bulk-slot-cancelled" style="padding:10px;">✅ Booking ${ref} cancelled.</div>
+        const wasEnded = nInfo.duration && isSlotEnded(date, time, nInfo.duration);
+        rowEl.innerHTML = wasEnded
+          ? `<div class="bulk-slot-cancelled" style="padding:10px;">✅ Booking ${ref} marked as cancelled (not played).</div>`
+          : `<div class="bulk-slot-cancelled" style="padding:10px;">✅ Booking ${ref} cancelled.</div>
            <div id="normalCancelShare_${idx}" style="margin-top:8px;"></div>`;
-        showCancelShareButtons(`normalCancelShare_${idx}`, null, buildSingleCancelMessage(name, mobile, ref, '', date, time));
+        if(!wasEnded) showCancelShareButtons(`normalCancelShare_${idx}`, null, buildSingleCancelMessage(name, mobile, ref, '', date, time));
       } else if(data.status === 'too_late' || data.status === 'already_cancelled'){
         btn.disabled = true; btn.textContent = data.status === 'too_late' ? 'Past' : 'Already cancelled';
         nMsg.textContent = cancelResultText(data.status);
