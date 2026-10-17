@@ -370,7 +370,7 @@
   .dt select{width:auto;min-width:0;padding:9px 6px;font-size:15px;}
   .wk-nethours{margin:6px 0 12px;}
   .wk-split{margin-top:10px;padding:10px;border:1px dashed #c9d6cc;border-radius:10px;background:#fafcfb;}
-  .wk-split-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .wk-split-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
   .wk-split-row label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;}
   .wk-split-row input{width:100%;box-sizing:border-box;}
   .wk-split-msg{font-size:12.5px;font-weight:700;margin-top:6px;min-height:16px;}
@@ -381,7 +381,7 @@
   .wk-adv-q{font-size:12px;font-weight:700;color:#1d4f86;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center;}
   .wk-adv-q button{margin-top:0;}
   .wkm-advpaid{color:#1d4f86;font-weight:800;}
-  .wkm-advnext{color:#6b2fa3;font-weight:800;}
+  .wkm-advnext{color:#0f766e;font-weight:800;}
   .wk-balmsg{font-size:12.5px;font-weight:700;margin-top:4px;min-height:0;}
   .wk-balmsg.more{color:#b35c00;} .wk-balmsg.less{color:#b3261e;}
   .wk-daytot{margin-top:16px;border:1.5px solid #d9d3c0;border-radius:12px;padding:4px 14px;background:#fff;}
@@ -402,6 +402,7 @@
   .wk-nh b{font-size:16px;color:var(--navy);}
   .wkm-cash{color:#1e7b34 !important;font-weight:700;}
   .wkm-upi{color:#1d5fb8 !important;font-weight:700;}
+  .wkm-ppay{color:#5f259f !important;font-weight:700;}
   .wkm-pending{color:#c0271d !important;font-weight:700;}
   .wkm-free{color:#6b6b6b !important;font-weight:700;}
 </style>
@@ -2812,16 +2813,19 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     : 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
   const MODES = [
     { key:'cash',    label:'Cash' },
-    { key:'upi',     label:'Paytm / UPI' },
+    { key:'upi',     label:'Paytm' },
+    { key:'ppay',    label:'PhonePe' },
     { key:'pending', label:'Pending' },
     { key:'free',    label:'No Charge (Club)' }
   ];
   const MODE_LABEL = Object.fromEntries(MODES.map(m => [m.key, m.label]));
-  // Nets payment choices (Split = part Cash, part UPI, part Pending)
+  // Nets payment choices (Split = part Cash, part Paytm, part PhonePe, part Pending)
+  const SPLIT_KEYS = ['cash','upi','ppay','pending'];
   const PAY_MODES = [
     { key:'cash',    label:'Cash' },
-    { key:'upi',     label:'Paytm / UPI' },
-    { key:'split',   label:'Split (Cash + UPI)' },
+    { key:'upi',     label:'Paytm' },
+    { key:'ppay',    label:'PhonePe' },
+    { key:'split',   label:'Split' },
     { key:'pending', label:'Pending' }
   ];
 
@@ -2925,7 +2929,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   }
   const extrasText = xs => xs.map(x => `${esc(x.item.replace('Accessories – ',''))}${x.qty>1?' ×'+x.qty:''} ${rupees(x.amount)}`).join(', ');
   // Short payment-mode names for the detail line
-  const MODE_SHORT = { cash:'Cash', upi:'PTM', pending:'Pending', free:'Club' };
+  const MODE_SHORT = { cash:'Cash', upi:'PTM', ppay:'PPAY', pending:'Pending', free:'Club' };
   const ITEM_SHORT = it => String(it).replace('Accessories – ','').replace('Throwers Charge','Thrower').replace('Coaching Charges','Coaching');
   // "Adv 200 (PTM), Nets 400 (Cash) + 200 (PTM), Ball 500 (PTM), 2 AP 300 (Cash)"
   const n2 = v => Number(v||0).toLocaleString('en-IN');
@@ -2934,7 +2938,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const parts = [];
     if(adv && adv.amount) parts.push(`<span class="wkm-advpaid">Adv paid</span> ${n2(adv.amount)} ${md(adv.mode)}${adv.status==='refunded' ? ' refunded' : ''}`);
     if(netMode === 'split' && split){
-      const sp = ['cash','upi','pending'].filter(k => split[k] > 0).map(k => `${n2(split[k])} ${md(k)}`);
+      const sp = SPLIT_KEYS.filter(k => split[k] > 0).map(k => `${n2(split[k])} ${md(k)}`);
       parts.push(`Nets ${sp.length ? sp.join(' + ') : '0'}`);
     } else parts.push(`Nets ${netMode==='free' ? '0' : n2(netAmt)} ${md(netMode)}`);
     (xs||[]).forEach(x => parts.push(x.item === ADV_NEXT
@@ -2950,29 +2954,31 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     return `<div class="wk-split" id="${pre}Split" style="display:${show ? 'block' : 'none'};">
       <div class="wk-split-row">
         <label><span class="wkm-cash">Cash ₹</span><input type="number" id="${pre}SpCash" value="${v('cash')}" min="0" inputmode="numeric" placeholder="0"></label>
-        <label><span class="wkm-upi">UPI ₹</span><input type="number" id="${pre}SpUpi" value="${v('upi')}" min="0" inputmode="numeric" placeholder="0"></label>
+        <label><span class="wkm-upi">Paytm ₹</span><input type="number" id="${pre}SpUpi" value="${v('upi')}" min="0" inputmode="numeric" placeholder="0"></label>
+        <label><span class="wkm-ppay">PhonePe ₹</span><input type="number" id="${pre}SpPpay" value="${v('ppay')}" min="0" inputmode="numeric" placeholder="0"></label>
         <label><span class="wkm-pending">Pending ₹</span><input type="number" id="${pre}SpPend" value="${v('pending')}" min="0" inputmode="numeric" placeholder="0"></label>
       </div>
       <div class="wk-split-msg" id="${pre}SpMsg"></div>
     </div>`;
   }
-  const readSplit = pre => ({ cash: num(($(pre+'SpCash')||{}).value), upi: num(($(pre+'SpUpi')||{}).value), pending: num(($(pre+'SpPend')||{}).value) });
-  function splitDiff(pre, amt){ const s = readSplit(pre); return amt - (s.cash + s.upi + s.pending); }
+  const readSplit = pre => ({ cash: num(($(pre+'SpCash')||{}).value), upi: num(($(pre+'SpUpi')||{}).value), ppay: num(($(pre+'SpPpay')||{}).value), pending: num(($(pre+'SpPend')||{}).value) });
+  function splitDiff(pre, amt){ const s = readSplit(pre); return amt - (s.cash + s.upi + s.ppay + s.pending); }
   function splitCheck(pre, amt){
     const el = $(pre+'SpMsg'); if(!el) return;
     const d = splitDiff(pre, amt);
     el.className = 'wk-split-msg ' + (d === 0 ? 'ok' : 'err');
     el.textContent = d === 0 ? `✓ Adds up to ${rupees(amt)}` : (d > 0 ? `${rupees(d)} short of ${rupees(amt)}` : `${rupees(-d)} more than ${rupees(amt)}`);
   }
-  // Typing Cash or Pending fills the UPI box with the balance
+  // Typing Cash, PhonePe or Pending fills the Paytm box with the balance
   function splitFill(pre, amt){
     const s = readSplit(pre), u = $(pre+'SpUpi'); if(!u) return;
-    u.value = Math.max(0, amt - s.cash - s.pending);
+    u.value = Math.max(0, amt - s.cash - s.ppay - s.pending);
     splitCheck(pre, amt);
   }
   function wireSplit(pre, getAmt, onChange){
-    const c = $(pre+'SpCash'), u = $(pre+'SpUpi'), pd = $(pre+'SpPend'); if(!c) return;
+    const c = $(pre+'SpCash'), u = $(pre+'SpUpi'), pp = $(pre+'SpPpay'), pd = $(pre+'SpPend'); if(!c) return;
     c.addEventListener('input', () => { splitFill(pre, getAmt()); onChange && onChange(); });
+    pp.addEventListener('input', () => { splitFill(pre, getAmt()); onChange && onChange(); });
     pd.addEventListener('input', () => { splitFill(pre, getAmt()); onChange && onChange(); });
     u.addEventListener('input', () => { splitCheck(pre, getAmt()); onChange && onChange(); });
   }
@@ -2981,8 +2987,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const ns = tot.nets || (tot.nets = { count:0, amt:0, modes:{} });
     const addM = (k, v) => { if(!(v > 0)) return; ns.modes[k] = (ns.modes[k]||0) + v; ns.amt += v; };
     if(mode !== 'free') ns.count++;
-    if(mode === 'split' && split){ tot.cash += split.cash||0; tot.upi += split.upi||0; tot.pending += split.pending||0;
-      addM('cash', split.cash||0); addM('upi', split.upi||0); addM('pending', split.pending||0); }
+    if(mode === 'split' && split){ SPLIT_KEYS.forEach(k => { tot[k] += split[k]||0; addM(k, split[k]||0); }); }
     else if(mode === 'free') tot.free++;
     else if(tot[mode] !== undefined){ tot[mode] += amt; addM(mode, amt); }
   }
@@ -2995,10 +3000,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${wkNets.includes(i)?' active':''}" onclick="wkPickNet(${i})">${i}</button>`;
     $('wkNets').innerHTML = html;
   }
-  const WK_MODES = [MODES[0], MODES[1], { key:'split', label:'Split (Cash + UPI)' }, MODES[2], MODES[3]];
+  const WK_MODES = ['cash','upi','ppay','split','pending','free'].map(k => k==='split' ? { key:'split', label:'Split' } : MODES.find(m => m.key===k));
   function renderModes(){
     $('wkModes').innerHTML = WK_MODES.map(m =>
-      `<button type="button" class="wk-chip${wkMode===m.key?' active':''}" onclick="wkPickMode('${m.key}')"${m.key==='free'?' style="grid-column:span 2;"':''}>${m.label}</button>`).join('');
+      `<button type="button" class="wk-chip${wkMode===m.key?' active':''}" onclick="wkPickMode('${m.key}')">${m.label}</button>`).join('');
     const sb = $('wkSplit'); if(sb) sb.style.display = wkMode==='split' ? 'block' : 'none';
   }
   const toggleIn = (arr, n) => { const i = arr.indexOf(n); if(i > -1) arr.splice(i,1); else arr.push(n); arr.sort((a,b)=>a-b); };
@@ -3038,7 +3043,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     showMsg(`✅ Added to Today's Register (preview only — not saved to Google Sheets).`, true);
     ['wkRef','wkName','wkMobile','wkStart','wkEnd','wkNetAmt','wkNote'].forEach(id => $(id).value='');
     syncDigi($('wkStart')); syncDigi($('wkEnd'));
-    ['wkSpCash','wkSpUpi','wkSpPend'].forEach(id => $(id).value=''); $('wkSpMsg').textContent='';
+    ['wkSpCash','wkSpUpi','wkSpPpay','wkSpPend'].forEach(id => $(id).value=''); $('wkSpMsg').textContent='';
     $('wkExtras').innerHTML=''; wkNets=[]; wkMode='cash'; renderNets(); renderModes(); updateEntryTotals();
     renderRegister();
   };
@@ -3266,7 +3271,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div class="admin-lbl" style="margin-top:10px;">Paid by</div>
       <div class="wk-chips two" id="wkAdvModes">
         <button type="button" class="wk-chip${advMode==='cash'?' active':''}" data-mode="cash" onclick="wkAdvMode('cash')">Cash</button>
-        <button type="button" class="wk-chip${advMode==='upi'?' active':''}" data-mode="upi" onclick="wkAdvMode('upi')">Paytm / UPI</button>
+        <button type="button" class="wk-chip${advMode==='upi'?' active':''}" data-mode="upi" onclick="wkAdvMode('upi')">Paytm</button>
+        <button type="button" class="wk-chip${advMode==='ppay'?' active':''}" data-mode="ppay" onclick="wkAdvMode('ppay')" style="grid-column:span 2;">PhonePe</button>
       </div>
       <div class="admin-msg" id="wkAdvMsg"></div>
       <div style="display:flex;gap:8px;margin-top:8px;">
@@ -3280,7 +3286,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   /* ---------- Register ---------- */
   function renderRegister(){
     const day = $('wkRegDate').value || todayISO();
-    const tot = { cash:0, upi:0, pending:0, free:0, mins:0, sessions:0 };
+    const tot = { cash:0, upi:0, ppay:0, pending:0, free:0, mins:0, sessions:0 };
     const netMins = {};   // net -> minutes actually played (recorded bookings + walk-ins)
     const addNetMins = (n, m) => { if(n && m > 0) netMins[n] = (netMins[n]||0) + m; };
     const groups = {};
@@ -3376,24 +3382,25 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const dp = day.split('-');
     const bkTotal = bookings.filter(b => b.status !== 'Cancelled').length;   // bookings for the day (not cancelled)
     $('wkCards').innerHTML = `
-      <div class="wk-card big"><div class="lbl">Total Amount Received · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.cash + tot.upi)}</div><div class="lbl">${bkTotal - notRecorded}/${bkTotal} booking${bkTotal===1?'':'s'} recorded : ${hrsText(tot.mins)} of nets</div></div>
+      <div class="wk-card big"><div class="lbl">Total Amount Received · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.cash + tot.upi + tot.ppay)}</div><div class="lbl">${bkTotal - notRecorded}/${bkTotal} booking${bkTotal===1?'':'s'} recorded : ${hrsText(tot.mins)} of nets</div></div>
       <div class="wk-card"><div class="lbl wkm-cash">Cash</div><div class="val wkm-cash">${rupees(tot.cash)}</div></div>
-      <div class="wk-card"><div class="lbl wkm-upi">Paytm</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
+      <div class="wk-card"><div class="lbl wkm-upi">Paytm (PTM)</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
+      <div class="wk-card"><div class="lbl wkm-ppay">PhonePe (PPAY)</div><div class="val wkm-ppay">${rupees(tot.ppay)}</div></div>
       <div class="wk-card pending"><div class="lbl wkm-pending">Pending</div><div class="val wkm-pending">${rupees(tot.pending)}</div></div>
-      <div class="wk-card total"><div class="lbl">Total Amount</div><div class="val">${rupees(tot.cash + tot.upi + tot.pending)}</div></div>`;
+      <div class="wk-card total" style="grid-column:span 2;"><div class="lbl">Total Amount</div><div class="val">${rupees(tot.cash + tot.upi + tot.ppay + tot.pending)}</div></div>`;
     // Item sales (accessories, drinks…) — count and amount, by payment mode
     const order = EXTRA_ITEMS.map(i => i.key).filter(k => itemSales[k]);
     const NO_COUNT = ['Drinks'];   // shown with amount only (no number in front)
     const ns = tot.nets;
     const netsHtml = (ns && ns.count) ? `<div class="wk-is-item">` +
-      ['cash','upi','pending'].filter(md => ns.modes[md]).map(md =>
+      SPLIT_KEYS.filter(md => ns.modes[md]).map(md =>
         `<div class="wk-is-line"><span>Nets</span><span>${rupees(ns.modes[md])} <span class="wkm-${md}">(${MODE_SHORT[md]})</span></span></div>`).join('') +
       `<div class="wk-is-tot"><span>Total Nets: ${ns.count} session${ns.count===1?'':'s'}</span><span>Amount ${rupees(ns.amt)}</span></div></div>` : '';
     const has = order.length || netsHtml;
     $('wkItemSales').style.display = has ? 'block' : 'none';
     $('wkItemSales').innerHTML = has ? `<div class="wk-is-title">Sales · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div>` + netsHtml + order.map(k => {
       const st = itemSales[k], nm = esc(ITEM_SHORT(k)), noCount = NO_COUNT.includes(k);
-      const lines = ['cash','upi','pending'].filter(md => st.modes[md]).map(md =>
+      const lines = SPLIT_KEYS.filter(md => st.modes[md]).map(md =>
         `<div class="wk-is-line"><span>${noCount ? '' : st.modes[md].qty + ' '}${nm}</span><span>${rupees(st.modes[md].amt)} <span class="wkm-${md}">(${MODE_SHORT[md]})</span></span></div>`).join('');
       return `<div class="wk-is-item">${lines}<div class="wk-is-tot"><span>Total ${nm}${noCount ? '' : ': ' + st.qty}</span><span>Amount ${rupees(st.amt)}</span></div></div>`;
     }).join('') : '';
