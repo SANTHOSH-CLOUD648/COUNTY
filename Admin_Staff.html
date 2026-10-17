@@ -310,7 +310,14 @@
   .wk-tag.upi{background:#e3ecf7;color:#1d4f86;}
   .wk-tag.pending{background:#fff4e0;color:#6b4a10;}
   .wk-tag.free{background:#eeeeec;color:#4a4a46;}
-  .wk-breakdown{font-size:13px;color:#3d4436;line-height:1.8;margin-bottom:12px;}
+  .wk-breakdown{font-size:13px;color:#3d4436;line-height:1.8;margin-bottom:12px;border:1px solid #e3e0d4;border-radius:12px;padding:10px 12px;background:#fff;}
+  .wk-breakdown:empty{display:none;}
+  .wk-pd-title{font-family:Georgia,serif;font-size:15.5px;font-weight:700;color:var(--navy);margin-bottom:2px;}
+  .wk-tot-box .wk-tb-title{font-family:Georgia,serif;font-size:16px;font-weight:700;color:#e8c766;text-align:center;margin-bottom:8px;}
+  .wk-tb-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .wk-tb-cell{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 10px;text-align:center;}
+  .wk-tot-box .wk-tb-cell .val{font-size:22px;}
+  .wk-tb-foot{text-align:center;margin-top:8px;}
   .wk-due{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:3px;background:#fde8d8;color:#8a3b0a;}
   .wk-noshow{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:3px;background:#eeeeec;color:#4a4a46;}
   .wk-rec-btn{font-family:inherit;font-size:13.5px;font-weight:700;min-height:40px;padding:0 12px;border-radius:10px;border:none;background:#d9b44a;color:#17251c;cursor:pointer;margin-top:6px;}
@@ -383,6 +390,12 @@
   .wkm-advpaid{color:#1d4f86;font-weight:800;}
   .wkm-advnext{color:#0f766e;font-weight:800;}
   .wk-balmsg{font-size:12.5px;font-weight:700;margin-top:4px;min-height:0;}
+  .wk-booked{font-size:11.5px !important;color:#8a8f80 !important;}
+  .wk-played{color:#2c4535 !important;}
+  .wk-ntline{display:block;}
+  .wk-row > div:nth-child(2){min-width:0;}
+  .wk-edit-banner{background:#fff7e0;border:1px solid #f0d58a;color:#6b4a10;border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:700;margin-bottom:8px;}
+  .wk-del-btn{font-family:inherit;font-size:12.5px;font-weight:700;min-height:36px;padding:0 10px;border-radius:10px;border:1.5px solid #e8b4b4;background:#fff;color:#8b1c1c;cursor:pointer;margin-top:6px;}
   .wk-balmsg.more{color:#b35c00;} .wk-balmsg.less{color:#b3261e;}
   .wk-daytot{margin-top:16px;border:1.5px solid #d9d3c0;border-radius:12px;padding:4px 14px;background:#fff;}
   .wk-dt-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid #eee9da;font-size:15px;font-weight:600;}
@@ -672,10 +685,7 @@
       <div class="wk-block">
         <div class="wk-block-title">Net No. <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
         <div class="wk-chips" id="wkNets"></div>
-        <div class="admin-grid" style="margin-top:12px;">
-          <div><label class="admin-lbl" for="wkStart">Start Time</label><input type="hidden" id="wkStart"></div>
-          <div><label class="admin-lbl" for="wkEnd">End Time</label><input type="hidden" id="wkEnd"></div>
-        </div>
+        <div id="wkNetTimes"></div>
         <div class="wk-total-time"><span>Total Time (auto)</span><strong id="wkTotalTime">—</strong></div>
       </div>
 
@@ -697,7 +707,11 @@
       <div><label class="admin-lbl" for="wkNote">Note (optional)</label><input type="text" id="wkNote" placeholder="Anything to remember about this session"></div>
 
       <div class="wk-sum" style="margin-top:14px;"><span>Total for this entry</span><strong id="wkEntryTotal">₹0</strong></div>
-      <button type="button" class="add-btn" style="width:100%;" onclick="wkSave()">Save Entry (preview)</button>
+      <div id="wkEditBanner" class="wk-edit-banner" style="display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="add-btn" style="flex:2;" id="wkSaveBtn" onclick="wkSave()">Save Entry (preview)</button>
+        <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;display:none;" id="wkCancelEditBtn" onclick="wkCancelEdit()">Cancel Edit</button>
+      </div>
       <div class="admin-msg" id="wkMsg"></div>
     </div>
 
@@ -2937,7 +2951,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const md = k => `<span class="wkm-${k}">(${MODE_SHORT[k]||k})</span>`;
     const parts = [];
     if(adv && adv.amount) parts.push(`<span class="wkm-advpaid">Adv paid</span> ${n2(adv.amount)} ${md(adv.mode)}${adv.status==='refunded' ? ' refunded' : ''}`);
-    if(netMode === 'split' && split){
+    if(netMode === 'noshow'){ /* no nets for a no-show */ }
+    else if(netMode === 'split' && split){
       const sp = SPLIT_KEYS.filter(k => split[k] > 0).map(k => `${n2(split[k])} ${md(k)}`);
       parts.push(`Nets ${sp.length ? sp.join(' + ') : '0'}`);
     } else parts.push(`Nets ${netMode==='free' ? '0' : n2(netAmt)} ${md(netMode)}`);
@@ -2993,6 +3008,61 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   }
   const fmtD = iso => { const d = String(iso||'').split('-'); return d.length===3 ? `${d[2]}/${d[1]}/${d[0].slice(2)}` : ''; };
 
+  /* ---------- Per-net Start / End rows (Walk-in Entry) ---------- */
+  const hhmm2m = v => { if(!v) return null; const [a,b] = v.split(':').map(Number); return a*60+b; };
+  const wkNT = { times:{}, last:null };   // net -> {start,end} as HH:MM
+  function wkReadNT(){
+    document.querySelectorAll('#wkNetTimes .wk-nt').forEach(r => {
+      wkNT.times[+r.dataset.net] = { start: r.querySelector('.wkn-start').value, end: r.querySelector('.wkn-end').value };
+    });
+  }
+  function ntTotText(t){ t = t || {}; const s = hhmm2m(t.start), e = hhmm2m(t.end); return (s!==null && e!==null) ? (e > s ? hrsText(e - s) : 'End after Start') : '—'; }
+  function wkRenderNT(){
+    const el = $('wkNetTimes'); if(!el) return;
+    el.innerHTML = wkNets.length ? wkNets.map(n => {
+      const t = wkNT.times[n] || {}, tot = ntTotText(t);
+      return `<div class="wk-nt" data-net="${n}">
+        <div class="wk-nt-head"><span class="wk-nt-net">Net ${n}</span><span class="wk-nt-tot">Total: ${tot}</span></div>
+        <div class="wk-nt-times">
+          <div><label class="admin-lbl">Start</label><input type="hidden" class="wkn-start" value="${t.start||''}"></div>
+          <div><label class="admin-lbl">End</label><input type="hidden" class="wkn-end" value="${t.end||''}"></div>
+        </div>
+      </div>`;
+    }).join('') : '<div style="font-size:13px;color:#5a6152;margin-top:8px;">Tap the net number(s) above to enter Start and End times.</div>';
+    el.querySelectorAll('input[type=hidden]').forEach(i => { mountDigi(i); i.addEventListener('change', () => {
+      wkReadNT();
+      const row = i.closest('.wk-nt'), n = +row.dataset.net, t = wkNT.times[n];
+      if(t && t.start && t.end) wkNT.last = Object.assign({}, t);
+      row.querySelector('.wk-nt-tot').textContent = 'Total: ' + ntTotText(t);   // update in place (keeps half-chosen times)
+      updateEntryTotals(); }); });
+  }
+  // Total minutes across the chosen nets; null if any net is incomplete, -1 if any End is not after Start
+  function entryMins(){
+    if(!wkNets.length) return null;
+    let sum = 0;
+    for(const n of wkNets){
+      const t = wkNT.times[n] || {}, s = hhmm2m(t.start), e = hhmm2m(t.end);
+      if(s===null || e===null) return null;
+      if(e <= s) return -1;
+      sum += e - s;
+    }
+    return sum;
+  }
+  // "08:00 pm – 09:15 pm · 1 hr 15 min" (same for all nets) or per-net times
+  function timesLine(nt){
+    if(!nt || !nt.length) return '';
+    const same = nt.every(t => t.start === nt[0].start && t.end === nt[0].end);
+    if(same) return `${esc(nt[0].start)} – ${esc(nt[0].end)} · ${hrsText(nt[0].mins)}${nt.length > 1 ? ` each (${nt.length} nets)` : ''}`;
+    // different times: one short line per net (each net's total is in its box on the left)
+    return nt.map(t => `<span class="wk-ntline">Net ${t.net}: ${esc(t.start)} – ${esc(t.end)}</span>`).join('');
+  }
+  // Older entries kept one Start/End for all nets
+  function walkinNetTimes(e){
+    if(e.netTimes && e.netTimes.length) return e.netTimes;
+    const ns = (e.nets && e.nets.length) ? e.nets : String(e.net||'').split(/\D+/).filter(Boolean).map(Number);
+    return ns.map(n => ({ net:n, start:e.start, end:e.end, mins:e.mins }));
+  }
+
   /* ---------- Walk-in Entry form ---------- */
   function renderNets(){
     const n = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
@@ -3007,19 +3077,21 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const sb = $('wkSplit'); if(sb) sb.style.display = wkMode==='split' ? 'block' : 'none';
   }
   const toggleIn = (arr, n) => { const i = arr.indexOf(n); if(i > -1) arr.splice(i,1); else arr.push(n); arr.sort((a,b)=>a-b); };
-  window.wkPickNet  = n => { toggleIn(wkNets, n); renderNets(); };
+  window.wkPickNet  = n => {
+    wkReadNT();
+    const other = wkNets.find(x => x !== n && wkNT.times[x] && wkNT.times[x].start);
+    if(!wkNT.last && other) wkNT.last = Object.assign({}, wkNT.times[other]);
+    toggleIn(wkNets, n);
+    // New net: same times as the net entered last
+    if(wkNets.includes(n)) wkNT.times[n] = wkNT.last ? Object.assign({}, wkNT.last) : (wkNT.times[n] || { start:'', end:'' });
+    renderNets(); wkRenderNT(); updateEntryTotals();
+  };
   window.wkPickMode = k => { wkMode = k; if(k==='free') $('wkNetAmt').value = 0; renderModes(); if(k==='split') splitFill('wk', num($('wkNetAmt').value)); updateEntryTotals(); };
   window.wkAddExtra = () => addExtraRow('wkExtras', wkMode, updateEntryTotals);
 
-  function entryMins(){
-    const s=$('wkStart').value, e=$('wkEnd').value;
-    if(!s||!e) return null;
-    const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
-    return (eh*60+em)-(sh*60+sm);
-  }
   function updateEntryTotals(){
     const m = entryMins();
-    $('wkTotalTime').textContent = (m===null) ? '—' : (m>0 ? hrsText(m) : 'End must be after Start');
+    $('wkTotalTime').textContent = (m===null) ? '—' : (m>0 ? hrsText(m) + (wkNets.length > 1 ? ` (${wkNets.length} nets)` : '') : 'End must be after Start');
     const xs = readExtras('wkExtras');
     $('wkExtrasEmpty').style.display = xs.length ? 'none' : 'block';
     const net = wkMode==='free' ? 0 : num($('wkNetAmt').value);
@@ -3027,24 +3099,80 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   }
   function showMsg(text, ok){ const el=$('wkMsg'); el.textContent=text; el.className='admin-msg '+(ok?'ok':'err'); }
 
+  let wkEditId = null;   // walk-in being edited (null = new entry)
+  function wkResetForm(){
+    ['wkRef','wkName','wkMobile','wkNetAmt','wkNote'].forEach(id => $(id).value='');
+    ['wkSpCash','wkSpUpi','wkSpPpay','wkSpPend'].forEach(id => $(id).value=''); $('wkSpMsg').textContent='';
+    $('wkExtras').innerHTML=''; wkNets=[]; wkNT.times={}; wkNT.last=null; wkMode='cash';
+    wkEditId = null;
+    $('wkSaveBtn').textContent = 'Save Entry (preview)';
+    $('wkCancelEditBtn').style.display = 'none';
+    $('wkEditBanner').style.display = 'none';
+    renderNets(); wkRenderNT(); renderModes(); updateEntryTotals();
+  }
   window.wkSave = function(){
+    wkReadNT();
     const name = $('wkName').value.trim(), m = entryMins();
     if(!name){ showMsg('Please enter the name.', false); return; }
     if(!wkNets.length){ showMsg('Please choose the net number(s).', false); return; }
-    if(m===null || m<=0){ showMsg('Please enter a valid Start and End time.', false); return; }
+    if(m===null || m<=0){ showMsg('Please enter a valid Start and End time for each net (End after Start).', false); return; }
     if(wkMode==='split' && splitDiff('wk', num($('wkNetAmt').value)) !== 0){ showMsg('Split amounts must add up to the Net Charges amount.', false); return; }
-    walkins.push({
+    const netTimes = wkNets.map(n => { const t = wkNT.times[n]; return { net:n, start: to12(t.start), end: to12(t.end), mins: hhmm2m(t.end) - hhmm2m(t.start) }; });
+    const starts = wkNets.map(n => hhmm2m(wkNT.times[n].start)), ends = wkNets.map(n => hhmm2m(wkNT.times[n].end));
+    const entry = {
+      id: wkEditId || ('W' + Date.now().toString(36) + Math.random().toString(36).slice(2,5)),
       date: $('wkDate').value || todayISO(), ref: $('wkRef').value.trim().toUpperCase(),
-      name, net: wkNets.join(', '), nets: wkNets.slice(), start: to12($('wkStart').value), end: to12($('wkEnd').value), mins: m,
+      name, mobile: $('wkMobile').value.trim(), net: wkNets.join(', '), nets: wkNets.slice(), netTimes,
+      start: minsToLabel(Math.min(...starts)), end: minsToLabel(Math.max(...ends)), mins: m,
       netAmount: wkMode==='free' ? 0 : num($('wkNetAmt').value), mode: wkMode,
       split: wkMode==='split' ? readSplit('wk') : null,
       extras: readExtras('wkExtras'), note: $('wkNote').value.trim()
+    };
+    const wasEdit = !!wkEditId;
+    if(wasEdit){ const i = walkins.findIndex(x => x.id === wkEditId); if(i > -1) walkins[i] = entry; else walkins.push(entry); }
+    else walkins.push(entry);
+    wkResetForm();
+    if(wasEdit){
+      // back to the register to see the change
+      if($('wkRegDate').value !== entry.date){ $('wkRegDate').value = entry.date; }
+      wkShowSub('today');
+    } else {
+      showMsg(`✅ Added to the register for ${fmtD(entry.date)} (preview only — not saved to Google Sheets).`, true);
+      renderRegister();
+    }
+  };
+  window.wkCancelEdit = function(){ wkResetForm(); showMsg('', true); wkShowSub('today'); };
+  window.wkEditWalkin = function(id){
+    const e = walkins.find(x => x.id === id); if(!e) return;
+    wkResetForm();
+    wkEditId = id;
+    $('wkDate').value = e.date; $('wkRef').value = e.ref || ''; $('wkName').value = e.name; $('wkMobile').value = e.mobile || '';
+    walkinNetTimes(e).forEach(t => { wkNT.times[t.net] = { start: toHHMM(t.start), end: toHHMM(t.end) }; });
+    wkNets = walkinNetTimes(e).map(t => t.net).sort((a,b)=>a-b);
+    const lastT = walkinNetTimes(e).slice(-1)[0]; wkNT.last = lastT ? Object.assign({}, wkNT.times[lastT.net]) : null;
+    $('wkNetAmt').value = e.mode === 'free' ? 0 : e.netAmount;
+    wkMode = e.mode;
+    if(e.split){ $('wkSpCash').value = e.split.cash||''; $('wkSpUpi').value = e.split.upi||''; $('wkSpPpay').value = e.split.ppay||''; $('wkSpPend').value = e.split.pending||''; }
+    (e.extras||[]).forEach(x => {
+      addExtraRow('wkExtras', x.mode, updateEntryTotals);
+      const r = $('wkExtras').lastElementChild;
+      r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
+      r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
     });
-    showMsg(`✅ Added to Today's Register (preview only — not saved to Google Sheets).`, true);
-    ['wkRef','wkName','wkMobile','wkStart','wkEnd','wkNetAmt','wkNote'].forEach(id => $(id).value='');
-    syncDigi($('wkStart')); syncDigi($('wkEnd'));
-    ['wkSpCash','wkSpUpi','wkSpPpay','wkSpPend'].forEach(id => $(id).value=''); $('wkSpMsg').textContent='';
-    $('wkExtras').innerHTML=''; wkNets=[]; wkMode='cash'; renderNets(); renderModes(); updateEntryTotals();
+    $('wkNote').value = e.note || '';
+    $('wkSaveBtn').textContent = 'Update Entry';
+    $('wkCancelEditBtn').style.display = 'block';
+    $('wkEditBanner').textContent = `✏️ Editing walk-in: ${e.name}`; $('wkEditBanner').style.display = 'block';
+    renderNets(); wkRenderNT(); renderModes();
+    if(wkMode === 'split') splitCheck('wk', num($('wkNetAmt').value));
+    updateEntryTotals(); showMsg('', true);
+    wkShowSub('entry', true);
+  };
+  window.wkDeleteWalkin = function(id){
+    const e = walkins.find(x => x.id === id); if(!e) return;
+    if(!confirm(`Delete the walk-in entry for ${e.name} (${e.start} – ${e.end})?`)) return;
+    walkins.splice(walkins.indexOf(e), 1);
+    if(wkEditId === id) wkResetForm();
     renderRegister();
   };
 
@@ -3095,10 +3223,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const a = openRef && advances[openRef], advAmt = (a && a.status !== 'refunded') ? a.amount : 0;
     const exAmt = xs.reduce((a,x)=>a+x.amount,0);
     const recv = num($('wkPayAmt').value);
-    const total = noShow ? advAmt : advAmt + recv + exAmt;
+    const total = noShow ? advAmt + exAmt : advAmt + recv + exAmt;
     el.textContent = rupees(total);
     const br = $('wkPayBreak');
-    if(br) br.textContent = noShow ? (advAmt ? `No-show — advance ${rupees(advAmt)} kept` : 'No-show — nothing collected')
+    if(br) br.textContent = noShow ? 'No-show — no nets' + (advAmt ? `, advance ${rupees(advAmt)} kept` : '') + (exAmt ? ` + items ${rupees(exAmt)}` : '')
       : (advAmt ? `Adv paid ${rupees(advAmt)} + ` : '') + `Nets ${rupees(recv)}` + (exAmt ? ` + extras ${rupees(exAmt)}` : '');
     // Warn (not block) when the amount differs from the balance after the advance
     const bm = $('wkPayBalMsg');
@@ -3135,7 +3263,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     payments[b.ref] = {
       received: noShow ? 0 : num($('wkPayAmt').value), mode: noShow ? 'pending' : payMode,
       split: (!noShow && payMode==='split') ? readSplit('wkPay') : null,
-      extras: noShow ? [] : readExtras('wkPayExtras'),
+      extras: readExtras('wkPayExtras'),   // items can be sold even for a no-show
       actualEnd: '',
       netTimes: noShow ? [] : payNets.map(n => { const t = payNetTimes[n]; const mins = hhmmMins(t.end) - hhmmMins(t.start);
         return { net: n, start: to12(t.start), end: to12(t.end), mins }; }),
@@ -3188,8 +3316,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     }).join('');
     el.querySelectorAll('input[type=hidden]').forEach(i => { mountDigi(i); i.addEventListener('change', () => {
       readNetTimeInputs();
-      const n = +i.closest('.wk-nt').dataset.net; if(payNetTimes[n]) lastNetTimes = Object.assign({}, payNetTimes[n]);
-      renderPayNetTimes(); }); });
+      const row = i.closest('.wk-nt'), n = +row.dataset.net, t = payNetTimes[n];
+      if(t && t.start && t.end) lastNetTimes = Object.assign({}, t);
+      row.querySelector('.wk-nt-tot').textContent = 'Total: ' + ntTotText(t); }); });
   }
   window.wkPayNet = n => {
     readNetTimeInputs();
@@ -3308,6 +3437,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const p = payments[b.ref], cancelled = b.status === 'Cancelled';
       const mins = DUR_MIN[b.duration] || 60;
       if(!cancelled){
+        if(p && p.noShow) addExtras(p.extras || [], b.name);   // no-show: items only, no nets / hours
         if(p && !p.noShow){
           tot.sessions++; addNetPay(tot, p.received, p.mode, p.split); addExtras(p.extras, b.name);
           if(p.netTimes && p.netTimes.length){ p.netTimes.forEach(t => { addNetMins(t.net, t.mins); tot.mins += t.mins; }); }
@@ -3324,10 +3454,11 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         if(adv && adv.status === 'held') right += `<div class="wk-adv-q">Advance ${rupees(adv.amount)}: <button type="button" class="wk-adv-btn" onclick="wkAdvStatus('${R}','refunded')">Refunded</button><button type="button" class="wk-adv-btn" onclick="wkAdvStatus('${R}','kept')">Kept</button></div>`;
         else if(adv) right += `<div class="wk-adv-q">Advance ${rupees(adv.amount)} ${adv.status === 'refunded' ? 'refunded' : 'kept'} <button type="button" class="wk-link" style="min-height:0;padding:0;font-size:12px;" onclick="wkAdvStatus('${R}','held')">Undo</button></div>`;
       }
-      else if(p && p.noShow) right = `<span class="wk-noshow">No-show</span>${advAmt ? `<br><span class="wk-adv">Adv ${rupees(advAmt)} kept</span>` : ''}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${R}')">Edit</button>`;
+      else if(p && p.noShow) right = `<span class="wk-noshow">No-show</span>${advAmt ? `<br><span class="wk-adv">Adv ${rupees(advAmt)} kept</span>` : ''}${(p.extras||[]).length ? `<br><span class="wk-total-lbl">Items</span> ${rupees(p.extras.reduce((a,x)=>a+x.amount,0))}` : ''}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${R}')">Edit</button>`;
       else if(p) right = `<span class="wk-total-lbl">Total</span><br>${rupees(advAmt + p.received + p.extras.reduce((a,x)=>a+x.amount,0))}<br><button type="button" class="wk-rec-btn edit" onclick="wkOpenPay('${R}')">Edit</button>`;
       else right = `${rupees(num(b.amount))}${advAmt ? `<br><span class="wk-adv">Adv ${rupees(advAmt)} · Bal ${rupees(Math.max(0, num(b.amount) - advAmt))}</span>` : ''}<br><span class="wk-due">Payment not recorded</span><br><button type="button" class="wk-rec-btn" onclick="wkOpenPay('${R}')">Record Payment</button><br>${advBtn}`;
       const extras = (p && !p.noShow) ? `<div class="sub wk-detail">${detailLine(p.received, p.mode, p.extras, p.split, adv)}</div>`
+        : (p && p.noShow && ((p.extras||[]).length || adv)) ? `<div class="sub wk-detail">${detailLine(0, 'noshow', p.extras, null, adv)}</div>`
         : (adv && !p && !cancelled) ? `<div class="sub wk-detail"><span class="wkm-advpaid">Adv paid</span> ${n2(adv.amount)} <span class="wkm-${adv.mode}">(${MODE_SHORT[adv.mode]})</span></div>` : '';
       const endTxt = esc(bookingEnd(b));
       const leftNets = (p && p.netTimes && p.netTimes.length) ? p.netTimes.map(t => ({net:t.net, mins:t.mins}))
@@ -3335,7 +3466,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       return `<div class="wk-row${cancelled?' cancelled':''}">
         ${netBoxes(leftNets)}
         <div><div class="nm">${esc(b.name)}${b.teamName ? ' <span class="sub">('+esc(b.teamName)+')</span>' : ''}</div>
-          <div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>
+          ${(p && p.netTimes && p.netTimes.length && !p.noShow)
+            ? `<div class="sub wk-played">${timesLine(p.netTimes)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>`
+              + ((p.netTimes.every(t => t.start === b.time && t.end === bookingEnd(b))) ? '' : `<div class="sub wk-booked">Booked ${esc(b.time)} – ${endTxt} · ${esc(b.duration)}</div>`)
+            : `<div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>`}
           ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
         <div class="amt">${right}</div>
         ${openRef === b.ref ? payPanelHtml(b) : ''}${openAdv === b.ref ? advPanelHtml(b) : ''}
@@ -3346,21 +3480,22 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const list = walkins.filter(e => e.date === day);
     list.forEach(e => {
       tot.sessions++;
-      const eNets = (e.nets && e.nets.length) ? e.nets : String(e.net||'').split(/\D+/).filter(Boolean).map(Number);
-      eNets.forEach(n => addNetMins(n, e.mins));
-      tot.mins += e.mins * Math.max(1, eNets.length);
+      walkinNetTimes(e).forEach(t => { addNetMins(t.net, t.mins); tot.mins += t.mins; });
       addNetPay(tot, e.netAmount, e.mode, e.split);
       addExtras(e.extras, e.name);
     });
     $('wkList').innerHTML = list.length ? list.map(e => {
       const extraTotal = e.extras.reduce((a,x)=>a+x.amount,0);
+      const nt = walkinNetTimes(e);
       return `<div class="wk-row">
-        ${netBoxes(((e.nets && e.nets.length) ? e.nets : String(e.net||'').split(/\D+/).filter(Boolean).map(Number)).map(n => ({net:n, mins:e.mins})))}
+        ${netBoxes(nt.map(t => ({net:t.net, mins:t.mins})))}
         <div><div class="nm">${esc(e.name)}</div>
-          <div class="sub">${e.start} – ${e.end} · ${hrsText(e.mins)}${e.ref?' · Ref '+esc(e.ref):''}</div>
+          <div class="sub wk-played">${timesLine(nt)}${e.ref?' · Ref '+esc(e.ref):''}</div>
           <div class="sub wk-detail">${detailLine(e.netAmount, e.mode, e.extras, e.split)}</div>
           ${e.note?`<div class="sub">📝 ${esc(e.note)}</div>`:''}</div>
-        <div class="amt"><span class="wk-total-lbl">Total</span><br>${rupees((e.mode==='free'?0:e.netAmount)+extraTotal)}</div>
+        <div class="amt"><span class="wk-total-lbl">Total</span><br>${rupees((e.mode==='free'?0:e.netAmount)+extraTotal)}<br>
+          <button type="button" class="wk-rec-btn edit" style="display:block;width:100%;" onclick="wkEditWalkin('${e.id}')">Edit</button>
+          <button type="button" class="wk-del-btn" style="display:block;width:100%;" onclick="wkDeleteWalkin('${e.id}')" aria-label="Delete this walk-in">Delete</button></div>
       </div>`;}).join('')
       : '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No walk-in entries for this date.</div>';
 
@@ -3382,12 +3517,18 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const dp = day.split('-');
     const bkTotal = bookings.filter(b => b.status !== 'Cancelled').length;   // bookings for the day (not cancelled)
     $('wkCards').innerHTML = `
-      <div class="wk-card big"><div class="lbl">Total Amount Received · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div><div class="val">${rupees(tot.cash + tot.upi + tot.ppay)}</div><div class="lbl">${bkTotal - notRecorded}/${bkTotal} booking${bkTotal===1?'':'s'} recorded : ${hrsText(tot.mins)} of nets</div></div>
       <div class="wk-card"><div class="lbl wkm-cash">Cash</div><div class="val wkm-cash">${rupees(tot.cash)}</div></div>
       <div class="wk-card"><div class="lbl wkm-upi">Paytm (PTM)</div><div class="val wkm-upi">${rupees(tot.upi)}</div></div>
       <div class="wk-card"><div class="lbl wkm-ppay">PhonePe (PPAY)</div><div class="val wkm-ppay">${rupees(tot.ppay)}</div></div>
       <div class="wk-card pending"><div class="lbl wkm-pending">Pending</div><div class="val wkm-pending">${rupees(tot.pending)}</div></div>
-      <div class="wk-card total" style="grid-column:span 2;"><div class="lbl">Total Amount</div><div class="val">${rupees(tot.cash + tot.upi + tot.ppay + tot.pending)}</div></div>`;
+      <div class="wk-card big wk-tot-box">
+        <div class="wk-tb-title">Total Amount · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div>
+        <div class="wk-tb-row">
+          <div class="wk-tb-cell"><div class="lbl">Received</div><div class="val">${rupees(tot.cash + tot.upi + tot.ppay)}</div></div>
+          <div class="wk-tb-cell"><div class="lbl">Collected</div><div class="val">${rupees(tot.cash + tot.upi + tot.ppay + tot.pending)}</div></div>
+        </div>
+        <div class="lbl wk-tb-foot">${bkTotal - notRecorded}/${bkTotal} booking${bkTotal===1?'':'s'} recorded : ${hrsText(tot.mins)} of nets</div>
+      </div>`;
     // Item sales (accessories, drinks…) — count and amount, by payment mode
     const order = EXTRA_ITEMS.map(i => i.key).filter(k => itemSales[k]);
     const NO_COUNT = ['Drinks'];   // shown with amount only (no number in front)
@@ -3395,7 +3536,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const netsHtml = (ns && ns.count) ? `<div class="wk-is-item">` +
       SPLIT_KEYS.filter(md => ns.modes[md]).map(md =>
         `<div class="wk-is-line"><span>Nets</span><span>${rupees(ns.modes[md])} <span class="wkm-${md}">(${MODE_SHORT[md]})</span></span></div>`).join('') +
-      `<div class="wk-is-tot"><span>Total Nets: ${ns.count} session${ns.count===1?'':'s'}</span><span>Amount ${rupees(ns.amt)}</span></div></div>` : '';
+      `<div class="wk-is-tot"><span>Total Nets: ${ns.count} session${ns.count===1?'':'s'}</span><span>Amount ${rupees(ns.amt)}</span></div>` +
+      `<div class="wk-is-tot"><span>Total Amount Received</span><span>${rupees((ns.modes.cash||0) + (ns.modes.upi||0) + (ns.modes.ppay||0))}</span></div></div>` : '';
     const has = order.length || netsHtml;
     $('wkItemSales').style.display = has ? 'block' : 'none';
     $('wkItemSales').innerHTML = has ? `<div class="wk-is-title">Sales · ${dp[2]}/${dp[1]}/${dp[0].slice(2)}</div>` + netsHtml + order.map(k => {
@@ -3407,12 +3549,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
     const g = Object.keys(groups);
     const pd = ((tot.nets && tot.nets.amt) ? [`Nets ${rupees(tot.nets.amt)}`] : []).concat(g.map(k => `${esc(k)} ${rupees(groups[k])}`));
-    $('wkBreakdown').innerHTML = (pd.length ? '<strong>Payment Details:</strong> ' + pd.join(' · ') : '')
+    $('wkBreakdown').innerHTML = (pd.length ? pd.join(' · ') : '')
       + (tot.free ? `${pd.length?'<br>':''}<strong>No-charge club sessions:</strong> ${tot.free}` : '')
       + (advIn.length ? `<br><strong>Advances received for bookings:</strong> ` + advIn.map(a => `${esc(a.name)} ${rupees(a.amount)} <span class="wkm-${a.mode}">(${MODE_SHORT[a.mode]})</span> for ${fmtD(a.forDate)}`).join(' · ') : '')
       + (advOut.length ? `<br><strong>Advances refunded:</strong> ` + advOut.map(a => `${esc(a.name)} −${rupees(a.amount)} <span class="wkm-${a.mode}">(${MODE_SHORT[a.mode]})</span>`).join(' · ') : '')
       + (advNext.length ? `<br><strong>Advances for next booking:</strong> ` + advNext.map(x => `${esc(x.name)} ${rupees(x.amount)} <span class="wkm-${x.mode}">(${MODE_SHORT[x.mode]})</span>`).join(' · ') : '');
-    $('wkBreakdown').innerHTML = $('wkBreakdown').innerHTML.replace(/^<br>/, '');
+    const pdBody = $('wkBreakdown').innerHTML.replace(/^<br>/, '');
+    $('wkBreakdown').innerHTML = pdBody ? `<div class="wk-pd-title">Payment Details</div>${pdBody}` : '';
 
     // restore the open payment panel's extras (kept across re-render)
     if(openRef && payments[openRef] && $('wkPayExtras') && !$('wkPayExtras').children.length){
@@ -3436,7 +3579,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
   window.wkLoadSample = function(){
     const d = $('wkRegDate').value || todayISO();
-    const S = (name,net,start,end,mins,amt,mode,extras) => ({date:d,ref:'',name,net,start,end,mins,netAmount:amt,mode,extras:extras||[],note:''});
+    const S = (name,net,start,end,mins,amt,mode,extras) => ({id:'S'+Math.random().toString(36).slice(2,8),date:d,ref:'',name,net,nets:[net],start,end,mins,netAmount:amt,mode,extras:extras||[],note:''});
     walkins.push(
       S('County',1,'07:00 pm','08:00 pm',60,0,'free'),
       S('County',2,'07:00 pm','08:00 pm',60,0,'free'),
@@ -3449,7 +3592,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     renderRegister();
   };
 
-  window.wkShowSub = function(which){
+  window.wkShowSub = function(which, keepDate){
+    // Walk-in Entry follows the register date (unless an entry is being edited)
+    if(which==='entry' && !keepDate && !wkEditId) $('wkDate').value = $('wkRegDate').value || todayISO();
     $('wkEntry').style.display = which==='entry' ? 'block' : 'none';
     $('wkToday').style.display = which==='today' ? 'block' : 'none';
     $('wkSubEntry').classList.toggle('active', which==='entry');
@@ -3464,13 +3609,12 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
   $('wkDate').value = todayISO();
   $('wkRegDate').value = todayISO();
-  mountDigi($('wkStart')); mountDigi($('wkEnd'));
   $('wkSplitBox').innerHTML = splitHtml('wk', null, false);
   wireSplit('wk', () => num($('wkNetAmt').value), updateEntryTotals);
   $('wkNetAmt').addEventListener('input', () => { if(wkMode === 'split') splitFill('wk', num($('wkNetAmt').value)); });
-  ['wkStart','wkEnd','wkNetAmt'].forEach(id => $(id).addEventListener('input', updateEntryTotals));
-  $('wkRegDate').addEventListener('change', wkLoadBookings);
-  renderNets(); renderModes(); updateEntryTotals(); renderRegister();
+  $('wkNetAmt').addEventListener('input', updateEntryTotals);
+  $('wkRegDate').addEventListener('change', () => { if(!wkEditId) $('wkDate').value = $('wkRegDate').value; wkLoadBookings(); });
+  renderNets(); wkRenderNT(); renderModes(); updateEntryTotals(); renderRegister();
 })();
 </script>
 </body>
