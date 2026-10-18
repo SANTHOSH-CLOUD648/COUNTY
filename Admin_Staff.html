@@ -2929,7 +2929,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div><label class="admin-lbl">Qty</label><input type="number" class="wkx-qty" value="1" min="1" inputmode="numeric"></div>
       <div><label class="admin-lbl">Amount ₹</label><input type="number" class="wkx-amt" placeholder="0" min="0" inputmode="numeric"></div>
       <div><label class="admin-lbl">Paid by</label><select class="wkx-mode">${modeOptions(defMode==='free'?'cash':defMode)}</select></div>
-      <div class="wkx-who-wrap"><input type="text" class="wkx-who" maxlength="40" placeholder="Bought by (name, optional)"></div>
+      ${containerId === 'wkExtras' ? '<div class="wkx-who-wrap"><input type="text" class="wkx-who" maxlength="40" placeholder="Bought by (name, optional)"></div>' : ''}
       <button type="button" class="wk-x" aria-label="Remove this item">×</button>`;
     row.querySelector('.wk-x').onclick = () => { row.remove(); onChange && onChange(); };
     row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => onChange && onChange()));
@@ -2942,7 +2942,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       qty:  parseInt(r.querySelector('.wkx-qty').value,10) || 1,
       amount: num(r.querySelector('.wkx-amt').value),
       mode: r.querySelector('.wkx-mode').value,
-      who:  r.querySelector('.wkx-who').value.replace(/[<>]/g,'').trim()
+      who:  r.querySelector('.wkx-who') ? r.querySelector('.wkx-who').value.replace(/[<>]/g,'').trim() : ''   // walk-ins only
     }));
   }
   const extrasText = xs => xs.map(x => `${esc(x.item.replace('Accessories – ',''))}${x.qty>1?' ×'+x.qty:''} ${rupees(x.amount)}`).join(', ');
@@ -3570,7 +3570,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         const r = $('wkPayExtras').lastElementChild;
         r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
         r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
-        r.querySelector('.wkx-who').value = x.who || '';
+        if(r.querySelector('.wkx-who')) r.querySelector('.wkx-who').value = x.who || '';
       });
     }
     if(openRef && $('wkPayAmt')){
