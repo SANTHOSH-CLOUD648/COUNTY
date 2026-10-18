@@ -277,8 +277,11 @@
   .wk-chip.active{border-color:var(--navy);background:var(--navy);color:#fff;font-weight:700;}
   .wk-total-time{display:flex;justify-content:space-between;align-items:center;background:#eef4ef;border-radius:10px;padding:11px 14px;margin-top:10px;font-size:14px;}
   .wk-total-time strong{color:var(--navy);font-size:17px;}
-  .wk-extra{display:grid;grid-template-columns:1.6fr .6fr .9fr 1.1fr 44px;gap:6px;align-items:end;margin-bottom:8px;}
+  .wk-extra{display:grid;grid-template-columns:1.6fr .6fr .9fr 1.1fr 44px;gap:6px;align-items:end;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed #e3e0d4;}
   .wk-extra select,.wk-extra input{width:100%;box-sizing:border-box;}
+  .wkx-who-wrap{grid-column:1 / -2;}
+  .wkx-who{font-size:14px;}
+  .wkx-buyer{color:#5a6152;font-weight:600;}
   .wk-x{font-family:inherit;width:44px;height:44px;border-radius:10px;border:1.5px solid #e8b4b4;background:#fff;color:#8b1c1c;font-size:18px;cursor:pointer;}
   .wk-link{font-family:inherit;background:none;border:none;color:var(--navy);font-weight:700;font-size:14px;cursor:pointer;padding:8px 0;min-height:44px;}
   .wk-sum{display:flex;justify-content:space-between;align-items:center;background:#17251c;color:#fff;border-radius:12px;padding:14px 16px;margin:6px 0 12px;}
@@ -324,7 +327,7 @@
   .wk-rec-btn.edit{background:#fff;border:1.5px solid #d9d3c0;color:var(--navy);}
   .wk-pay{grid-column:1 / -1;border-top:1px dashed #d9d3c0;margin-top:8px;padding-top:10px;}
   .wk-row.cancelled{opacity:.6;}
-  @media(max-width:520px){.wk-extra{grid-template-columns:1fr 1fr;}.wk-extra .wk-x{grid-column:span 2;width:100%;}}
+  @media(max-width:520px){.wk-extra{grid-template-columns:1fr 1fr;}.wk-extra .wk-x{grid-column:span 2;width:100%;}.wkx-who-wrap{grid-column:span 2;}}
   /* Edit modal */
   .edit-overlay{
     display:none;position:fixed;inset:0;background:rgba(8,12,40,.6);
@@ -2926,6 +2929,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <div><label class="admin-lbl">Qty</label><input type="number" class="wkx-qty" value="1" min="1" inputmode="numeric"></div>
       <div><label class="admin-lbl">Amount ₹</label><input type="number" class="wkx-amt" placeholder="0" min="0" inputmode="numeric"></div>
       <div><label class="admin-lbl">Paid by</label><select class="wkx-mode">${modeOptions(defMode==='free'?'cash':defMode)}</select></div>
+      <div class="wkx-who-wrap"><input type="text" class="wkx-who" maxlength="40" placeholder="Bought by (name, optional)"></div>
       <button type="button" class="wk-x" aria-label="Remove this item">×</button>`;
     row.querySelector('.wk-x').onclick = () => { row.remove(); onChange && onChange(); };
     row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => onChange && onChange()));
@@ -2937,7 +2941,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       item: r.querySelector('.wkx-item').value,
       qty:  parseInt(r.querySelector('.wkx-qty').value,10) || 1,
       amount: num(r.querySelector('.wkx-amt').value),
-      mode: r.querySelector('.wkx-mode').value
+      mode: r.querySelector('.wkx-mode').value,
+      who:  r.querySelector('.wkx-who').value.replace(/[<>]/g,'').trim()
     }));
   }
   const extrasText = xs => xs.map(x => `${esc(x.item.replace('Accessories – ',''))}${x.qty>1?' ×'+x.qty:''} ${rupees(x.amount)}`).join(', ');
@@ -2955,9 +2960,10 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const sp = SPLIT_KEYS.filter(k => split[k] > 0).map(k => `${n2(split[k])} ${md(k)}`);
       parts.push(`Nets ${sp.length ? sp.join(' + ') : '0'}`);
     } else parts.push(`Nets ${netMode==='free' ? '0' : n2(netAmt)} ${md(netMode)}`);
-    (xs||[]).forEach(x => parts.push(x.item === ADV_NEXT
+    (xs||[]).forEach(x => parts.push((x.item === ADV_NEXT
       ? `<span class="wkm-advnext">Adv-Next</span> ${n2(x.amount)} ${md(x.mode)}`
-      : `${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} ${md(x.mode)}`));
+      : `${x.qty>1 ? x.qty+' ' : ''}${esc(ITEM_SHORT(x.item))} ${Number(x.amount||0).toLocaleString('en-IN')} ${md(x.mode)}`)
+      + (x.who ? ` <span class="wkx-buyer">– ${esc(x.who)}</span>` : '')));
     return parts.join(', ');
   }
 
@@ -3157,6 +3163,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const r = $('wkExtras').lastElementChild;
       r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
       r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
+      r.querySelector('.wkx-who').value = x.who || '';
     });
     $('wkNote').value = e.note || '';
     $('wkSaveBtn').textContent = 'Update Entry';
@@ -3563,6 +3570,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         const r = $('wkPayExtras').lastElementChild;
         r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
         r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
+        r.querySelector('.wkx-who').value = x.who || '';
       });
     }
     if(openRef && $('wkPayAmt')){
