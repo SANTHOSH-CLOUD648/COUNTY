@@ -406,6 +406,7 @@
   .wk-clash-free{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;color:#2c4535;}
   .wk-clash-free .wk-swap{min-height:38px;padding:0 12px;font-size:14px;}
   .wk-clash-hint{font-size:12.5px;color:#5a6152;margin-top:4px;}
+  .wk-loading{font-size:14px;color:#5a6152;padding:14px 4px;}
   .wk-balmsg.more{color:#b35c00;} .wk-balmsg.less{color:#b3261e;}
   .wk-daytot{margin-top:16px;border:1.5px solid #d9d3c0;border-radius:12px;padding:4px 14px;background:#fff;}
   .wk-dt-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid #eee9da;font-size:15px;font-weight:600;}
@@ -3224,7 +3225,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     if(data && data.status === 'clash'){ pendingWalkin = entry; showClash(data); return; }
     if(!data || data.status !== 'ok'){ showMsg('❌ ' + failText(data), false); return; }
     pendingWalkin = null;
-    delete dayUsage[entry.date];
+    delete dayUsage[entry.date]; delete dayCache[entry.date]; if(prev) delete dayCache[prev.date];
     const skipped = (data.skippedNets || []);
     const note = skipped.length ? ` Net ${skipped.join(', ')} was already booked, so it was saved without blocking it.` : '';
     wkResetForm();
@@ -3297,7 +3298,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     wkApi({ action:'wkDelWalkin', id }).then(data => {
       if(!data || data.status !== 'ok') throw new Error(failText(data));
       walkins = walkins.filter(x => x.id !== id);
-      delete dayUsage[e.date];
+      delete dayUsage[e.date]; delete dayCache[e.date];
       if(wkEditId === id) wkResetForm();
       renderRegister();
     }).catch(err => alert('❌ ' + (err.message || failText())));
@@ -3305,28 +3306,45 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
   /* ---------- Bookings (read-only from the sheet) ---------- */
   let loadSeq = 0;
+  const dayCache = {};   // date -> last data loaded (shown at once when you come back to that date)
+  function clearDay(){
+    bookings = []; walkins = []; advances = {};
+    Object.keys(payments).forEach(k => delete payments[k]);
+  }
+  function applyDay(day, data){
+    bookings = Array.isArray(data.bookings) ? data.bookings : [];
+    Object.keys(payments).forEach(k => delete payments[k]);
+    Object.assign(payments, JSON.parse(JSON.stringify(data.payments || {})));
+    walkins = JSON.parse(JSON.stringify(Array.isArray(data.walkins) ? data.walkins : []));
+    advances = {};
+    (data.advances || []).forEach(a => { advances[a.ref] = Object.assign({}, a); });
+    dayUsage[day] = data.usage || {};
+    applyItems(data.items);
+  }
   window.wkLoadBookings = async function(){
     const day = $('wkRegDate').value || todayISO();
     const seq = ++loadSeq;
-    $('wkBkStatus').textContent = '· loading…';
     openRef = null; openAdv = null;
+    if(dayCache[day]){
+      // show the last copy straight away, then refresh it in the background
+      applyDay(day, dayCache[day]); renderRegister();
+      $('wkBkStatus').textContent = '· updating…';
+    } else {
+      clearDay(); renderRegister();
+      $('wkBkStatus').textContent = '· loading…';
+      $('wkBkList').innerHTML = '<div class="wk-loading">⏳ Loading bookings and payments for this date…</div>';
+    }
     try{
       const data = await wkApi({ action:'wkDay', date: day }, 45000);
       if(seq !== loadSeq) return;                // a newer date was chosen meanwhile
       if(!data || data.status !== 'ok') throw new Error(failText(data));
-      bookings = Array.isArray(data.bookings) ? data.bookings : [];
-      Object.keys(payments).forEach(k => delete payments[k]);
-      Object.assign(payments, data.payments || {});
-      walkins = Array.isArray(data.walkins) ? data.walkins : [];
-      advances = {};
-      (data.advances || []).forEach(a => { advances[a.ref] = a; });
-      dayUsage[day] = data.usage || {};
-      applyItems(data.items);
+      dayCache[day] = data;
+      applyDay(day, data);
       $('wkBkStatus').textContent = `· ${bookings.filter(b=>b.status!=='Cancelled').length} booking(s)`;
     }catch(err){
       if(seq !== loadSeq) return;
-      bookings = []; walkins = []; advances = {};
-      Object.keys(payments).forEach(k => delete payments[k]);
+      if(dayCache[day]){ $('wkBkStatus').innerHTML = '· could not refresh — <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadBookings()">try again</button>'; return; }
+      clearDay();
       $('wkBkStatus').innerHTML = '· could not load — <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadBookings()">try again</button>';
     }
     renderRegister();
@@ -3415,6 +3433,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     wkApi({ action:'wkSavePay', payload:{ ref, record: rec } }).then(data => {
       if(!data || data.status !== 'ok') throw new Error(failText(data));
       payments[ref] = Object.assign(rec, data.record || {});
+      delete dayCache[rec.date];
       if(openRef === ref) openRef = null;
       renderRegister();
     }).catch(err => {
@@ -3534,6 +3553,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     wkApi({ action:'wkSaveAdv', payload:{ ref, advance: adv } }).then(data => {
       if(!data || data.status !== 'ok') throw new Error(failText(data));
       advances[ref] = data.advance || Object.assign({ ref }, adv);
+      Object.keys(dayCache).forEach(k => delete dayCache[k]);
       if(openAdv === ref) openAdv = null;
       renderRegister();
     }).catch(err => {
@@ -3546,7 +3566,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     if(!confirm('Remove this advance?')) return;
     wkApi({ action:'wkDelAdv', ref }).then(data => {
       if(!data || data.status !== 'ok') throw new Error(failText(data));
-      delete advances[ref]; if(openAdv === ref) openAdv = null; renderRegister();
+      delete advances[ref]; Object.keys(dayCache).forEach(k => delete dayCache[k]); if(openAdv === ref) openAdv = null; renderRegister();
     }).catch(err => { const m = $('wkAdvMsg'); if(m){ m.textContent = '❌ ' + (err.message || failText()); m.className = 'admin-msg err'; } });
   };
   window.wkAdvStatus = function(ref, st){
@@ -3554,6 +3574,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     wkApi({ action:'wkAdvStatus', ref, status: st }).then(data => {
       if(!data || data.status !== 'ok') throw new Error(failText(data));
       a.status = st; a.refundDate = data.refundDate || '';
+      Object.keys(dayCache).forEach(k => delete dayCache[k]);
       renderRegister();
     }).catch(err => alert('❌ ' + (err.message || failText())));
   };
