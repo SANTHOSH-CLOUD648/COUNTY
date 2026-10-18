@@ -399,6 +399,13 @@
   .wk-row > div:nth-child(2){min-width:0;}
   .wk-edit-banner{background:#fff7e0;border:1px solid #f0d58a;color:#6b4a10;border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:700;margin-bottom:8px;}
   .wk-del-btn{font-family:inherit;font-size:12.5px;font-weight:700;min-height:36px;padding:0 10px;border-radius:10px;border:1.5px solid #e8b4b4;background:#fff;color:#8b1c1c;cursor:pointer;margin-top:6px;}
+  .wk-chip.busy{border-color:#e8b4b4;background:#fdf0f0;color:#8b1c1c;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;}
+  .wk-chip.busy.active{background:#8b1c1c;color:#fff;border-color:#8b1c1c;}
+  .wk-chip.busy small{font-size:10px;font-weight:700;}
+  .wk-clash{margin-bottom:6px;line-height:1.5;}
+  .wk-clash-free{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;color:#2c4535;}
+  .wk-clash-free .wk-swap{min-height:38px;padding:0 12px;font-size:14px;}
+  .wk-clash-hint{font-size:12.5px;color:#5a6152;margin-top:4px;}
   .wk-balmsg.more{color:#b35c00;} .wk-balmsg.less{color:#b3261e;}
   .wk-daytot{margin-top:16px;border:1.5px solid #d9d3c0;border-radius:12px;padding:4px 14px;background:#fff;}
   .wk-dt-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid #eee9da;font-size:15px;font-weight:600;}
@@ -662,11 +669,10 @@
   </div>
   </div>
 
-  <!-- ── Walk-in & Payment (PREVIEW — not saved to Google Sheets yet) ── -->
+  <!-- ── Walk-in & Payment (saved to the "County Payments" Google Sheet) ── -->
   <div class="admin-tab-content" id="staffTabWalkin" style="display:none;">
   <div class="card">
-    <div class="lock-title">💰 Walk-in &amp; Payment <span class="badge">PREVIEW</span></div>
-    <div class="wk-preview">Preview only — entries are NOT saved to Google Sheets yet and disappear when the page is refreshed.</div>
+    <div class="lock-title">💰 Walk-in &amp; Payment</div>
 
     <div class="wk-sub">
       <button type="button" id="wkSubToday" class="active" onclick="wkShowSub('today')">Today's Register</button>
@@ -679,7 +685,6 @@
       <div class="wk-block">
         <div class="admin-grid">
           <div><label class="admin-lbl" for="wkDate">Date</label><input type="date" id="wkDate"></div>
-          <div><label class="admin-lbl" for="wkRef">Booking Ref (if any)</label><input type="text" id="wkRef" placeholder="e.g. F7M7ZI" maxlength="10"></div>
           <div><label class="admin-lbl" for="wkName">Name</label><input type="text" id="wkName" placeholder="Customer / team name"></div>
           <div><label class="admin-lbl" for="wkMobile">Mobile (optional)</label><input type="tel" id="wkMobile" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
         </div>
@@ -712,7 +717,7 @@
       <div class="wk-sum" style="margin-top:14px;"><span>Total for this entry</span><strong id="wkEntryTotal">₹0</strong></div>
       <div id="wkEditBanner" class="wk-edit-banner" style="display:none;"></div>
       <div style="display:flex;gap:8px;">
-        <button type="button" class="add-btn" style="flex:2;" id="wkSaveBtn" onclick="wkSave()">Save Entry (preview)</button>
+        <button type="button" class="add-btn" style="flex:2;" id="wkSaveBtn" onclick="wkSave()">Save Entry</button>
         <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;display:none;" id="wkCancelEditBtn" onclick="wkCancelEdit()">Cancel Edit</button>
       </div>
       <div class="admin-msg" id="wkMsg"></div>
@@ -733,7 +738,6 @@
 
       <div class="wk-block-title" style="margin-top:14px;">Walk-ins &amp; Club <button type="button" class="wk-link" onclick="wkShowSub('entry')">+ Walk-in Entry</button></div>
       <div id="wkList"></div>
-      <button type="button" class="wk-link" onclick="wkLoadSample()">Load sample walk-ins (from your register page)</button>
 
       <div class="wk-daytot" id="wkItemSales"></div>
     </div>
@@ -2820,10 +2824,12 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   window.toggleNormalResult = toggleNormalResult;
 </script>
 <script>
-/* ── Walk-in & Payment — PREVIEW ──
-   Reads today's REAL bookings (read-only, via the existing searchBookings
-   action). Payments and walk-ins are kept on this screen only — nothing is
-   saved to Google Sheets yet. */
+/* ── Walk-in & Payment ──
+   Reads the day's bookings, payments, walk-ins and advances from the server
+   (?action=wkDay) and saves every change straight away (wkSavePay,
+   wkSaveWalkin, wkDelWalkin, wkSaveAdv, wkDelAdv, wkAdvStatus). Payments are
+   kept in the separate "County Payments" Google Sheet; paid walk-ins are also
+   added to the Bookings tab so their nets show as taken. */
 (function(){
   const WK_URL = (typeof SHEET_SCRIPT_URL !== 'undefined') ? SHEET_SCRIPT_URL
     : 'https://script.google.com/macros/s/AKfycbz_nfLwmQNOC9wG79NpkcbniYt7hBU6XPKTcCrAJKbQT2BaXfASXHtaEiC9BJPc-AMl/exec';
@@ -2845,7 +2851,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     { key:'pending', label:'Pending' }
   ];
 
-  const EXTRA_ITEMS = [
+  let EXTRA_ITEMS = [
     { key:'Accessories – AP',       group:'Accessories' },
     { key:'Accessories – Grip',     group:'Accessories' },
     { key:'Accessories – Ball',     group:'Accessories' },
@@ -2857,15 +2863,40 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     { key:'Advance – Next Booking', group:'Advance (Next)' }
   ];
   const ADV_NEXT = 'Advance – Next Booking';   // paid after playing, adjusted in the next booking
-  const GROUP_OF = Object.fromEntries(EXTRA_ITEMS.map(i => [i.key, i.group]));
+  let GROUP_OF = Object.fromEntries(EXTRA_ITEMS.map(i => [i.key, i.group]));
+  // Item list from the Items tab (County Bookings): name, group, price, show qty, active
+  function applyItems(list){
+    if(!Array.isArray(list) || !list.length) return;
+    EXTRA_ITEMS = list.filter(i => i.active !== false).map(i => ({ key:i.name, group:i.group || 'Other', price:(i.price == null ? null : Number(i.price)), showQty:i.showQty !== false }))
+      .concat([{ key:ADV_NEXT, group:'Advance (Next)' }]);
+    GROUP_OF = Object.fromEntries(EXTRA_ITEMS.map(i => [i.key, i.group]));
+    // older item names
+    ['Accessories – AP','Accessories – Grip','Accessories – Ball','Accessories – Kit Rent'].forEach(k => { if(!GROUP_OF[k]) GROUP_OF[k] = 'Accessories'; });
+  }
+  const itemInfo = key => EXTRA_ITEMS.find(i => i.key === key) || null;
+  const showQtyFor = key => { const i = itemInfo(key); return i ? i.showQty !== false : key !== 'Drinks'; };
+  // Sets an item <select>, adding the option if it's an older name not in the list
+  function setItemValue(sel, v){
+    if(!Array.from(sel.options).some(o => o.value === v)){ const o = document.createElement('option'); o.textContent = v; o.value = v; sel.appendChild(o); }
+    sel.value = v;
+  }
   // Advance paid at booking time (before playing), for THAT booking
-  const advances = {};   // ref -> { amount, mode, date, status:'held'|'refunded'|'kept', refundDate, name, forDate }
+  let advances = {};     // ref -> { amount, mode, date, status:'held'|'refunded'|'kept', refundDate, name, forDate }
   let openAdv = null;    // booking whose + Advance panel is open
   let advMode = 'upi';
   const DUR_MIN = {'1 hr':60,'1.5 hrs':90,'2 hrs':120,'2.5 hrs':150,'3 hrs':180};
 
-  const walkins  = [];   // walk-in / club entries (this screen only)
-  const payments = {};   // ref -> recorded payment (this screen only)
+  let walkins    = [];   // walk-in / club entries for the register date (from the Sheet)
+  const payments = {};   // ref -> recorded payment (from the Sheet)
+  const dayUsage = {};   // date -> { slot: [{net, ref, name}] } (nets taken, from Bookings)
+  // Calls the server; params are sent as ?action=…&payload=JSON
+  async function wkApi(params, timeoutMs){
+    const qs = Object.keys(params).map(k => `${k}=${encodeURIComponent(typeof params[k] === 'string' ? params[k] : JSON.stringify(params[k]))}`).join('&');
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), timeoutMs || 30000);
+    try{ const res = await fetch(`${WK_URL}?${qs}`, { signal: ctrl.signal }); return await res.json(); }
+    finally{ clearTimeout(t); }
+  }
+  const failText = d => (d && d.message) ? d.message : (d && d.status === 'busy') ? 'The server is busy. Please try again in a moment.' : 'Could not save. Please check the connection and try again.';
   let bookings = [];     // bookings for the register date
   let openRef = null;    // booking whose Record Payment panel is open
   let payMode = 'cash';
@@ -2925,15 +2956,27 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const row = document.createElement('div');
     row.className = 'wk-extra';
     row.innerHTML = `
-      <div><label class="admin-lbl">Item</label><select class="wkx-item">${EXTRA_ITEMS.map(i=>`<option>${i.key}</option>`).join('')}</select></div>
+      <div><label class="admin-lbl">Item</label><select class="wkx-item">${EXTRA_ITEMS.map(i=>`<option value="${esc(i.key)}">${esc(i.key)}</option>`).join('')}</select></div>
       <div><label class="admin-lbl">Qty</label><input type="number" class="wkx-qty" value="1" min="1" inputmode="numeric"></div>
       <div><label class="admin-lbl">Amount ₹</label><input type="number" class="wkx-amt" placeholder="0" min="0" inputmode="numeric"></div>
       <div><label class="admin-lbl">Paid by</label><select class="wkx-mode">${modeOptions(defMode==='free'?'cash':defMode)}</select></div>
       ${containerId === 'wkExtras' ? '<div class="wkx-who-wrap"><input type="text" class="wkx-who" maxlength="40" placeholder="Bought by (name, optional)"></div>' : ''}
       <button type="button" class="wk-x" aria-label="Remove this item">×</button>`;
     row.querySelector('.wk-x').onclick = () => { row.remove(); onChange && onChange(); };
+    // Price from the Items tab: amount = price × qty (until staff type their own amount)
+    const autoPrice = () => {
+      const it = itemInfo(row.querySelector('.wkx-item').value), amt = row.querySelector('.wkx-amt');
+      if(row.dataset.manual === '1') return;
+      if(!it || it.price == null || isNaN(it.price)){ if(row.dataset.auto === '1'){ amt.value = ''; row.dataset.auto = ''; } return; }
+      amt.value = it.price * (parseInt(row.querySelector('.wkx-qty').value,10) || 1);
+      row.dataset.auto = '1';
+    };
+    row.querySelector('.wkx-amt').addEventListener('input', () => { row.dataset.manual = '1'; row.dataset.auto = ''; });
+    row.querySelector('.wkx-item').addEventListener('change', () => { row.dataset.manual = ''; autoPrice(); onChange && onChange(); });
+    row.querySelector('.wkx-qty').addEventListener('input', () => { autoPrice(); onChange && onChange(); });
     row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => onChange && onChange()));
     $(containerId).appendChild(row);
+    autoPrice();
     onChange && onChange();
   }
   function readExtras(containerId){
@@ -3039,7 +3082,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       const row = i.closest('.wk-nt'), n = +row.dataset.net, t = wkNT.times[n];
       if(t && t.start && t.end) wkNT.last = Object.assign({}, t);
       row.querySelector('.wk-nt-tot').textContent = 'Total: ' + ntTotText(t);   // update in place (keeps half-chosen times)
-      updateEntryTotals(); }); });
+      renderNets(); updateEntryTotals(); }); });
   }
   // Total minutes across the chosen nets; null if any net is incomplete, -1 if any End is not after Start
   function entryMins(){
@@ -3069,10 +3112,43 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   }
 
   /* ---------- Walk-in Entry form ---------- */
+  // 30-min slot labels ("07:00 pm") a played time overlaps
+  function slotsFor(startHHMM, endHHMM){
+    const s = hhmm2m(startHHMM), e = hhmm2m(endHHMM), out = [];
+    if(s === null || e === null || e <= s) return out;
+    for(let m = Math.floor(s/30)*30; m < e; m += 30) out.push(minsToLabel(m));
+    return out;
+  }
+  // Which booking (if any) holds net n during the given times on the entry date
+  function busyInfo(n, t){
+    const day = $('wkDate').value || todayISO(), u = dayUsage[day];
+    if(!u || !t || !t.start || !t.end) return null;
+    const own = wkEditId || '';
+    for(const sl of slotsFor(t.start, t.end)){
+      const hit = (u[sl] || []).find(x => x.net === n && !(own && (x.ref === own || String(x.ref).indexOf(own + '-') === 0)));
+      if(hit) return hit;
+    }
+    return null;
+  }
+  let usageLoading = {};
+  async function ensureUsage(day){
+    if(dayUsage[day] || usageLoading[day]) return;
+    usageLoading[day] = true;
+    try{ const d = await wkApi({ action:'wkUsage', date: day }, 30000); if(d && d.status === 'ok') dayUsage[day] = d.usage || {}; }
+    catch(e){} finally{ delete usageLoading[day]; }
+    if(($('wkDate').value || todayISO()) === day) renderNets();
+  }
   function renderNets(){
     const n = (typeof MAX_NETS === 'number' && MAX_NETS > 0) ? MAX_NETS : 4;
+    const day = $('wkDate').value || todayISO();
+    if(!dayUsage[day]) ensureUsage(day);
+    const ref = wkNT.last || (wkNets.length ? wkNT.times[wkNets[0]] : null);
     let html='';
-    for(let i=1;i<=n;i++) html += `<button type="button" class="wk-chip${wkNets.includes(i)?' active':''}" onclick="wkPickNet(${i})">${i}</button>`;
+    for(let i=1;i<=n;i++){
+      const hit = busyInfo(i, (wkNets.includes(i) && wkNT.times[i] && wkNT.times[i].end) ? wkNT.times[i] : ref);
+      const cls = (wkNets.includes(i) ? ' active' : '') + (hit ? ' busy' : '');
+      html += `<button type="button" class="wk-chip${cls}" onclick="wkPickNet(${i})"${hit ? ` title="Booked – ${esc(hit.name)} (${esc(hit.ref)})"` : ''}>${i}${hit ? '<small>Booked</small>' : ''}</button>`;
+    }
     $('wkNets').innerHTML = html;
   }
   const WK_MODES = ['cash','upi','ppay','split','pending','free'].map(k => k==='split' ? { key:'split', label:'Split' } : MODES.find(m => m.key===k));
@@ -3106,11 +3182,11 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
 
   let wkEditId = null;   // walk-in being edited (null = new entry)
   function wkResetForm(){
-    ['wkRef','wkName','wkMobile','wkNetAmt','wkNote'].forEach(id => $(id).value='');
+    ['wkName','wkMobile','wkNetAmt','wkNote'].forEach(id => $(id).value='');
     ['wkSpCash','wkSpUpi','wkSpPpay','wkSpPend'].forEach(id => $(id).value=''); $('wkSpMsg').textContent='';
     $('wkExtras').innerHTML=''; wkNets=[]; wkNT.times={}; wkNT.last=null; wkMode='cash';
     wkEditId = null;
-    $('wkSaveBtn').textContent = 'Save Entry (preview)';
+    $('wkSaveBtn').textContent = 'Save Entry';
     $('wkCancelEditBtn').style.display = 'none';
     $('wkEditBanner').style.display = 'none';
     renderNets(); wkRenderNT(); renderModes(); updateEntryTotals();
@@ -3125,33 +3201,74 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const netTimes = wkNets.map(n => { const t = wkNT.times[n]; return { net:n, start: to12(t.start), end: to12(t.end), mins: hhmm2m(t.end) - hhmm2m(t.start) }; });
     const starts = wkNets.map(n => hhmm2m(wkNT.times[n].start)), ends = wkNets.map(n => hhmm2m(wkNT.times[n].end));
     const entry = {
-      id: wkEditId || ('W' + Date.now().toString(36) + Math.random().toString(36).slice(2,5)),
-      date: $('wkDate').value || todayISO(), ref: $('wkRef').value.trim().toUpperCase(),
+      id: wkEditId || '',   // a new walk-in gets its WLK Ref from the server
+      date: $('wkDate').value || todayISO(), ref: '',
       name, mobile: $('wkMobile').value.trim(), net: wkNets.join(', '), nets: wkNets.slice(), netTimes,
       start: minsToLabel(Math.min(...starts)), end: minsToLabel(Math.max(...ends)), mins: m,
       netAmount: wkMode==='free' ? 0 : num($('wkNetAmt').value), mode: wkMode,
       split: wkMode==='split' ? readSplit('wk') : null,
       extras: readExtras('wkExtras'), note: $('wkNote').value.trim()
     };
+    sendWalkin(entry, false);
+  };
+  let pendingWalkin = null;   // entry waiting for "Save anyway"
+  async function sendWalkin(entry, force){
     const wasEdit = !!wkEditId;
-    if(wasEdit){ const i = walkins.findIndex(x => x.id === wkEditId); if(i > -1) walkins[i] = entry; else walkins.push(entry); }
-    else walkins.push(entry);
+    const prev = wasEdit ? walkins.find(x => x.id === wkEditId) : null;
+    const btn = $('wkSaveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+    showMsg('', true);
+    let data;
+    try{ data = await wkApi({ action:'wkSaveWalkin', payload:{ record: entry, force: !!force, prevDate: prev ? prev.date : '' } }); }
+    catch(e){ data = null; }
+    btn.disabled = false; btn.textContent = wasEdit ? 'Update Entry' : 'Save Entry';
+    if(data && data.status === 'clash'){ pendingWalkin = entry; showClash(data); return; }
+    if(!data || data.status !== 'ok'){ showMsg('❌ ' + failText(data), false); return; }
+    pendingWalkin = null;
+    delete dayUsage[entry.date];
+    const skipped = (data.skippedNets || []);
+    const note = skipped.length ? ` Net ${skipped.join(', ')} was already booked, so it was saved without blocking it.` : '';
     wkResetForm();
     if(wasEdit){
-      // back to the register to see the change
-      if($('wkRegDate').value !== entry.date){ $('wkRegDate').value = entry.date; }
+      if($('wkRegDate').value !== data.record.date) $('wkRegDate').value = data.record.date;
       wkShowSub('today');
+      await wkLoadBookings();
     } else {
-      showMsg(`✅ Added to the register for ${fmtD(entry.date)} (preview only — not saved to Google Sheets).`, true);
-      renderRegister();
+      showMsg(`✅ Saved for ${fmtD(data.record.date)} — Ref ${data.id}.${entry.mode === 'free' ? ' (Club session — net not blocked.)' : ''}${note}`, true);
+      if(($('wkRegDate').value || todayISO()) === data.record.date) wkLoadBookings();
     }
+  }
+  // Clash with an existing booking: say which, offer free nets (and "Save anyway" for past times)
+  function showClash(d){
+    const el = $('wkMsg');
+    const lines = (d.clashes || []).map(c => {
+      const free = (c.freeNets || []).map(n => `<button type="button" class="wk-chip wk-swap" onclick="wkSwapNet(${c.net},${n})">Net ${n}</button>`).join('');
+      const until = Object.keys(c.freeUntil || {}).map(n => `Net ${n} free until ${esc(c.freeUntil[n])}`).join(' · ');
+      return `<div class="wk-clash">⚠️ <b>Net ${c.net}</b> is already booked from ${esc(c.from)} (Ref ${esc(c.ref)} – ${esc(c.name)}).
+        ${free ? `<div class="wk-clash-free"><span>Free for ${esc(c.start)} – ${esc(c.end)}:</span>${free}</div>` : `<div class="wk-clash-free">No net is free for the whole time.${until ? ' ' + until + '.' : ''}</div>`}
+        <div class="wk-clash-hint">Or end the walk-in on Net ${c.net} by ${esc(c.from)}.</div></div>`;
+    }).join('');
+    el.className = 'admin-msg err';
+    el.innerHTML = lines + (d.canForce ? `<button type="button" class="wk-rec-btn" style="margin-top:8px;" onclick="wkSaveAnyway()">Save anyway (time already over)</button>` : '');
+  }
+  window.wkSaveAnyway = function(){ if(pendingWalkin) sendWalkin(pendingWalkin, true); };
+  // Move a clashing net's times to a free net
+  window.wkSwapNet = function(from, to){
+    wkReadNT();
+    const t = wkNT.times[from];
+    wkNets = wkNets.filter(n => n !== from);
+    if(!wkNets.includes(to)) wkNets.push(to);
+    wkNets.sort((a,b)=>a-b);
+    if(t) wkNT.times[to] = Object.assign({}, t);
+    delete wkNT.times[from];
+    renderNets(); wkRenderNT(); updateEntryTotals();
+    showMsg(`Moved to Net ${to}. Tap Save Entry.`, true);
   };
   window.wkCancelEdit = function(){ wkResetForm(); showMsg('', true); wkShowSub('today'); };
   window.wkEditWalkin = function(id){
     const e = walkins.find(x => x.id === id); if(!e) return;
     wkResetForm();
     wkEditId = id;
-    $('wkDate').value = e.date; $('wkRef').value = e.ref || ''; $('wkName').value = e.name; $('wkMobile').value = e.mobile || '';
+    $('wkDate').value = e.date; $('wkName').value = e.name; $('wkMobile').value = e.mobile || '';
     walkinNetTimes(e).forEach(t => { wkNT.times[t.net] = { start: toHHMM(t.start), end: toHHMM(t.end) }; });
     wkNets = walkinNetTimes(e).map(t => t.net).sort((a,b)=>a-b);
     const lastT = walkinNetTimes(e).slice(-1)[0]; wkNT.last = lastT ? Object.assign({}, wkNT.times[lastT.net]) : null;
@@ -3161,8 +3278,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     (e.extras||[]).forEach(x => {
       addExtraRow('wkExtras', x.mode, updateEntryTotals);
       const r = $('wkExtras').lastElementChild;
-      r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
-      r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
+      setItemValue(r.querySelector('.wkx-item'), x.item); r.querySelector('.wkx-qty').value = x.qty;
+      r.querySelector('.wkx-amt').value = x.amount; r.dataset.manual = '1'; r.querySelector('.wkx-mode').value = x.mode;
       r.querySelector('.wkx-who').value = x.who || '';
     });
     $('wkNote').value = e.note || '';
@@ -3177,28 +3294,43 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   window.wkDeleteWalkin = function(id){
     const e = walkins.find(x => x.id === id); if(!e) return;
     if(!confirm(`Delete the walk-in entry for ${e.name} (${e.start} – ${e.end})?`)) return;
-    walkins.splice(walkins.indexOf(e), 1);
-    if(wkEditId === id) wkResetForm();
-    renderRegister();
+    wkApi({ action:'wkDelWalkin', id }).then(data => {
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      walkins = walkins.filter(x => x.id !== id);
+      delete dayUsage[e.date];
+      if(wkEditId === id) wkResetForm();
+      renderRegister();
+    }).catch(err => alert('❌ ' + (err.message || failText())));
   };
 
   /* ---------- Bookings (read-only from the sheet) ---------- */
+  let loadSeq = 0;
   window.wkLoadBookings = async function(){
     const day = $('wkRegDate').value || todayISO();
+    const seq = ++loadSeq;
     $('wkBkStatus').textContent = '· loading…';
-    openRef = null;
+    openRef = null; openAdv = null;
     try{
-      const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 20000);
-      const res = await fetch(`${WK_URL}?action=searchBookings&date=${encodeURIComponent(day)}&includeBulk=true`, { signal: ctrl.signal });
-      clearTimeout(t);
-      const data = await res.json();
-      bookings = (data && Array.isArray(data.results)) ? data.results : [];
-      $('wkBkStatus').textContent = `· ${bookings.filter(b=>b.status!=='Cancelled').length} booking(s) from the sheet`;
+      const data = await wkApi({ action:'wkDay', date: day }, 45000);
+      if(seq !== loadSeq) return;                // a newer date was chosen meanwhile
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      bookings = Array.isArray(data.bookings) ? data.bookings : [];
+      Object.keys(payments).forEach(k => delete payments[k]);
+      Object.assign(payments, data.payments || {});
+      walkins = Array.isArray(data.walkins) ? data.walkins : [];
+      advances = {};
+      (data.advances || []).forEach(a => { advances[a.ref] = a; });
+      dayUsage[day] = data.usage || {};
+      applyItems(data.items);
+      $('wkBkStatus').textContent = `· ${bookings.filter(b=>b.status!=='Cancelled').length} booking(s)`;
     }catch(err){
-      bookings = [];
-      $('wkBkStatus').innerHTML = '· could not load — <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadSampleBookings()">show sample bookings</button>';
+      if(seq !== loadSeq) return;
+      bookings = []; walkins = []; advances = {};
+      Object.keys(payments).forEach(k => delete payments[k]);
+      $('wkBkStatus').innerHTML = '· could not load — <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadBookings()">try again</button>';
     }
     renderRegister();
+    if($('wkEntry').style.display !== 'none') renderNets();
   };
   window.wkLoadSampleBookings = function(){
     bookings = [
@@ -3266,7 +3398,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       if(el){ el.insertAdjacentHTML('afterend', '<div class="admin-msg err" id="wkPayNetErr">Split amounts must add up to the amount received.</div>'); setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 3500); }
       return;
     }
-    payments[b.ref] = {
+    const rec = {
+      date: $('wkRegDate').value || todayISO(), name: b.name, mobile: b.mobile || '',
       received: noShow ? 0 : num($('wkPayAmt').value), mode: noShow ? 'pending' : payMode,
       split: (!noShow && payMode==='split') ? readSplit('wkPay') : null,
       extras: readExtras('wkPayExtras'),   // items can be sold even for a no-show
@@ -3274,11 +3407,21 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       netTimes: noShow ? [] : payNets.map(n => { const t = payNetTimes[n]; const mins = hhmmMins(t.end) - hhmmMins(t.start);
         return { net: n, start: to12(t.start), end: to12(t.end), mins }; }),
       noShow, note: $('wkPayNote').value.trim(),
-      nets: payNets.slice(),
-      net: payNets.join(', ')
+      nets: noShow ? [] : payNets.slice(),
+      net: noShow ? '' : payNets.join(', ')
     };
-    openRef = null;
-    renderRegister();
+    const btn = $('wkPaySaveBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+    const ref = b.ref;
+    wkApi({ action:'wkSavePay', payload:{ ref, record: rec } }).then(data => {
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      payments[ref] = Object.assign(rec, data.record || {});
+      if(openRef === ref) openRef = null;
+      renderRegister();
+    }).catch(err => {
+      if(btn){ btn.disabled = false; btn.textContent = 'Save Payment'; }
+      const el = $('wkPayTotal'); if(el) el.closest('.wk-pay').insertAdjacentHTML('beforeend', `<div class="admin-msg err" id="wkPayNetErr">❌ ${esc(err.message || failText())}</div>`);
+      setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 5000);
+    });
   };
 
   function allottedNets(b){ const m = String(b.net||'').match(/\d+/g); return m ? m.map(Number) : []; }
@@ -3369,7 +3512,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;min-height:44px;"><input type="checkbox" id="wkPayNoShow" style="width:20px;height:20px;"${p && p.noShow ? ' checked' : ''}> Did not turn up (No-show)</label>
       <div class="wk-sum" style="margin:8px 0 4px;"><span>Total for this booking<br><small id="wkPayBreak" style="font-size:12px;color:#cfdcd3;"></small></span><strong id="wkPayTotal">₹0</strong></div>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button type="button" class="add-btn" style="flex:2;" onclick="wkPaySave()">Save Payment (preview)</button>
+        <button type="button" class="add-btn" style="flex:2;" id="wkPaySaveBtn" onclick="wkPaySave()">Save Payment</button>
         <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;" onclick="wkOpenPay('${esc(b.ref)}')">Close</button>
       </div>
     </div>`;
@@ -3385,14 +3528,34 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const b = bookings.find(x => x.ref === openAdv); if(!b) return;
     const amt = num($('wkAdvAmt').value), date = $('wkAdvDate').value || todayISO();
     if(amt <= 0){ const m=$('wkAdvMsg'); m.textContent='Please enter the advance amount.'; m.className='admin-msg err'; return; }
-    advances[b.ref] = { amount: amt, mode: advMode, date, status:'held', refundDate:'', name: b.name, forDate: $('wkRegDate').value || todayISO() };
-    openAdv = null; renderRegister();
+    const adv = { amount: amt, mode: advMode, date, status:'held', refundDate:'', name: b.name, forDate: $('wkRegDate').value || todayISO() };
+    const btn = $('wkAdvSaveBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+    const ref = b.ref;
+    wkApi({ action:'wkSaveAdv', payload:{ ref, advance: adv } }).then(data => {
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      advances[ref] = data.advance || Object.assign({ ref }, adv);
+      if(openAdv === ref) openAdv = null;
+      renderRegister();
+    }).catch(err => {
+      if(btn){ btn.disabled = false; btn.textContent = 'Save Advance'; }
+      const m = $('wkAdvMsg'); if(m){ m.textContent = '❌ ' + (err.message || failText()); m.className = 'admin-msg err'; }
+    });
   };
-  window.wkAdvRemove = function(){ if(openAdv){ delete advances[openAdv]; openAdv = null; renderRegister(); } };
+  window.wkAdvRemove = function(){
+    const ref = openAdv; if(!ref) return;
+    if(!confirm('Remove this advance?')) return;
+    wkApi({ action:'wkDelAdv', ref }).then(data => {
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      delete advances[ref]; if(openAdv === ref) openAdv = null; renderRegister();
+    }).catch(err => { const m = $('wkAdvMsg'); if(m){ m.textContent = '❌ ' + (err.message || failText()); m.className = 'admin-msg err'; } });
+  };
   window.wkAdvStatus = function(ref, st){
     const a = advances[ref]; if(!a) return;
-    a.status = st; a.refundDate = st === 'refunded' ? todayISO() : '';
-    renderRegister();
+    wkApi({ action:'wkAdvStatus', ref, status: st }).then(data => {
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      a.status = st; a.refundDate = data.refundDate || '';
+      renderRegister();
+    }).catch(err => alert('❌ ' + (err.message || failText())));
   };
   function advPanelHtml(b){
     const a = advances[b.ref];
@@ -3411,7 +3574,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       </div>
       <div class="admin-msg" id="wkAdvMsg"></div>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button type="button" class="add-btn" style="flex:2;" onclick="wkAdvSave()">Save Advance (preview)</button>
+        <button type="button" class="add-btn" style="flex:2;" id="wkAdvSaveBtn" onclick="wkAdvSave()">Save Advance</button>
         ${a ? `<button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;color:#8b1c1c;" onclick="wkAdvRemove()">Remove</button>` : ''}
         <button type="button" class="wk-rec-btn edit" style="flex:1;margin-top:0;min-height:44px;" onclick="wkOpenAdv('${esc(b.ref)}')">Close</button>
       </div>
@@ -3480,7 +3643,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         <div class="amt">${right}</div>
         ${openRef === b.ref ? payPanelHtml(b) : ''}${openAdv === b.ref ? advPanelHtml(b) : ''}
       </div>`;
-    }).join('') : `<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No bookings loaded for this date. <button type="button" class="wk-link" style="min-height:0;padding:0;" onclick="wkLoadSampleBookings()">Show sample bookings</button></div>`;
+    }).join('') : `<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No bookings for this date.</div>`;
 
     // walk-ins
     const list = walkins.filter(e => e.date === day);
@@ -3536,8 +3699,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         <div class="lbl wk-tb-foot">${bkTotal - notRecorded}/${bkTotal} booking${bkTotal===1?'':'s'} recorded : ${hrsText(tot.mins)} of nets</div>
       </div>`;
     // Item sales (accessories, drinks…) — count and amount, by payment mode
-    const order = EXTRA_ITEMS.map(i => i.key).filter(k => itemSales[k]);
-    const NO_COUNT = ['Drinks'];   // shown with amount only (no number in front)
+    const order = EXTRA_ITEMS.map(i => i.key).filter(k => itemSales[k])
+      .concat(Object.keys(itemSales).filter(k => !EXTRA_ITEMS.some(i => i.key === k)));
+    const NO_COUNT = Object.keys(itemSales).filter(k => !showQtyFor(k));   // shown with amount only (no number in front)
     const ns = tot.nets;
     const netsHtml = (ns && ns.count) ? `<div class="wk-is-item">` +
       SPLIT_KEYS.filter(md => ns.modes[md]).map(md =>
@@ -3568,8 +3732,8 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
       payments[openRef].extras.forEach(x => {
         addExtraRow('wkPayExtras', x.mode, updatePayTotal);
         const r = $('wkPayExtras').lastElementChild;
-        r.querySelector('.wkx-item').value = x.item; r.querySelector('.wkx-qty').value = x.qty;
-        r.querySelector('.wkx-amt').value = x.amount; r.querySelector('.wkx-mode').value = x.mode;
+        setItemValue(r.querySelector('.wkx-item'), x.item); r.querySelector('.wkx-qty').value = x.qty;
+        r.querySelector('.wkx-amt').value = x.amount; r.dataset.manual = '1'; r.querySelector('.wkx-mode').value = x.mode;
         if(r.querySelector('.wkx-who')) r.querySelector('.wkx-who').value = x.who || '';
       });
     }
@@ -3602,6 +3766,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   window.wkShowSub = function(which, keepDate){
     // Walk-in Entry follows the register date (unless an entry is being edited)
     if(which==='entry' && !keepDate && !wkEditId) $('wkDate').value = $('wkRegDate').value || todayISO();
+    if(which==='entry') setTimeout(renderNets, 0);
     $('wkEntry').style.display = which==='entry' ? 'block' : 'none';
     $('wkToday').style.display = which==='today' ? 'block' : 'none';
     $('wkSubEntry').classList.toggle('active', which==='entry');
@@ -3621,6 +3786,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   $('wkNetAmt').addEventListener('input', () => { if(wkMode === 'split') splitFill('wk', num($('wkNetAmt').value)); });
   $('wkNetAmt').addEventListener('input', updateEntryTotals);
   $('wkRegDate').addEventListener('change', () => { if(!wkEditId) $('wkDate').value = $('wkRegDate').value; wkLoadBookings(); });
+  $('wkDate').addEventListener('change', () => renderNets());
   renderNets(); wkRenderNT(); renderModes(); updateEntryTotals(); renderRegister();
 })();
 </script>
