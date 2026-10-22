@@ -3186,7 +3186,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     ['wkName','wkMobile','wkNetAmt','wkNote'].forEach(id => $(id).value='');
     ['wkSpCash','wkSpUpi','wkSpPpay','wkSpPend'].forEach(id => $(id).value=''); $('wkSpMsg').textContent='';
     $('wkExtras').innerHTML=''; wkNets=[]; wkNT.times={}; wkNT.last=null; wkMode='cash';
-    wkEditId = null;
+    wkEditId = null; wkCkey = '';
     $('wkSaveBtn').textContent = 'Save Entry';
     $('wkCancelEditBtn').style.display = 'none';
     $('wkEditBanner').style.display = 'none';
@@ -3213,21 +3213,30 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     sendWalkin(entry, false);
   };
   let pendingWalkin = null;   // entry waiting for "Save anyway"
+  let wkCkey = '';            // one key per new entry, so a repeated Save never creates a second walk-in
   async function sendWalkin(entry, force){
+    if(!entry.id && !wkCkey) wkCkey = 'C' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
     const wasEdit = !!wkEditId;
     const prev = wasEdit ? walkins.find(x => x.id === wkEditId) : null;
     const btn = $('wkSaveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
     showMsg('', true);
     let data;
-    try{ data = await wkApi({ action:'wkSaveWalkin', payload:{ record: entry, force: !!force, prevDate: prev ? prev.date : '' } }); }
-    catch(e){ data = null; }
+    let timedOut = false;
+    try{ data = await wkApi({ action:'wkSaveWalkin', payload:{ record: entry, force: !!force, prevDate: prev ? prev.date : '', ckey: entry.id ? '' : wkCkey } }, 60000); }
+    catch(e){ data = null; timedOut = true; }
     btn.disabled = false; btn.textContent = wasEdit ? 'Update Entry' : 'Save Entry';
     if(data && data.status === 'clash'){ pendingWalkin = entry; showClash(data); return; }
-    if(!data || data.status !== 'ok'){ showMsg('❌ ' + failText(data), false); return; }
-    pendingWalkin = null;
+    if(!data || data.status !== 'ok'){
+      showMsg(timedOut ? '⏳ No reply from the server yet. It may still have saved — tap Save Entry again (it will not be saved twice), or check Today\'s Register.' : '❌ ' + failText(data), false);
+      return;
+    }
+    pendingWalkin = null; wkCkey = '';
     delete dayUsage[entry.date]; delete dayCache[entry.date]; if(prev) delete dayCache[prev.date];
     const skipped = (data.skippedNets || []);
-    const note = skipped.length ? ` Net ${skipped.join(', ')} was already booked, so it was saved without blocking it.` : '';
+    const overlap = (data.overlapNets || []);
+    const note = overlap.length
+      ? ` Net ${overlap.join(', ')} was also allotted to a booking at that time — both are kept. If that team played on another net, record their payment with the net they used and the Bookings tab will be corrected.`
+      : (skipped.length ? ` Net ${skipped.join(', ')} was already booked, so it was saved without blocking it.` : '');
     wkResetForm();
     if(wasEdit){
       if($('wkRegDate').value !== data.record.date) $('wkRegDate').value = data.record.date;
@@ -3430,7 +3439,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     };
     const btn = $('wkPaySaveBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
     const ref = b.ref;
-    wkApi({ action:'wkSavePay', payload:{ ref, record: rec } }).then(data => {
+    wkApi({ action:'wkSavePay', payload:{ ref, record: rec } }, 60000).then(data => {
       if(!data || data.status !== 'ok') throw new Error(failText(data));
       payments[ref] = Object.assign(rec, data.record || {});
       delete dayCache[rec.date];
@@ -3550,7 +3559,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const adv = { amount: amt, mode: advMode, date, status:'held', refundDate:'', name: b.name, forDate: $('wkRegDate').value || todayISO() };
     const btn = $('wkAdvSaveBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
     const ref = b.ref;
-    wkApi({ action:'wkSaveAdv', payload:{ ref, advance: adv } }).then(data => {
+    wkApi({ action:'wkSaveAdv', payload:{ ref, advance: adv } }, 60000).then(data => {
       if(!data || data.status !== 'ok') throw new Error(failText(data));
       advances[ref] = data.advance || Object.assign({ ref }, adv);
       Object.keys(dayCache).forEach(k => delete dayCache[k]);
