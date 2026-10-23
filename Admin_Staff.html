@@ -3521,13 +3521,13 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const adv = advances[b.ref], advAmt = (adv && adv.status !== 'refunded') ? adv.amount : 0;
     const balance = Math.max(0, num(b.amount) - advAmt);
     return `<div class="wk-pay">
-      ${advAmt ? `<div class="wk-adv-info">Advance paid ${rupees(advAmt)} (${MODE_SHORT[adv.mode]} on ${fmtD(adv.date)}) · Balance ${rupees(balance)}</div>` : ''}
-      <div class="admin-grid">
-        <div><label class="admin-lbl" for="wkPayAmt">${advAmt ? 'Balance received (₹)' : 'Amount received (₹)'}</label><input type="number" id="wkPayAmt" value="${p ? p.received : balance}" min="0" inputmode="numeric"><div class="wk-balmsg" id="wkPayBalMsg"></div></div>
-      </div>
-      <div class="admin-lbl" style="margin-top:10px;">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
+      <div class="admin-lbl">Net No. used <span style="font-weight:500;font-size:12px;color:#5a6152;">(tap one or more)</span></div>
       <div class="wk-chips" id="wkPayNets"></div>
       <div id="wkPayNetTimes"></div>
+      ${advAmt ? `<div class="wk-adv-info" style="margin-top:10px;">Advance paid ${rupees(advAmt)} (${MODE_SHORT[adv.mode]} on ${fmtD(adv.date)}) · Balance ${rupees(balance)}</div>` : ''}
+      <div class="admin-grid" style="margin-top:10px;">
+        <div><label class="admin-lbl" for="wkPayAmt">${advAmt ? 'Balance received (₹)' : 'Amount received (₹)'}</label><input type="number" id="wkPayAmt" value="${p ? p.received : balance}" min="0" inputmode="numeric"><div class="wk-balmsg" id="wkPayBalMsg"></div></div>
+      </div>
       <div class="admin-lbl" style="margin-top:10px;">Payment Mode</div>
       <div class="wk-chips two" id="wkPayModes">
         ${PAY_MODES.map(m => `<button type="button" class="wk-chip${payMode===m.key?' active':''}" data-mode="${m.key}" onclick="wkPayMode('${m.key}')">${m.label}</button>`).join('')}
