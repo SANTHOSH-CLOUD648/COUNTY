@@ -2932,7 +2932,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     if(!box || !box.classList.contains('dt')){
       box = document.createElement('span'); box.className = 'dt';
       let hO='<option value="">Hr</option>'; for(let i=1;i<=12;i++) hO+=`<option value="${i}">${i}</option>`;
-      let mO='<option value="">Min</option>'; for(let i=0;i<60;i++){ const t=String(i).padStart(2,'0'); mO+=`<option value="${t}">${t}</option>`; }
+      let mO='<option value="">Min</option>'; for(let i=0;i<60;i+=5){ const t=String(i).padStart(2,'0'); mO+=`<option value="${t}">${t}</option>`; }
       box.innerHTML = `<select class="dt-h" aria-label="Hour">${hO}</select><select class="dt-m" aria-label="Minute">${mO}</select><select class="dt-ap" aria-label="AM or PM"><option value="">–</option><option value="am">am</option><option value="pm">pm</option></select>`;
       hid.after(box);
       box.querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => {
@@ -2949,6 +2949,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   function syncDigi(hid){
     const box = hid.nextElementSibling; if(!box || !box.classList.contains('dt')) return;
     const p = digiParts(hid.value);
+    const mSel = box.querySelector('.dt-m');
+    // an older entry saved with e.g. :07 — add that minute so it still shows
+    if(p.m && ![...mSel.options].some(o => o.value === p.m)) mSel.insertAdjacentHTML('beforeend', `<option value="${p.m}">${p.m}</option>`);
     box.querySelector('.dt-h').value = p.h; box.querySelector('.dt-m').value = p.m; box.querySelector('.dt-ap').value = p.ap;
   }
 
@@ -3677,8 +3680,12 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
         ${netBoxes(leftNets)}
         <div><div class="nm">${esc(b.name)}${b.teamName ? ' <span class="sub">('+esc(b.teamName)+')</span>' : ''}</div>
           ${(p && p.netTimes && p.netTimes.length && !p.noShow)
-            ? `<div class="sub wk-played">${timesLine(p.netTimes)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>`
-              + ((p.netTimes.every(t => t.start ? (t.start === b.time && t.end === bookingEnd(b)) : t.mins === (DUR_MIN[b.duration] || 60))) ? '' : `<div class="sub wk-booked">Booked ${esc(b.time)} – ${endTxt} · ${esc(b.duration)}</div>`)
+            ? (p.netTimes.every(t => !t.start)
+                // time-only entries: always show the booked time, then the time played
+                ? `<div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>`
+                  + `<div class="sub wk-played">Played: ${timesLine(p.netTimes)}</div>`
+                : `<div class="sub wk-played">${timesLine(p.netTimes)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>`
+                  + ((p.netTimes.every(t => t.start === b.time && t.end === bookingEnd(b))) ? '' : `<div class="sub wk-booked">Booked ${esc(b.time)} – ${endTxt} · ${esc(b.duration)}</div>`))
             : `<div class="sub">${esc(b.time)} – ${endTxt} · ${esc(b.duration)} · Ref ${esc(b.ref)}${b.groupCode ? ' · '+esc(b.groupCode) : ''}</div>`}
           ${extras}${p && p.note ? `<div class="sub">📝 ${esc(p.note)}</div>` : ''}</div>
         <div class="amt">${right}</div>
