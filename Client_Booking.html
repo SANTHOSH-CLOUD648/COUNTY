@@ -1359,6 +1359,18 @@
     ]);
   }
 
+  // Nets busy per slot (from the server) — attached to the counts object it came with
+  const BUSY_OF = new WeakMap();
+  // Nets in use over a whole booking: a net counts as free only if it is free in EVERY slot
+  function spanUsed(counts, slots, single){
+    if(!counts) return 0;
+    if(!slots.length) return counts[single] || 0;
+    const top = Math.max(...slots.map(s => counts[s] || 0));
+    const b = BUSY_OF.get(counts);
+    if(!b) return top;
+    const u = new Set(); slots.forEach(s => (b[s] || []).forEach(n => u.add(n)));
+    return Math.max(top, u.size);
+  }
   async function fetchAvailability(dateStr){
     try{
       const res = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateStr}`);
@@ -1373,6 +1385,7 @@
       if(data && typeof data.priorBookingDays === 'number' && data.priorBookingDays > 0){
         applyPriorBookingDays(data.priorBookingDays);
       }
+      if(data && data.counts && data.busy) BUSY_OF.set(data.counts, data.busy);
       return (data && data.counts) ? data.counts : data;
     }catch(err){ return null; }
   }
@@ -1388,7 +1401,7 @@
       let used;
       {
         const slots = getSpanSlots(o.value, effectiveDuration);
-        used = slots.length ? Math.max(...slots.map(s => counts[s] || 0)) : (counts[o.value] || 0);
+        used = spanUsed(counts, slots, o.value);
       }
       const left = MAX_NETS - used;
       if(left <= 0){
@@ -1705,7 +1718,7 @@
     if(!timeStr || !durationStr || Object.keys(availabilityCache).length === 0) return MAX_NETS;
     const slots = getSpanSlots(timeStr, durationStr);
     if(!slots.length) return MAX_NETS;
-    const maxOccupied = Math.max(...slots.map(s => availabilityCache[s] || 0));
+    const maxOccupied = spanUsed(availabilityCache, slots);
     return Math.max(0, MAX_NETS - maxOccupied);
   }
 

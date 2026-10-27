@@ -1256,6 +1256,18 @@
     ]);
   }
 
+  // Nets busy per slot (from the server) — attached to the counts object it came with
+  const BUSY_OF = new WeakMap();
+  // Nets in use over a whole booking: a net counts as free only if it is free in EVERY slot
+  function spanUsed(counts, slots, single){
+    if(!counts) return 0;
+    if(!slots.length) return counts[single] || 0;
+    const top = Math.max(...slots.map(s => counts[s] || 0));
+    const b = BUSY_OF.get(counts);
+    if(!b) return top;
+    const u = new Set(); slots.forEach(s => (b[s] || []).forEach(n => u.add(n)));
+    return Math.max(top, u.size);
+  }
   async function fetchAvailability(dateStr){
     try{
       const res = await fetchWithTimeout(`${SHEET_SCRIPT_URL}?action=availability&date=${dateStr}`);
@@ -1266,6 +1278,7 @@
       ALL_CLOSED   = !!(data && data.allClosed);
       CLOSED_NETS  = (data && Array.isArray(data.closedNets)) ? data.closedNets : [];
       FROM_MINUTES = (data && typeof data.fromMinutes === 'number') ? data.fromMinutes : -1;
+      if(data && data.counts && data.busy) BUSY_OF.set(data.counts, data.busy);
       return (data && data.counts) ? data.counts : data;
     }catch(err){ return null; }
   }
@@ -1518,7 +1531,7 @@
     Array.from(aTime.options).forEach(o=>{
       if(!o.value) return;
       const slots = getSpanSlots(o.value, dur||'1 hr');
-      const used  = slots.length ? Math.max(...slots.map(s => counts[s]||0)) : (counts[o.value]||0);
+      const used  = spanUsed(counts, slots, o.value);
       const left  = MAX_NETS - used;
       if(left <= 0){
         o.textContent = `${o.value} — Full`;
@@ -1539,7 +1552,7 @@
     const t = aTime.value;
     if(!t) return;
     const slots = getSpanSlots(t, dur||'1 hr');
-    const used  = slots.length ? Math.max(...slots.map(s => counts[s]||0)) : (counts[t]||0);
+    const used  = spanUsed(counts, slots, t);
     const avail = Math.max(0, MAX_NETS - used);
     const cur   = parseInt(aNetsEl.value)||1;
     aNetsEl.innerHTML = '';
@@ -2957,7 +2970,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     Array.from(timeSel.options).forEach(o=>{
       if(!o.value || o.dataset.past === '1') return;
       const slots = getSpanSlots(o.value, durVal || '1 hr');
-      const used  = slots.length ? Math.max(...slots.map(s => editAvailCache[s]||0)) : (editAvailCache[o.value]||0);
+      const used  = spanUsed(editAvailCache, slots, o.value);
       // Add back current booking's nets when checking its own original slot
       const bonus = (sameDate && o.value === editOriginalTime) ? editCurrentNetsCount : 0;
       const left  = MAX_NETS - used + bonus;
@@ -2979,7 +2992,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     const dur = document.getElementById('editDuration').value;
     if(!t || !editAvailCache || Object.keys(editAvailCache).length === 0) return;
     const slots = getSpanSlots(t, dur || '1 hr');
-    const used  = slots.length ? Math.max(...slots.map(s => editAvailCache[s]||0)) : (editAvailCache[t]||0);
+    const used  = spanUsed(editAvailCache, slots, t);
 
     // When the same original slot is selected, Surya's current nets will be freed —
     // add them back so the dropdown correctly shows how many nets are available
