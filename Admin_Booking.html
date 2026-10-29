@@ -1814,7 +1814,9 @@
       const totalAmount = rows.filter(r => r.status !== 'Cancelled')
         .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
-      resultArea.innerHTML = `
+      const teamsLine = (() => { const t = [...new Set(rows.map(r => r.teamName).filter(Boolean))];
+        return t.length ? `<div style="margin:0 0 10px;font-size:13.5px;">👕 Team${t.length>1?'s':''}: <strong>${t.map(x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join(', ')}</strong></div>` : ''; })();
+      resultArea.innerHTML = `${teamsLine}
         <div class="person-summary-grid">
           <div class="person-summary-card"><div class="val">${totalBookings}</div><div class="lbl">Total Bookings</div></div>
           <div class="person-summary-card"><div class="val">${totalCancelled}</div><div class="lbl">Total Cancellations</div></div>
@@ -1947,7 +1949,9 @@
         </tr>`;
       }).join('');
 
-      resultArea.innerHTML = `
+      const teamsLine = (() => { const t = [...new Set(rows.map(r => r.teamName).filter(Boolean))];
+        return t.length ? `<div style="margin:0 0 10px;font-size:13.5px;">👕 Team${t.length>1?'s':''}: <strong>${t.map(x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join(', ')}</strong></div>` : ''; })();
+      resultArea.innerHTML = `${teamsLine}
         <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
           <table class="report-table">
             <thead><tr>
@@ -2278,6 +2282,7 @@
         return;
       }
       lastBulkGroups = data.groups;
+      (data.groups||[]).forEach(g => { if(g.teamName){ TEAM_BY_REF[String(g.groupRef).toUpperCase()] = g.teamName; (g.slots||[]).forEach(s => { TEAM_BY_REF[String(s.ref).toUpperCase()] = g.teamName; }); } });
       area.innerHTML = data.groups.map((g,gi)=>{
         return `
         <div class="bulk-group-card" id="grpCard${gi}" data-groupref="${g.groupRef}">
@@ -2285,6 +2290,7 @@
             <div class="bulk-group-info">
               <div class="bulk-group-ref">${g.groupRef}</div>
               <div class="bulk-group-name">${g.name}</div>
+              ${g.teamName ? `<div class="bulk-group-meta">👕 Team: <strong>${String(g.teamName).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong></div>` : ''}
               <div class="bulk-group-meta">📱 ${g.mobile}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
@@ -2386,7 +2392,7 @@
       <div class="admin-receipt" style="margin-bottom:14px;">
         <div class="receipt-title">📋 Full Group Receipt</div>
         <div class="receipt-meta">
-          <strong>${g.name}</strong> &nbsp;|&nbsp; ${g.mobile} &nbsp;|&nbsp;
+          <strong>${g.name}</strong>${g.teamName ? ` &nbsp;|&nbsp; Team: <strong>${String(g.teamName).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong>` : ''} &nbsp;|&nbsp; ${g.mobile} &nbsp;|&nbsp;
           ${activeSlots.length} active${cancelledSlots.length ? `, ${cancelledSlots.length} cancelled` : ''}
         </div>
         <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
@@ -2405,7 +2411,7 @@
     const waMsg = `*County Indoor Netz — Updated Group Booking Summary* 📋
 
 *Customer:* ${g.name}
-*Mobile:* ${g.mobile}
+${g.teamName ? `*Team:* ${g.teamName}\n` : ''}*Mobile:* ${g.mobile}
 *Group Ref:* ${g.groupRef}
 *Active:* ${activeSlots.length}${cancelledSlots.length ? ` · *Cancelled:* ${cancelledSlots.length}` : ''}
 
@@ -2425,7 +2431,7 @@ Thank you for your cooperation! See you at the nets! 🏏`;
       const netsCount = (s.net.match(/Net/g)||[]).length || 1;
       return `${i+1}. ${s.date} ${s.time} ${s.duration} Nets:${netsCount} Ref:${s.ref} ${s.status==='Cancelled'?'CANCELLED':'Confirmed'}`;
     }).join('\n');
-    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+    const smsMsg = `County Indoor Netz - Updated Group Summary\nCustomer: ${g.name}${g.teamName ? ` | Team: ${g.teamName}` : ''} | Group Ref: ${g.groupRef}\nActive: ${activeSlots.length}${cancelledSlots.length ? `, Cancelled: ${cancelledSlots.length}` : ''}\n\n${smsLines}\n\nTo cancel any or all active slots quote your individual Booking Ref No. and Group Ref ${g.groupRef}\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
     document.getElementById(`groupReceiptBtns${gi}`).innerHTML = `
       <a class="share-btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(waMsg)}">
@@ -2574,12 +2580,16 @@ Thank you for your cooperation! See you at the nets! 🏏`;
   }
   window.cancelSingleSlot = cancelSingleSlot;
 
+  // Team name per booking Ref / Group Ref (filled when search results or groups are shown)
+  const TEAM_BY_REF = {};
+  const teamOf = (...refs) => { for(const r of refs){ const t = TEAM_BY_REF[String(r||'').trim().toUpperCase()]; if(t) return t; } return ''; };
+  const noteTeams = list => (list||[]).forEach(b => { if(b && b.teamName){ if(b.ref) TEAM_BY_REF[String(b.ref).toUpperCase()] = b.teamName; if(b.groupCode) TEAM_BY_REF[String(b.groupCode).toUpperCase()] = b.teamName; } });
   // Builds the WhatsApp + SMS confirmation text for a single-slot cancellation
   function buildSingleCancelMessage(name, mobile, ref, groupRef, date, time){
     const waMsg = `*County Indoor Netz — Booking Cancelled* 🚫
 
 Name: ${name}
-Mobile: ${mobile}
+${teamOf(ref, groupRef) ? `Team: ${teamOf(ref, groupRef)}\n` : ''}Mobile: ${mobile}
 Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? `\nGroup Ref: ${groupRef}` : ''}
 Date: ${date}
 Time: ${time}
@@ -2588,7 +2598,7 @@ This slot has been cancelled and the net is now free for others to book.
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://countyindoornetz.com/Client_Booking.html`;
-    const smsMsg = `County Indoor Netz - Booking Cancelled\nName: ${name} | Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? ` | Group Ref: ${groupRef}` : ''}\nDate: ${date} Time: ${time}\nThis slot has been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html`;
+    const smsMsg = `County Indoor Netz - Booking Cancelled\nName: ${name}${teamOf(ref, groupRef) ? ` | Team: ${teamOf(ref, groupRef)}` : ''} | Ref: ${ref}${groupRef && groupRef.toUpperCase().startsWith('GRP-') ? ` | Group Ref: ${groupRef}` : ''}\nDate: ${date} Time: ${time}\nThis slot has been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html`;
     return { waMsg, smsMsg, mobile };
   }
 
@@ -2597,7 +2607,7 @@ https://countyindoornetz.com/Client_Booking.html`;
     const waMsg = `*County Indoor Netz — Group Booking Code ${groupRef} is Cancelled* 🚫
 
 Name: ${name}
-Mobile: ${mobile}
+${teamOf(groupRef) ? `Team: ${teamOf(groupRef)}\n` : ''}Mobile: ${mobile}
 Group Ref: ${groupRef}
 Slots cancelled: ${count}
 
@@ -2605,7 +2615,7 @@ All slots under this group have been cancelled and those nets are now free for o
 
 👉 Tip: Click the link below → tap ⋮ menu → "Install" or "Add to Home screen" for quick access anytime, just like an app!
 https://countyindoornetz.com/Client_Booking.html`;
-    const smsMsg = `County Indoor Netz - Group Booking Code ${groupRef} is Cancelled\nName: ${name} | Group Ref: ${groupRef}\nSlots cancelled: ${count}\nAll slots under this group have been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html`;
+    const smsMsg = `County Indoor Netz - Group Booking Code ${groupRef} is Cancelled\nName: ${name}${teamOf(groupRef) ? ` | Team: ${teamOf(groupRef)}` : ''} | Group Ref: ${groupRef}\nSlots cancelled: ${count}\nAll slots under this group have been cancelled.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html`;
     return { waMsg, smsMsg, mobile };
   }
 
@@ -2683,6 +2693,7 @@ https://countyindoornetz.com/Client_Booking.html`;
       document.getElementById('normalRefreshBtn').style.display = 'inline-flex';
 
       lastAdminNormalResults = data.results;
+      noteTeams(data.results);
       results.innerHTML = data.results.map((b,i)=>{
         const isCancelled = b.status === 'Cancelled';
         const isPast = isSlotPast(b.date, b.time);
@@ -2694,6 +2705,7 @@ https://countyindoornetz.com/Client_Booking.html`;
               <div class="bulk-group-name" style="${isCancelled?'text-decoration:line-through;':''}">${b.name}</div>
               <div class="bulk-group-meta">📅 ${b.date} &nbsp; ⏰ ${b.time} &nbsp; Ref: ${b.ref}</div>
               <div class="bulk-group-meta">⏱ ${b.duration} &nbsp; 👥 ${b.players} player${b.players=='1'?'':'s'} &nbsp; 🏏 ${b.ball} &nbsp; 💰 ${b.amount}</div>
+              ${b.teamName ? `<div class="bulk-group-meta">👕 Team: <strong>${String(b.teamName).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong></div>` : ''}
               ${groupLine}
             </div>
             ${isCancelled ? '<span class="bulk-group-badge" style="background:var(--error);">🚫 Cancelled</span>'
@@ -3253,6 +3265,7 @@ https://countyindoornetz.com/Client_Booking.html`;
           ${editCurrentGroupRef ? `<dt>Group Ref</dt><dd style="color:var(--leather);font-weight:700;letter-spacing:.5px">${editCurrentGroupRef}</dd>` : ''}
           <dt>Booking Ref</dt><dd>${ref}</dd>
           <dt>Name</dt><dd>${editCurrentName}</dd>
+          ${teamOf(editCurrentRef, editCurrentGroupRef) ? `<dt>Team</dt><dd>${String(teamOf(editCurrentRef, editCurrentGroupRef)).replace(/</g,'&lt;')}</dd>` : ''}
           <dt>Mobile</dt><dd>${mobile}</dd>
           ${players ? `<dt>Players</dt><dd>${players}</dd>` : ''}
           <dt>Date</dt><dd>${dateDisplay}</dd>
@@ -3268,7 +3281,7 @@ https://countyindoornetz.com/Client_Booking.html`;
 
 *Group Ref:* ${editCurrentGroupRef}
 *Booking Ref:* ${ref}
-*Name:* ${editCurrentName}
+*Name:* ${editCurrentName}${teamOf(editCurrentRef, editCurrentGroupRef) ? `\n*Team:* ${teamOf(editCurrentRef, editCurrentGroupRef)}` : ''}
 *Date:* ${dateDisplay}
 *Session:* ${sessionShort}
 *Time:* ${time}
@@ -3300,7 +3313,7 @@ https://countyindoornetz.com/Client_Booking.html
 
 Your booking has been updated. Thank you for your cooperation! See you at the nets!`;
 
-        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot. For Prime Time (${primeRangeShort()}) kindly cancel or inform us at least 5 hours prior. To inform us, call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
+        const smsMsg = `County Indoor Netz - Booking Updated\nGroup Ref:${editCurrentGroupRef} Booking Ref:${ref}\nName:${editCurrentName}${teamOf(editCurrentRef, editCurrentGroupRef) ? ` Team:${teamOf(editCurrentRef, editCurrentGroupRef)}` : ''}\nDate:${dateDisplay} Time:${time} ${duration} Nets Required:${nets}\nHelmet compulsory for leather balls. Rate changes if player count exceeds booking.\nPlease note: Payment is applicable for the selected number of players, duration, and number of nets, regardless of whether you play or not.\nPunctuality is Mandatory: Late arrivals will affect other bookings, kindly report on time. If a team fails to arrive within 15 minutes without prior information, the booking will be treated as cancelled and the slot will be allotted to others.\nCancellation Policy: Cancellation allowed up to 2 hours before the slot. For Prime Time (${primeRangeShort()}) kindly cancel or inform us at least 5 hours prior. To inform us, call Customer Support 1: 9847047462 or Customer Support 2: 9895011774.\nNetwork/Technical Issues: please contact us directly.\nTip: Click the link below and use "Add to Home screen" for quick access: https://countyindoornetz.com/Client_Booking.html\nLocation: Mamangalam, Edappally, Kochi, Metro Pillar – 494`;
 
         document.getElementById('editWaBtn').href  = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
         document.getElementById('editSmsBtn').href = `sms:+91${mobile}?body=${encodeURIComponent(smsMsg)}`;
