@@ -2985,7 +2985,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     const row = document.createElement('div');
     row.className = 'wk-extra';
     row.innerHTML = `
-      <div><label class="admin-lbl">Item</label><select class="wkx-item">${EXTRA_ITEMS.map(i=>`<option value="${esc(i.key)}">${esc(i.key)}</option>`).join('')}</select></div>
+      <div><label class="admin-lbl">Item</label><select class="wkx-item"><option value="">— Choose item —</option>${EXTRA_ITEMS.map(i=>`<option value="${esc(i.key)}">${esc(i.key)}</option>`).join('')}</select></div>
       <div><label class="admin-lbl">Qty</label><input type="number" class="wkx-qty" value="1" min="1" inputmode="numeric"></div>
       <div><label class="admin-lbl">Amount ₹</label><input type="number" class="wkx-amt" placeholder="0" min="0" inputmode="numeric"></div>
       <div><label class="admin-lbl">Paid by</label><select class="wkx-mode">${modeOptions(defMode==='free'?'cash':defMode)}</select></div>
@@ -3009,7 +3009,9 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     onChange && onChange();
   }
   function readExtras(containerId){
-    return Array.from(document.querySelectorAll('#'+containerId+' .wk-extra')).map(r => ({
+    return Array.from(document.querySelectorAll('#'+containerId+' .wk-extra'))
+      .filter(r => r.querySelector('.wkx-item').value)   // rows left on "Choose item" are ignored
+      .map(r => ({
       item: r.querySelector('.wkx-item').value,
       qty:  parseInt(r.querySelector('.wkx-qty').value,10) || 1,
       amount: num(r.querySelector('.wkx-amt').value),
@@ -3225,8 +3227,16 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     $('wkEditBanner').style.display = 'none';
     renderNets(); wkRenderNT(); renderModes(); updateEntryTotals();
   }
+  // An item row with an amount but no item chosen
+  function extrasNeedItem(containerId){
+    const bad = Array.from(document.querySelectorAll('#'+containerId+' .wk-extra'))
+      .filter(r => !r.querySelector('.wkx-item').value && num(r.querySelector('.wkx-amt').value) > 0);
+    bad.forEach(r => { const sel = r.querySelector('.wkx-item'); sel.style.borderColor = '#b3261e'; sel.addEventListener('change', () => { sel.style.borderColor = ''; }, { once:true }); });
+    return bad.length > 0;
+  }
   window.wkSave = function(){
     wkReadNT();
+    if(extrasNeedItem('wkExtras')){ showMsg('Please choose the item for each amount in Additional Payments (or remove that row).', false); return; }
     const name = $('wkName').value.trim(), m = entryMins();
     if(!name){ showMsg('Please enter the name.', false); return; }
     if(!wkNets.length){ showMsg('Please choose the net number(s).', false); return; }
@@ -3440,6 +3450,11 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   window.wkPayAddExtra = () => addExtraRow('wkPayExtras', payMode, updatePayTotal);
   window.wkPaySave = function(){
     const b = bookings.find(x => x.ref === openRef); if(!b) return;
+    if(extrasNeedItem('wkPayExtras')){
+      const el = $('wkPayExtras');
+      if(el){ el.insertAdjacentHTML('afterend', '<div class="admin-msg err" id="wkPayNetErr">Please choose the item for each amount in Additional Payments (or remove that row).</div>'); setTimeout(()=>{ const e=$('wkPayNetErr'); if(e) e.remove(); }, 3500); }
+      return;
+    }
     const noShow = $('wkPayNoShow').checked;
     readNetTimeInputs();
     const badTime = !noShow && payNets.some(n => !((payNetTimes[n]||{}).mins > 0));
@@ -3860,5 +3875,6 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
   renderNets(); wkRenderNT(); renderModes(); updateEntryTotals(); renderRegister();
 })();
 </script>
+<div id="pageVersion" style="text-align:center;font-size:11px;color:#9aa39a;padding:14px 0 18px;">Page version: 29 Oct 2026 (team names)</div>
 </body>
 </html>
