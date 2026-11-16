@@ -327,6 +327,19 @@
   .wk-rec-btn.edit{background:#fff;border:1.5px solid #d9d3c0;color:var(--navy);}
   .wk-pay{grid-column:1 / -1;border-top:1px dashed #d9d3c0;margin-top:8px;padding-top:10px;}
   .wk-row.cancelled{opacity:.6;}
+  .wk-pend-btn{width:100%;font-family:inherit;font-size:15px;font-weight:700;min-height:46px;border-radius:10px;border:1.5px solid #b45309;background:#fff7ed;color:#9a3412;cursor:pointer;margin:0 0 12px;}
+  .wk-pend-panel{border:1.5px solid #f0c9a0;background:#fffaf3;border-radius:12px;padding:12px;margin:-4px 0 14px;}
+  .wk-pend-total{font-size:15px;font-weight:700;color:#9a3412;margin-bottom:4px;}
+  .wk-pend-note{font-size:12.5px;color:#5a6152;margin-bottom:10px;line-height:1.45;}
+  .wk-pend-item{background:#fff;border:1px solid #e3e0d4;border-radius:10px;padding:10px;margin-bottom:8px;}
+  .wk-pend-head{display:flex;justify-content:space-between;gap:8px;font-size:14.5px;}
+  .wk-pend-head strong{color:var(--navy);}
+  .wk-pend-sub{font-size:12.5px;color:#5a6152;margin:2px 0 8px;}
+  .wk-pend-ctrl{display:grid;grid-template-columns:110px 1fr 1fr 1fr;gap:6px;align-items:center;}
+  .wk-pend-ctrl input{min-height:44px;font-size:16px;padding:0 8px;border:1px solid #c9cfc3;border-radius:8px;width:100%;box-sizing:border-box;}
+  .wk-pend-ctrl .wk-chip{min-height:44px;font-size:14px;}
+  .wk-pend-go{grid-column:1 / -1;}
+  @media(max-width:420px){.wk-pend-ctrl{grid-template-columns:1fr 1fr 1fr;}.wk-pend-ctrl input{grid-column:1 / -1;}}
   @media(max-width:520px){.wk-extra{grid-template-columns:1fr 1fr;}.wk-extra .wk-x{grid-column:span 2;width:100%;}.wkx-who-wrap{grid-column:span 2;}}
   /* Edit modal */
   .edit-overlay{
@@ -733,6 +746,8 @@
         <div style="flex:1;"><label class="admin-lbl" for="wkRegDate">Date</label><input type="date" id="wkRegDate"></div>
         <button type="button" class="wk-chip" style="padding:0 14px;" onclick="wkLoadBookings()">↻ Refresh</button>
       </div>
+      <button type="button" class="wk-pend-btn" id="wkPendBtn" onclick="wkTogglePend()">💰 Collect Pending (earlier unpaid amounts)</button>
+      <div class="wk-pend-panel" id="wkPendPanel" style="display:none;"></div>
       <div class="wk-cards" id="wkCards"></div>
       <div class="wk-breakdown" id="wkBreakdown"></div>
 
@@ -742,6 +757,9 @@
 
       <div class="wk-block-title" style="margin-top:14px;">Walk-ins &amp; Club <button type="button" class="wk-link" onclick="wkShowSub('entry')">+ Walk-in Entry</button></div>
       <div id="wkList"></div>
+
+      <div class="wk-block-title" style="margin-top:14px;">Pending Collected on this date</div>
+      <div id="wkPcolList"></div>
 
       <div class="wk-daytot" id="wkItemSales"></div>
     </div>
@@ -3366,11 +3384,90 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     }).catch(err => alert('❌ ' + (err.message || failText())));
   };
 
+  /* ---------- Collect Pending (amounts left unpaid on an earlier date) ---------- */
+  let pendList = [], pendSel = {};
+  function renderPcols(){
+    const el = $('wkPcolList'); if(!el) return;
+    if(!pcols.length){ el.innerHTML = '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No pending amounts collected on this date. Use 💰 Collect Pending above.</div>'; return; }
+    const tot = pcols.reduce((a,c)=>a+c.amount,0);
+    el.innerHTML = pcols.map(c => `<div class="wk-pend-item">
+        <div class="wk-pend-head"><span><strong>${esc(c.name)}</strong> · ${esc(c.what)}</span><strong>${rupees(c.amount)} ${MODE_SHORT[c.mode]||''}</strong></div>
+        <div class="wk-pend-sub">Pending from ${fmtD(c.bookDate)} · collected ${fmtD(c.date)}
+          <button type="button" class="wk-del-btn" style="margin-left:8px;" onclick="wkDelCollect('${esc(c.id)}')" aria-label="Remove this collection">Remove</button></div>
+      </div>`).join('') + `<div style="font-size:13.5px;font-weight:700;color:var(--navy);padding:2px 0 6px;">Total collected: ${rupees(tot)}</div>`;
+  }
+  function renderPendPanel(msg){
+    const el = $('wkPendPanel'); if(!el) return;
+    const day = $('wkRegDate').value || todayISO();
+    const total = pendList.reduce((a,x)=>a+x.amount,0);
+    el.innerHTML = `<div class="wk-pend-total">Total pending: ${rupees(total)}</div>
+      <div class="wk-pend-note">Collected amounts are saved on <strong>${fmtD(day)}</strong> (the register date). Change the date above to save them on another day.</div>
+      ${msg ? `<div class="admin-msg ${msg.ok?'ok':'err'}" style="display:block;margin-bottom:8px;">${esc(msg.text)}</div>` : ''}
+      ${pendList.length ? pendList.map((x,i) => {
+        const sel = pendSel[i] || {};
+        return `<div class="wk-pend-item">
+          <div class="wk-pend-head"><span><strong>${esc(x.name)}</strong> · ${esc(x.what)}</span><strong>${rupees(x.amount)}</strong></div>
+          <div class="wk-pend-sub">Pending from ${fmtD(x.date)}${x.amount !== x.original ? ` · ${rupees(x.original - x.amount)} already collected` : ''}</div>
+          <div class="wk-pend-ctrl">
+            <input type="number" min="1" max="${x.amount}" inputmode="numeric" id="wkPendAmt${i}" value="${sel.amount != null ? sel.amount : x.amount}" aria-label="Amount received" oninput="wkPendAmt(${i}, this.value)">
+            ${['cash','upi','ppay'].map(m => `<button type="button" class="wk-chip${sel.mode===m?' active':''}" onclick="wkPendMode(${i},'${m}')">${MODE_SHORT[m]}</button>`).join('')}
+            <button type="button" class="add-btn wk-pend-go" style="margin-top:4px;" onclick="wkCollect(${i})">Collect</button>
+          </div>
+        </div>`; }).join('') : '<div style="font-size:13.5px;color:#5a6152;">🎉 Nothing pending — everyone has paid.</div>'}`;
+  }
+  async function loadPendList(msg){
+    $('wkPendPanel').innerHTML = '<div class="wk-loading">⏳ Loading pending amounts…</div>';
+    try{
+      const data = await wkApi({ action:'wkPendList' }, 45000);
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      pendList = data.list || []; pendSel = {};
+      renderPendPanel(msg);
+    }catch(err){ $('wkPendPanel').innerHTML = `<div class="admin-msg err" style="display:block;">❌ ${esc(err.message || 'Could not load the pending list.')}</div>`; }
+  }
+  window.wkTogglePend = function(){
+    const el = $('wkPendPanel'), open = el.style.display === 'none';
+    el.style.display = open ? 'block' : 'none';
+    $('wkPendBtn').textContent = open ? '✖ Close Collect Pending' : '💰 Collect Pending (earlier unpaid amounts)';
+    if(open) loadPendList();
+  };
+  window.wkPendAmt = function(i, v){ pendSel[i] = Object.assign({}, pendSel[i], { amount: v }); };
+  window.wkPendMode = function(i, m){ pendSel[i] = Object.assign({}, pendSel[i], { mode: m }); renderPendPanel(); };
+  window.wkCollect = async function(i){
+    const x = pendList[i]; if(!x) return;
+    const sel = pendSel[i] || {};
+    const amt = Math.round(Number(sel.amount != null ? sel.amount : x.amount));
+    if(!sel.mode){ renderPendPanel({ ok:false, text:`Choose how ${x.name} paid: Cash, PTM or PPAY.` }); return; }
+    if(!(amt > 0) || amt > x.amount){ renderPendPanel({ ok:false, text:`Enter an amount between 1 and ${x.amount} for ${x.name}.` }); return; }
+    const day = $('wkRegDate').value || todayISO();
+    $('wkPendPanel').querySelectorAll('button').forEach(b => b.disabled = true);
+    try{
+      const data = await wkApi({ action:'wkCollect', payload:{ ref:x.ref, part:x.part, amount:amt, mode:sel.mode, date:day } }, 45000);
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      pcols.push({ id:data.id, date:day, ref:x.ref, part:x.part, name:x.name, bookDate:x.date, what:x.what, amount:amt, mode:sel.mode });
+      delete dayCache[day]; delete dayCache[x.date];
+      renderPcols();
+      await loadPendList({ ok:true, text:`✅ Collected ${rupees(amt)} (${MODE_SHORT[sel.mode]}) from ${x.name} on ${fmtD(day)}.` });
+    }catch(err){ renderPendPanel({ ok:false, text:'❌ ' + (err.message || failText()) }); }
+  };
+  window.wkDelCollect = async function(id){
+    const c = pcols.find(x => x.id === id); if(!c) return;
+    if(!confirm(`Remove the collection of ${rupees(c.amount)} from ${c.name}?\n\nIt will show as pending again.`)) return;
+    try{
+      const data = await wkApi({ action:'wkDelCollect', id }, 45000);
+      if(!data || data.status !== 'ok') throw new Error(failText(data));
+      pcols = pcols.filter(x => x.id !== id);
+      delete dayCache[c.date]; delete dayCache[c.bookDate];
+      renderPcols();
+      if($('wkPendPanel').style.display !== 'none') loadPendList();
+    }catch(err){ alert('❌ ' + (err.message || failText())); }
+  };
+
   /* ---------- Bookings (read-only from the sheet) ---------- */
   let loadSeq = 0;
   const dayCache = {};   // date -> last data loaded (shown at once when you come back to that date)
+  let pcols = [];         // pending amounts collected on the register date
   function clearDay(){
-    bookings = []; walkins = []; advances = {};
+    bookings = []; walkins = []; advances = {}; pcols = [];
     Object.keys(payments).forEach(k => delete payments[k]);
   }
   function applyDay(day, data){
@@ -3378,6 +3475,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
     Object.keys(payments).forEach(k => delete payments[k]);
     Object.assign(payments, JSON.parse(JSON.stringify(data.payments || {})));
     walkins = JSON.parse(JSON.stringify(Array.isArray(data.walkins) ? data.walkins : []));
+    pcols = Array.isArray(data.collections) ? data.collections.slice() : [];
     advances = {};
     (data.advances || []).forEach(a => { advances[a.ref] = Object.assign({}, a); });
     dayUsage[day] = data.usage || {};
@@ -3763,6 +3861,7 @@ Your booking has been updated. Thank you for your cooperation! See you at the ne
           <button type="button" class="wk-del-btn" style="display:block;width:100%;" onclick="wkDeleteWalkin('${e.id}')" aria-label="Delete this walk-in">Delete</button></div>
       </div>`;}).join('')
       : '<div style="font-size:13.5px;color:#5a6152;padding:6px 0;">No walk-in entries for this date.</div>';
+    renderPcols();
 
     // + Advance money: counted on the day it was received (refunds on the day refunded)
     const advIn = [], advOut = [];
